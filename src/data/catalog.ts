@@ -1,0 +1,207 @@
+import type { Destination, Hotel, RentalCar, Review, TourPackage } from '../types'
+
+const photos = {
+  lake: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1400&q=85',
+  valley: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1400&q=85',
+  mountain: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1400&q=85',
+  snow: 'https://images.unsplash.com/photo-1517299321609-52687d1bc55a?auto=format&fit=crop&w=1400&q=85',
+  meadow: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?auto=format&fit=crop&w=1400&q=85',
+  houseboat: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1400&q=85',
+  hotel: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1400&q=85',
+  car: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1400&q=85',
+  suv: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=1400&q=85',
+  room: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1400&q=85',
+}
+
+export const tourPackages: TourPackage[] = [
+  {
+    id: 'deluxe', kind: 'package', name: 'Deluxe', location: 'Srinagar · Gulmarg · Pahalgam',
+    image: photos.lake, gallery: [photos.lake, photos.valley, photos.meadow], category: 'Deluxe', price: 28999,
+    duration: '4 nights · 5 days', description: 'A five-day Kashmir escape with stays in Srinagar, Gulmarg and Pahalgam.',
+    itinerary: [
+      { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Meet your local driver, check in at The Mallard and enjoy a relaxed first evening.' },
+      { day: 'Day 02', title: 'Srinagar to Gulmarg', detail: 'Travel to Gulmarg for a mountain stay and time to explore the meadows.' },
+      { day: 'Day 03', title: 'Gulmarg to Pahalgam', detail: 'Continue to Pahalgam and check in at Home 2 for a night beside the valley.' },
+      { day: 'Day 04', title: 'Pahalgam to Srinagar', detail: 'Enjoy the Pahalgam scenery before returning to Srinagar for the final night.' },
+      { day: 'Day 05', title: 'Departure', detail: 'Transfer to Srinagar airport for your onward journey.' },
+    ],
+    stay: 'Two nights in Srinagar, one night in Gulmarg and one night in Pahalgam.',
+    stays: [
+      { location: 'Srinagar', nights: 2, hotel: 'The Garden House' },
+      { location: 'Gulmarg', nights: 1, hotel: 'Pine Ridge Retreat' },
+      { location: 'Pahalgam', nights: 1, hotel: 'Riverstone Pahalgam' },
+    ],
+    transport: 'Private air-conditioned vehicle with a local driver throughout.',
+    experiences: ['Srinagar city and lake time', 'Gulmarg mountain stay', 'Pahalgam valley visit'],
+    inclusions: ['4 nights accommodation', 'Daily breakfast', 'Private transfers and sightseeing', 'Local trip assistance'],
+    exclusions: ['Flights and travel insurance', 'Gondola tickets and optional activities', 'Lunches and dinners unless stated'],
+  },
+  {
+    id: 'premium', kind: 'package', name: 'Premium', location: 'Srinagar · Gulmarg · Pahalgam',
+    image: photos.mountain, gallery: [photos.mountain, photos.snow, photos.lake], category: 'Premium', price: 36999,
+    duration: '5 nights · 6 days', description: 'A six-day Kashmir stay with Jamal Resorts, Hotel Signature and Twin Towers.',
+    itinerary: [
+      { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Check in at Jamal Resorts and settle into the city.' },
+      { day: 'Day 02', title: 'Discover Srinagar', detail: 'Enjoy a full day for the lake, gardens and old city before another night at Jamal Resorts.' },
+      { day: 'Day 03', title: 'Srinagar to Gulmarg', detail: 'Head to Gulmarg and stay at Hotel Signature.' },
+      { day: 'Day 04', title: 'Gulmarg to Pahalgam', detail: 'Travel through the valley and check in at Twin Towers.' },
+      { day: 'Day 05', title: 'A slower day in Pahalgam', detail: 'Spend another night at Twin Towers and explore the valley at an easy pace.' },
+      { day: 'Day 06', title: 'Departure', detail: 'Transfer from Pahalgam to Srinagar airport for your onward journey.' },
+    ],
+    stay: 'Two nights in Srinagar, one night in Gulmarg and two nights in Pahalgam.',
+    stays: [
+      { location: 'Srinagar', nights: 2, hotel: 'Jamal Resorts' },
+      { location: 'Gulmarg', nights: 1, hotel: 'Hotel Signature' },
+      { location: 'Pahalgam', nights: 2, hotel: 'Twin Towers' },
+    ],
+    transport: 'Private air-conditioned vehicle with a local driver throughout.',
+    experiences: ['Srinagar city and lake time', 'Gulmarg mountain stay', 'Pahalgam valley visit'],
+    inclusions: ['5 nights accommodation', 'Daily breakfast', 'Private transfers and sightseeing', 'Local trip assistance'],
+    exclusions: ['Flights and travel insurance', 'Gondola tickets and optional activities', 'Lunches and dinners unless stated'],
+  },
+  {
+    id: 'luxury', kind: 'package', name: 'Luxury', location: 'Srinagar · Gulmarg · Pahalgam',
+    image: photos.meadow, gallery: [photos.meadow, photos.valley, photos.lake], category: 'Luxury', price: 52999,
+    duration: '5 nights · 6 days', description: 'A six-day Kashmir escape with distinctive stays across Srinagar, Gulmarg and Pahalgam.',
+    itinerary: [
+      { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Check in at Hotel Tradition and enjoy an easy first evening.' },
+      { day: 'Day 02', title: 'Discover Srinagar', detail: 'Enjoy a full day for the lake, gardens and old city before another night at Hotel Tradition.' },
+      { day: 'Day 03', title: 'Srinagar to Gulmarg', detail: 'Travel to Gulmarg and stay at Hotel Khyber.' },
+      { day: 'Day 04', title: 'Gulmarg to Pahalgam', detail: 'Continue through the valley and check in at Protal Hermitage.' },
+      { day: 'Day 05', title: 'A slower day in Pahalgam', detail: 'Spend another night at Protal Hermitage and explore the valley at an easy pace.' },
+      { day: 'Day 06', title: 'Departure', detail: 'Transfer from Pahalgam to Srinagar airport for your onward journey.' },
+    ],
+    stay: 'Two nights in Srinagar, one night in Gulmarg and two nights in Pahalgam.',
+    stays: [
+      { location: 'Srinagar', nights: 2, hotel: 'Hotel Tradition' },
+      { location: 'Gulmarg', nights: 1, hotel: 'Hotel Khyber' },
+      { location: 'Pahalgam', nights: 2, hotel: 'Protal Hermitage' },
+    ],
+    transport: 'Private air-conditioned vehicle with a local driver throughout.',
+    experiences: ['Srinagar city and lake time', 'Gulmarg mountain stay', 'Pahalgam valley visit'],
+    inclusions: ['5 nights accommodation', 'Daily breakfast', 'Private transfers and sightseeing', 'Local trip assistance'],
+    exclusions: ['Flights and travel insurance', 'Gondola tickets and optional activities', 'Lunches and dinners unless stated'],
+  },
+]
+
+export const rentalCars: RentalCar[] = [
+  { id: 'swift-dzire', kind: 'car', name: 'Comfort Sedan', location: 'Srinagar', image: photos.car, gallery: [photos.car, photos.valley], category: 'Sedan', price: 3200, description: 'A comfortable choice for airport transfers and easy valley drives.', seats: 4, luggage: '2 medium bags', ac: true, tripTypes: ['Airport transfer', 'Local sightseeing', 'Intercity'], conditions: ['Price varies by route and season.', 'Driver allowance and applicable taxes are confirmed in your quote.'] },
+  { id: 'innova-crysta', kind: 'car', name: 'Innova Crysta', location: 'Srinagar', image: photos.suv, gallery: [photos.suv, photos.mountain], category: 'Premium SUV', price: 5500, description: 'Extra room and a relaxed ride for families and longer mountain routes.', seats: 6, luggage: '3 medium bags', ac: true, tripTypes: ['Airport transfer', 'Multi-day tour', 'Intercity'], conditions: ['Availability depends on travel dates.', 'Final fare is confirmed after route and duration review.'] },
+  { id: 'urban-suv', kind: 'car', name: 'Compact SUV', location: 'Srinagar', image: photos.car, gallery: [photos.car, photos.lake], category: 'SUV', price: 4200, description: 'A versatile vehicle for couples or small groups exploring the valley.', seats: 5, luggage: '2 medium bags', ac: true, tripTypes: ['Local sightseeing', 'Airport transfer', 'Intercity'], conditions: ['Route restrictions may apply in peak season.', 'Ask us to confirm luggage capacity for your group.'] },
+  { id: 'tempo-traveller', kind: 'car', name: 'Tempo Traveller', location: 'Srinagar', image: photos.suv, gallery: [photos.suv, photos.valley], category: 'Tempo Traveller', price: 7800, description: 'A practical option for larger groups travelling together.', seats: 12, luggage: 'Group luggage space', ac: true, tripTypes: ['Group tours', 'Airport transfer', 'Multi-day tour'], conditions: ['Vehicle layout varies by availability.', 'Share your group and luggage size for a suitable quote.'] },
+  { id: 'city-economy', kind: 'car', name: 'City Economy', location: 'Srinagar', image: photos.car, gallery: [photos.car, photos.lake], category: 'Economy', price: 2700, description: 'A compact, easygoing option for airport transfers and city travel.', seats: 4, luggage: '1 medium bag', ac: true, tripTypes: ['Airport transfer', 'Local sightseeing'], conditions: ['Best suited to light luggage.', 'Final fare depends on route and travel dates.'] },
+]
+
+export const hotels: Hotel[] = [
+  { id: 'dal-lake-houseboat', kind: 'hotel', name: 'Dal Lake Heritage Houseboat', location: 'Dal Lake, Srinagar', image: photos.houseboat, gallery: [photos.houseboat, photos.lake, photos.room], category: 'Houseboat', price: 8500, description: 'A calm, characterful stay on the water with mountain views and attentive local hosting.', roomTypes: ['Deluxe lake-view room', 'Heritage suite'], facilities: ['Breakfast', 'Private deck', 'Shikara access', 'Heating'], checkIn: '12:00 PM', checkOut: '11:00 AM', highlights: ['Lake-facing rooms', 'Traditional interiors', 'Quiet location'] },
+  { id: 'pine-ridge-resort', kind: 'hotel', name: 'Pine Ridge Retreat', location: 'Gulmarg', image: photos.hotel, gallery: [photos.hotel, photos.snow, photos.room], category: 'Premium resort', price: 14500, description: 'A warm mountain hideaway close to the meadow, made for slow mornings after a day outdoors.', roomTypes: ['Deluxe room', 'Mountain suite', 'Family room'], facilities: ['Restaurant', 'Heating', 'Garden', 'Room service'], checkIn: '2:00 PM', checkOut: '11:00 AM', highlights: ['Mountain views', 'Near meadow trails', 'Family-friendly rooms'] },
+  { id: 'riverstone-pahalgam', kind: 'hotel', name: 'Riverstone Pahalgam', location: 'Pahalgam', image: photos.valley, gallery: [photos.valley, photos.meadow, photos.room], category: 'Family stay', price: 9200, description: 'A welcoming base near the river, with easy access to Pahalgam’s walking paths.', roomTypes: ['Classic room', 'River-view room', 'Family suite'], facilities: ['Restaurant', 'Garden', 'Heating', 'Parking'], checkIn: '1:00 PM', checkOut: '11:00 AM', highlights: ['River nearby', 'Spacious rooms', 'Local dining'] },
+  { id: 'garden-house-srinagar', kind: 'hotel', name: 'The Garden House', location: 'Srinagar', image: photos.room, gallery: [photos.room, photos.lake, photos.hotel], category: 'Boutique hotel', price: 6800, description: 'An intimate city stay with leafy corners and thoughtful, personal service.', roomTypes: ['Classic room', 'Superior room'], facilities: ['Breakfast', 'Garden', 'Wi-Fi', 'Heating'], checkIn: '12:00 PM', checkOut: '10:00 AM', highlights: ['Quiet garden', 'Central location', 'Good for short stays'] },
+  { id: 'cedar-grand', kind: 'hotel', name: 'Cedar Grand Srinagar', location: 'Srinagar', image: photos.hotel, gallery: [photos.hotel, photos.room, photos.lake], category: 'Luxury hotel', price: 18500, description: 'A polished city retreat with generous rooms and attentive hospitality.', roomTypes: ['Deluxe room', 'Executive suite'], facilities: ['Restaurant', 'Spa', 'Room service', 'Heating'], checkIn: '2:00 PM', checkOut: '12:00 PM', highlights: ['Full-service stay', 'Spacious rooms', 'Central Srinagar'] },
+  { id: 'willow-budget-stay', kind: 'hotel', name: 'Willow Guesthouse', location: 'Srinagar', image: photos.room, gallery: [photos.room, photos.houseboat, photos.lake], category: 'Budget stay', price: 3400, description: 'A simple, welcoming base for travellers who plan to spend their days exploring.', roomTypes: ['Standard room', 'Twin room'], facilities: ['Breakfast available', 'Wi-Fi', 'Heating'], checkIn: '12:00 PM', checkOut: '10:00 AM', highlights: ['Good value', 'Friendly hosting', 'Easy city access'] },
+]
+
+export const destinations: Destination[] = [
+  {
+    id: 'srinagar', name: 'Srinagar', aliases: [], image: photos.lake, count: 'Lake & heritage',
+    distance: '0 km (city base)', travelTime: '15-60 min within the city', maxDriveHours: 1,
+    detail: 'Lake mornings, Mughal gardens and old-city lanes make Srinagar a relaxed starting point for the valley.',
+    suggestedVisit: '1-2 days', season: 'Year-round; gardens at their best in spring and summer',
+    accessNote: 'City travel depends on traffic and the location of your stay. The tulip garden opens only for a short spring season.',
+    attractions: [{ name: 'Dal Lake', detail: 'Shikara rides and lake-side walks; boat charges are separate.' }, { name: 'Mughal gardens', detail: 'Nishat Bagh, Shalimar Bagh and Chashme Shahi.' }, { name: 'Pari Mahal', detail: 'Terraced gardens with views over the lake.' }, { name: 'Old city & Hazratbal', detail: 'Heritage lanes and the lake-side shrine; respect local dress and visiting rules.' }, { name: 'Tulip Garden', detail: 'A seasonal spring visit, subject to official opening dates.' }],
+  },
+  {
+    id: 'gulmarg', name: 'Gulmarg', aliases: [], image: photos.mountain, count: 'Mountain escape',
+    distance: '50-55 km', travelTime: '1.5-2.5 hours', maxDriveHours: 2.5,
+    detail: 'Wide meadows and high mountain scenery, with snow activities in winter and walking trails in warmer months.',
+    suggestedVisit: 'Full day or 1-2 nights', season: 'Spring-autumn for meadows; winter for snow',
+    accessNote: 'Gondola tickets require separate booking and operations depend on weather. Snow can require local transfers or chains; high-altitude activities need extra care.',
+    attractions: [{ name: 'Gulmarg Gondola', detail: 'Kongdori and the higher Apharwat section, when operating.' }, { name: 'Gulmarg meadow', detail: 'Gentle walks around the meadow and golf-course area.' }, { name: 'Drung Waterfall', detail: 'A nearby stop via Tangmarg; winter paths can be icy.' }],
+  },
+  {
+    id: 'pahalgam', name: 'Pahalgam', aliases: [], image: photos.meadow, count: 'River country',
+    distance: '90-100 km', travelTime: '2.5-3.5 hours', maxDriveHours: 3.5,
+    detail: 'Pine-fringed paths and the Lidder River reward a slower stay, with several valleys to explore from town.',
+    suggestedVisit: '1-2 nights; a day trip is possible but long', season: 'Spring-autumn; winter access depends on snow',
+    accessNote: 'Aru, Betaab Valley and Chandanwari add travel beyond Pahalgam. Local taxi rules and separate entry charges may apply.',
+    attractions: [{ name: 'Aru Valley', detail: 'Mountain village and meadow scenery beyond the town.' }, { name: 'Betaab Valley', detail: 'River-side scenery with a separate entry fee.' }, { name: 'Chandanwari', detail: 'A higher valley road, subject to seasonal access.' }, { name: 'Baisaran', detail: 'A walking or pony excursion; not a standard car stop.' }, { name: 'Lidder River', detail: 'Riverside walks around Pahalgam.' }],
+  },
+  {
+    id: 'sonamarg', name: 'Sonamarg', aliases: ['Sonmarg'], image: photos.snow, count: 'Alpine day out',
+    distance: '80-85 km', travelTime: '2-3 hours', maxDriveHours: 3,
+    detail: 'An alpine valley beside the Sind River, with meadow views and access to higher mountain excursions.',
+    suggestedVisit: 'Full day or 1 night', season: 'Late spring-autumn; winter operations vary',
+    accessNote: 'Check road and activity access before departure. Thajiwas excursions and any onward Zoji La trip require separate time and arrangements.',
+    attractions: [{ name: 'Thajiwas area', detail: 'Walking or pony excursions towards glacier scenery, depending on conditions.' }, { name: 'Sind River', detail: 'Scenic stops along the valley; avoid entering fast-flowing water.' }, { name: 'Sonamarg meadow', detail: 'Open views and short walks near the town.' }, { name: 'Zoji La', detail: 'An optional onward mountain-pass excursion, not included in the Srinagar estimate; seasonal restrictions apply.' }],
+  },
+  {
+    id: 'doodhpathri', name: 'Doodhpathri', aliases: ['Dudhpatri', 'Doodhpatri'], image: photos.valley, count: 'Quiet meadow',
+    distance: '40-45 km', travelTime: '1.5-2 hours', maxDriveHours: 2,
+    detail: 'Rolling grassland and forested slopes, well suited to an unhurried picnic and short meadow walks.',
+    suggestedVisit: 'Half to full day', season: 'Late spring-autumn',
+    accessNote: 'Snow can restrict the upper road. River paths are uneven, and facilities are limited away from the main meadow.',
+    attractions: [{ name: 'Doodhpathri meadow', detail: 'Open grassland for gentle walks and a picnic.' }, { name: 'Shaliganga River', detail: 'A walk down to river scenery; wear shoes with grip.' }, { name: 'Tangnar', detail: 'Forest and meadow stops on the approach road.' }],
+  },
+  {
+    id: 'yusmarg', name: 'Yusmarg', aliases: ['USMRG', 'Yousmarg', 'Yusmarg'], image: photos.meadow, count: 'Meadow & forest',
+    distance: '45-50 km', travelTime: '1.5-2.5 hours', maxDriveHours: 2.5,
+    detail: 'A quieter meadow escape with forest walks and longer trails for guests who want time outdoors.',
+    suggestedVisit: 'Full day', season: 'Late spring-autumn',
+    accessNote: 'Doodh Ganga and Nilnag are walking excursions, not drive-up stops. Check trail conditions and allow time to return before dark.',
+    attractions: [{ name: 'Yusmarg meadow', detail: 'Easy meadow walks beside the surrounding forest.' }, { name: 'Doodh Ganga', detail: 'A forest walk to the river; route and duration depend on conditions.' }, { name: 'Nilnag Lake', detail: 'A longer guided walking excursion, arranged separately.' }, { name: 'Charar-e-Sharief', detail: 'A shrine town that can be considered on the approach route.' }],
+  },
+  {
+    id: 'peer-ki-gali', name: 'Peer Ki Gali', aliases: ['Peer Ki Gai', 'Pir Ki Gali', 'Peer Ki Gali'], image: photos.mountain, count: 'High mountain pass',
+    distance: '140-150 km via Shopian', travelTime: '4-5 hours', maxDriveHours: 5,
+    detail: 'A high pass on the Mughal Road, with dramatic mountain scenery and a journey that deserves a full day of its own.',
+    suggestedVisit: 'Long full day; consider a tailored overnight route', season: 'Usually late spring-autumn when the Mughal Road is open',
+    accessNote: 'The pass is often closed by snow and may have traffic restrictions. Confirm opening and weather with the team before planning; avoid a rushed late return.',
+    attractions: [{ name: 'Peer Ki Gali pass & shrine', detail: 'Mountain views and a shrine at the pass.' }, { name: 'Mughal Road viewpoints', detail: 'Scenic stops on the approach, where parking is safe.' }, { name: 'Dubjan', detail: 'Forest and river scenery along the Shopian approach.' }],
+  },
+  {
+    id: 'aharbal', name: 'Aharbal Waterfall', aliases: ['Herbal Waterfall', 'Aharbal', 'Aherbal'], image: photos.valley, count: 'Waterfall & forest',
+    distance: '70-75 km', travelTime: '2-3 hours', maxDriveHours: 3,
+    detail: 'A striking waterfall on the Veshu River, surrounded by wooded scenery in the southern valley.',
+    suggestedVisit: 'Full day', season: 'Spring-autumn; winter access varies',
+    accessNote: 'Viewpoints involve steps and uneven paths. Stay behind barriers; slippery rocks and strong currents make river access unsafe.',
+    attractions: [{ name: 'Aharbal Waterfall viewpoints', detail: 'Marked viewpoints around the waterfall gorge.' }, { name: 'Veshu River scenery', detail: 'Forest-side walks on designated paths.' }, { name: 'Kungwattan meadow', detail: 'A separate trekking excursion requiring more time and a guide.' }],
+  },
+  {
+    id: 'gurez', name: 'Gurez Valley', aliases: ['Dawar'], image: photos.mountain, count: 'Farther afield',
+    distance: '125-140 km', travelTime: '5-7 hours', maxDriveHours: 7,
+    detail: 'A remote valley beyond Razdan Pass, known for the Kishanganga River and mountain village life.',
+    suggestedVisit: '2-3 nights; not a casual day trip', season: 'Usually late spring-autumn, subject to pass opening',
+    accessNote: 'Razdan Pass closes in winter. Check road status, identification or permit requirements and accommodation ahead; mobile coverage can be limited.',
+    attractions: [{ name: 'Habba Khatoon peak', detail: 'Distinctive mountain views near Dawar.' }, { name: 'Kishanganga River', detail: 'Valley scenery and village-side walks.' }, { name: 'Razdan Pass', detail: 'A seasonal viewpoint on the approach.' }, { name: 'Tulail Valley', detail: 'An additional onward excursion with extra travel and access checks.' }],
+  },
+  {
+    id: 'manasbal', name: 'Manasbal Lake', aliases: ['Manasbal', 'Safapora'], image: photos.lake, count: 'Lake day out',
+    distance: '30-35 km', travelTime: '1-1.5 hours', maxDriveHours: 1.5,
+    detail: 'A quieter lake north of Srinagar, with garden views and relaxed time by the water.',
+    suggestedVisit: 'Half day', season: 'Spring-autumn',
+    accessNote: 'Boat availability and charges vary. Wular is a separate onward drive, not included in this travel estimate.',
+    attractions: [{ name: 'Manasbal lakefront', detail: 'Water views, gardens and seasonal boat rides.' }, { name: 'Jharokha Bagh', detail: 'A historic garden beside the lake.' }],
+  },
+  {
+    id: 'wular', name: 'Wular Lake', aliases: ['Wullar', 'Bandipora'], image: photos.lake, count: 'Wetland & birdlife',
+    distance: '55-65 km to the Bandipora side', travelTime: '1.5-2.5 hours', maxDriveHours: 2.5,
+    detail: 'Broad wetland landscapes and birdlife, with views that vary with season and water level.',
+    suggestedVisit: 'Half to full day', season: 'Spring-autumn; birdlife varies by season',
+    accessNote: 'Wular has several approach points. The distance here is for the Bandipora side; confirm the chosen viewpoint and local access.',
+    attractions: [{ name: 'Wular lake viewpoints', detail: 'Wide lake views from accessible designated stops.' }, { name: 'Watlab', detail: 'An alternative lake-view area with a separate approach route.' }],
+  },
+  {
+    id: 'dachigam', name: 'Dachigam National Park', aliases: ['Dachigam', 'Harwan'], image: photos.meadow, count: 'Wildlife & woodland',
+    distance: '20-25 km to the entrance', travelTime: '45-90 min', maxDriveHours: 1.5,
+    detail: 'Protected woodland near Srinagar, home to the endangered Hangul deer and rich Himalayan habitat.',
+    suggestedVisit: 'Half day, subject to permission', season: 'Seasonal visitor access; confirm in advance',
+    accessNote: 'Entry requires advance permission or booking with the relevant authorities. Wildlife sightings are not guaranteed; deeper park access is restricted.',
+    attractions: [{ name: 'Lower Dachigam', detail: 'Permitted nature walks or visits as arranged by park authorities.' }, { name: 'Harwan Garden', detail: 'A nearby garden stop outside the national park.' }],
+  },
+]
+
+export const sampleReviews: Review[] = [
+  { id: 'preview-1', name: 'Sample traveller', destination: 'Srinagar & Gulmarg', category: 'Couple journey', rating: 5, text: 'Preview content for the future reviews section. Replace with an approved customer review before publishing.', date: 'Design preview' },
+  { id: 'preview-2', name: 'Sample traveller', destination: 'Pahalgam', category: 'Family stay', rating: 5, text: 'This clearly labelled sample helps preview the layout; it is not a verified testimonial.', date: 'Design preview' },
+  { id: 'preview-3', name: 'Sample traveller', destination: 'Kashmir', category: 'Private tour', rating: 4, text: 'Sample review copy for design preview only. No customer feedback is being represented as genuine.', date: 'Design preview' },
+]
