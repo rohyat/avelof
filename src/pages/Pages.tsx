@@ -1,17 +1,19 @@
-import { useState } from 'react'
-import { ArrowDown, ArrowRight, ArrowUpRight, Check, Compass, Mail, MapPin, Plus, Star, Users } from 'lucide-react'
-import { Link, useLocation, useNavigate, useOutletContext, useParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import type { FormEvent } from 'react'
+import { ArrowDown, ArrowRight, ArrowUpRight, Check, Compass, Mail, MapPin, Phone, Plus, Star, Tag, Users } from 'lucide-react'
+import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import { business } from '../config'
-import { destinations, hotels, rentalCars, sampleReviews, tourPackages } from '../data/catalog'
+import { destinations, hotels, rentalCars, tourPackages, verifiedGuestRatings } from '../data/catalog'
+import { createWhatsAppUrl, enquiryWhatsAppUrl } from '../services/bookingService'
 import BookingModal, { EnquiryForm } from '../components/BookingModal'
 import TripPlanner from '../components/TripPlanner'
+import { clearSavedTripPlan } from '../services/tripPlanStorage'
 import type { CatalogItem, CatalogKind, Hotel, PreparedRequest, RentalCar, TourPackage } from '../types'
 import type { SiteContext } from '../components/SiteLayout'
 
 const allItems: Record<CatalogKind, CatalogItem[]> = { package: tourPackages, car: rentalCars, hotel: hotels }
+const hotelLocations = [...new Set(hotels.map((hotel) => hotel.location))]
 const routeFor: Record<CatalogKind, string> = { package: '/tour-packages', car: '/car-rentals', hotel: '/hotels' }
-const bookingLabel: Record<CatalogKind, string> = { package: 'Enquire Now', car: 'Enquire Now', hotel: 'Enquire Now' }
-
 function useBooking() {
   return useOutletContext<SiteContext>().openBooking
 }
@@ -56,11 +58,12 @@ export function HomePage() {
     <section className="home-hero">
       <div className="hero-image" role="img" aria-label="Mountain lake landscape, illustrative travel photography" />
       <div className="hero-shade" />
-      <div className="hero-content page-width"><h1>Kashmir,<br /><em>closer to you.</em></h1><p>Trust starts with honesty. We’ll plan transparently, care for every detail and welcome you like family from your first hello.</p><div className="hero-actions"><button className="button button-ivory" onClick={() => openBooking('package')}>Enquire Now <ArrowUpRight size={16} /></button><Link className="button button-ghost" to="/tour-packages">Explore journeys <ArrowRight size={16} /></Link></div></div>
+      <div className="hero-content page-width"><h1>Kashmir,<br /><em>closer to you.</em></h1><p>Discover Kashmir through local insight and journeys shaped around you.</p><div className="hero-actions"><button className="button button-ivory" onClick={() => openBooking('package')}>Enquire Now <ArrowUpRight size={16} /></button><Link className="button button-ghost" to="/tour-packages">Explore journeys <ArrowRight size={16} /></Link></div></div>
       <div className="hero-caption"><span>A sense of adventure</span><span>Illustrative travel photography</span></div>
       <a className="hero-scroll" href="#discover"><span>Scroll to discover</span><ArrowDown size={16} /></a>
     </section>
     <TripPlanner onContinue={setTripFields} />
+    <section className="offers-banner" aria-labelledby="offers-title"><div className="page-width offers-banner-inner"><span className="offers-icon"><Tag size={20} /></span><div><Eyebrow>Featured Kashmir package</Eyebrow><h2 id="offers-title">{tourPackages[0].name} Kashmir escape</h2><p>{tourPackages[0].duration} · from {money(tourPackages[0].price)} per person. Ask us about current seasonal rates for your travel dates.</p></div><div className="offers-actions"><Link className="button button-dark" to={`/tour-packages/${tourPackages[0].id}`}>Explore package <ArrowRight size={16} /></Link><a className="text-link" href={enquiryWhatsAppUrl('current package and stay offers')} target="_blank" rel="noreferrer">Ask about offers <ArrowUpRight size={15} /></a></div></div></section>
     <section className="section page-width feature-section"><SectionHeading eyebrow="Journeys made with care" title={'Clear plans. Local care.\nRoom for wonder.'} copy="We’ll listen first, share honest recommendations and shape a Kashmir journey around the people travelling with us." link="See all journeys" to="/tour-packages" /><div className="catalog-grid">{tourPackages.slice(0, 3).map((item) => <CatalogCard key={item.id} item={item} kind="package" />)}</div></section>
     <section className="destination-band"><div className="page-width"><SectionHeading eyebrow="The valley, in many moods" title="Find your own kind of Kashmir." link="Explore destinations" to="/destinations" /><div className="destination-grid">{destinations.slice(0, 6).map((place, index) => <Link className={`destination-tile destination-tile-${index + 1}`} to={`/destinations?place=${encodeURIComponent(place.name)}`} key={place.name}><img src={place.image} alt={place.name} loading="lazy" /><span className="destination-overlay" /><span className="destination-text"><small>{place.count}</small><strong>{place.name}</strong><span>{place.detail}</span></span><ArrowUpRight className="destination-arrow" size={18} /></Link>)}</div></div></section>
     <section className="section page-width split-promo"><div className="promo-photo"><img src={rentalCars[1].image} alt="Comfortable vehicle for Kashmir mountain travel" loading="lazy" /><span>THE VALLEY, YOUR WAY</span></div><div className="promo-copy"><Eyebrow>Go at your own pace</Eyebrow><h2>Good roads.<br /><em>Better company.</em></h2><p>From a quick Srinagar pickup to a week on the mountain roads, travel with a local driver who knows the turns and the stories.</p><div className="service-points"><span><Check size={15} /> Comfortable vehicles</span><span><Check size={15} /> Local, experienced drivers</span><span><Check size={15} /> Routes made around you</span></div><Link className="button button-dark" to="/car-rentals">Explore car rentals <ArrowRight size={16} /></Link></div></section>
@@ -74,16 +77,40 @@ export function HomePage() {
 export function CollectionPage() {
   const location = useLocation()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const kind = kindFromPath(location.pathname)
-  const openBooking = useBooking()
+  const navigationState = location.state as { tripReturn?: { sectionId?: string; returnPath?: string } } | null
+  const tripReturn = kind === 'hotel'
+    && (navigationState?.tripReturn?.sectionId === 'custom-trip' || navigationState?.tripReturn?.sectionId === 'package-planner')
+    && (navigationState.tripReturn.returnPath === '/' || navigationState.tripReturn.returnPath === '/tour-packages')
+    ? navigationState.tripReturn as { sectionId: string; returnPath: string }
+    : null
+  const previousPath = useRef(location.pathname)
+  const tripReturnRef = useRef(tripReturn)
+  useEffect(() => {
+    if (tripReturn) tripReturnRef.current = tripReturn
+  }, [tripReturn])
+  useEffect(() => {
+    const previous = previousPath.current
+    if (previous === '/hotels' && location.pathname !== '/hotels') {
+      const returnContext = tripReturnRef.current
+      if (returnContext && location.pathname !== returnContext.returnPath) clearSavedTripPlan(returnContext.sectionId)
+      tripReturnRef.current = null
+    }
+    previousPath.current = location.pathname
+  }, [location.pathname])
   const [tripFields, setTripFields] = useState<Record<string, string> | null>(null)
   const items = allItems[kind]
-  const params = new URLSearchParams(location.search)
-  const [search, setSearch] = useState(params.get('search') ?? '')
-  const [category, setCategory] = useState('All')
-  const [maxPrice, setMaxPrice] = useState('all')
-  const [duration, setDuration] = useState('all')
-  const [seats, setSeats] = useState('all')
+  const category = searchParams.get('category') ?? 'All'
+  const maxPrice = searchParams.get('price') ?? 'all'
+  const locationFilter = searchParams.get('location') ?? 'all'
+  const seats = searchParams.get('seats') ?? 'all'
+  const updateFilter = (key: string, value: string, defaultValue: string) => {
+    const next = new URLSearchParams(searchParams)
+    if (value === defaultValue) next.delete(key)
+    else next.set(key, value)
+    setSearchParams(next, { replace: true })
+  }
   const headings: Record<CatalogKind, { label: string; title: string; copy: string }> = {
     package: { label: 'Journeys through Kashmir', title: 'Find your kind of journey.', copy: 'Small-group and private routes, shaped by local knowledge and a little breathing room.' },
     car: { label: 'The open road', title: 'The valley, at your pace.', copy: 'Comfortable vehicles and local drivers for airport transfers, day trips and longer journeys.' },
@@ -91,21 +118,27 @@ export function CollectionPage() {
   }
   const categories = ['All', ...new Set(items.map((item) => item.category))]
   const filtered = items.filter((item) => {
-    const searchable = `${item.name} ${item.location} ${item.description}`.toLowerCase()
     const priceLimit = maxPrice === 'all' ? Infinity : Number(maxPrice)
-    const packageDays = kind === 'package' ? Number((item as TourPackage).duration.match(/(\d+)\s*days/)?.[1] ?? 0) : 0
-    const matchDuration = kind !== 'package' || duration === 'all' || (duration === 'short' ? packageDays <= 5 : packageDays >= 6)
     const matchSeats = kind !== 'car' || seats === 'all' || (item as RentalCar).seats >= Number(seats)
-    return searchable.includes(search.toLowerCase()) && (category === 'All' || item.category === category) && item.price <= priceLimit && matchDuration && matchSeats
+    const matchLocation = kind !== 'hotel' || locationFilter === 'all' || item.location === locationFilter
+    return (category === 'All' || item.category === category) && item.price <= priceLimit && matchSeats && matchLocation
   })
 
   return <>
-    <section className="page-hero"><div className="page-width"><div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>{headings[kind].label}</span></div><Eyebrow>{headings[kind].label}</Eyebrow><h1>{headings[kind].title}</h1><p>{headings[kind].copy}</p><div className="page-hero-mark">{kind === 'package' ? '01' : kind === 'car' ? '02' : '03'} <span>— Kashmir, India</span></div></div></section>
+    <section className="page-hero"><div className="page-width"><div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>{headings[kind].label}</span></div><Eyebrow>{headings[kind].label}</Eyebrow><h1>{headings[kind].title}</h1><p>{headings[kind].copy}</p>{kind === 'hotel' && tripReturn && <button className="button button-outline trip-return-button" type="button" onClick={() => navigate(-1)}>Back to your trip <ArrowRight size={16} /></button>}</div></section>
     {kind === 'package' && <TripPlanner onContinue={setTripFields} sectionId="package-planner" />}
-    <section className="catalog-page page-width">{kind !== 'package' && <div className="filters-bar"><label className="filter-search"><span>Search</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={`Search ${headings[kind].label.toLowerCase()}`} /></label><label><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}>{categories.map((value) => <option key={value}>{value}</option>)}</select></label>{kind === 'car' && <label><span>Seats</span><select value={seats} onChange={(event) => setSeats(event.target.value)}><option value="all">Any capacity</option><option value="4">4+ seats</option><option value="6">6+ seats</option><option value="8">8+ seats</option></select></label>}<label><span>Price</span><select value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)}><option value="all">Any price</option><option value="25000">Under ₹25,000</option><option value="35000">Under ₹35,000</option><option value="50000">Under ₹50,000</option></select></label><span className="result-count">{filtered.length} {filtered.length === 1 ? 'option' : 'options'}</span></div>}
-      {filtered.length ? <div className="catalog-grid">{filtered.map((item) => <CatalogCard key={item.id} item={item} kind={kind} />)}</div> : <div className="empty-state"><Compass size={28} /><h2>No matches just yet</h2><p>Try a different search or clear a filter to see more of Kashmir.</p><button className="button button-outline" onClick={() => { setSearch(''); setCategory('All'); setMaxPrice('all'); setDuration('all'); setSeats('all'); navigate(location.pathname) }}>Clear filters</button></div>}
+    <section className="catalog-page page-width">
+      {kind !== 'package' && <div className="filters-bar">
+        <div className="filter-guidance"><strong>Need help choosing?</strong><p>Our local team can help you find the right fit.</p></div>
+        <label><span>Category</span><select value={category} onChange={(event) => updateFilter('category', event.target.value, 'All')}>{categories.map((value) => <option key={value}>{value}</option>)}</select></label>
+        {kind === 'hotel' && <label><span>Location</span><select value={locationFilter} onChange={(event) => updateFilter('location', event.target.value, 'all')}><option value="all">All locations</option>{hotelLocations.map((value) => <option key={value}>{value}</option>)}</select></label>}
+        {kind === 'car' && <label><span>Seats</span><select value={seats} onChange={(event) => updateFilter('seats', event.target.value, 'all')}><option value="all">Any capacity</option><option value="4">4+ seats</option><option value="6">6+ seats</option><option value="8">8+ seats</option></select></label>}
+        <label><span>Price</span><select value={maxPrice} onChange={(event) => updateFilter('price', event.target.value, 'all')}><option value="all">Any price</option><option value="25000">Under ₹25,000</option><option value="35000">Under ₹35,000</option><option value="50000">Under ₹50,000</option></select></label>
+        <span className="result-count">{filtered.length} {filtered.length === 1 ? 'option' : 'options'}</span>
+      </div>}
+      {filtered.length ? <div className="catalog-grid">{filtered.map((item) => <CatalogCard key={item.id} item={item} kind={kind} />)}</div> : <div className="empty-state"><Compass size={28} /><h2>No matches just yet</h2><p>Try another category or clear a filter to see more of Kashmir.</p><button className="button button-outline" onClick={() => setSearchParams({}, { replace: true })}>Clear filters</button></div>}
     </section>
-    <section className="catalog-note page-width"><div><Eyebrow>Made to fit</Eyebrow><h2>Looking for something specific?</h2></div><button className="button button-dark" onClick={() => openBooking(kind)}>Ask a local <ArrowUpRight size={16} /></button></section>
+    <section className="catalog-note page-width"><div><Eyebrow>Need help?</Eyebrow><h2>Looking for something?</h2><p>Have a question about availability, pricing, or choosing the right option? Contact our team and we’ll help.</p></div><Link className="button button-dark" to="/contact">Contact us <ArrowUpRight size={16} /></Link></section>
     {tripFields && <BookingModal kind="package" selectedItem="Custom package" initialFields={tripFields} onClose={() => setTripFields(null)} />}
   </>
 }
@@ -118,14 +151,14 @@ export function DetailPage() {
   if (!item) return <NotFoundPage />
 
   return <>
-    <section className="detail-top page-width"><div className="breadcrumb"><Link to="/">Home</Link><span>/</span><Link to={routeFor[kind]}>{kind === 'package' ? 'Tour packages' : kind === 'car' ? 'Car rentals' : 'Hotels'}</Link><span>/</span><span>{item.name}</span></div><div className="detail-heading"><div><Eyebrow>{item.category} · {item.location}</Eyebrow><h1>{item.name}</h1><p>{item.description}</p></div><button className="button button-dark" onClick={() => openBooking(kind, item.name)}>{bookingLabel[kind]} <ArrowRight size={16} /></button></div></section>
+    <section className="detail-top page-width"><div className="breadcrumb"><Link to="/">Home</Link><span>/</span><Link to={routeFor[kind]}>{kind === 'package' ? 'Tour packages' : kind === 'car' ? 'Car rentals' : 'Hotels'}</Link><span>/</span><span>{item.name}</span></div><div className="detail-heading"><div><Eyebrow>{item.category} · {item.location}</Eyebrow><h1>{item.name}</h1><p>{item.description}</p></div><button className="button button-dark" onClick={() => openBooking(kind, item.name)}>Enquire Now <ArrowRight size={16} /></button></div></section>
     <section className="detail-gallery page-width"><img className="gallery-main" src={item.gallery[0]} alt={item.name} /><img src={item.gallery[1] ?? item.image} alt={`${item.name} view`} /><img src={item.gallery[2] ?? item.image} alt={`${item.name} detail`} /></section>
     <div className="detail-layout page-width"><div className="detail-body">
       {kind === 'package' && <PackageDetail item={item as TourPackage} />}
       {kind === 'car' && <CarDetail item={item as RentalCar} />}
       {kind === 'hotel' && <HotelDetail item={item as Hotel} />}
       <section className="detail-related"><Eyebrow>Keep exploring</Eyebrow><h2>More ways to see Kashmir</h2><div className="related-links"><Link to="/tour-packages">Journeys <ArrowRight size={15} /></Link><Link to="/car-rentals">Local transport <ArrowRight size={15} /></Link><Link to="/hotels">Stays <ArrowRight size={15} /></Link></div></section>
-    </div><aside className="detail-aside"><Eyebrow>From</Eyebrow><strong>{money(item.price)}</strong><span>{kind === 'package' ? 'per person' : kind === 'car' ? 'per day, estimated' : 'per night, estimated'}</span><p>Final price depends on dates, availability and the details of your trip. We’ll confirm everything with you directly.</p><button className="button button-dark" onClick={() => openBooking(kind, item.name)}>{bookingLabel[kind]} <ArrowRight size={16} /></button><a href={`mailto:${business.email}`} className="aside-email"><Mail size={16} /> Email AVELOF</a></aside></div>
+    </div><aside className="detail-aside"><Eyebrow>From</Eyebrow><strong>{money(item.price)}</strong><span>{kind === 'package' ? 'per person' : kind === 'car' ? 'per day, estimated' : 'per night, estimated'}</span><p>Final price depends on dates, availability and the details of your trip. We’ll confirm everything with you directly.</p><button className="button button-dark" onClick={() => openBooking(kind, item.name)}>Enquire Now <ArrowRight size={16} /></button><a href={`mailto:${business.email}`} className="aside-email"><Mail size={16} /> Email AVELOF</a></aside></div>
   </>
 }
 
@@ -162,12 +195,55 @@ function IncludedLists({ inclusions, exclusions }: { inclusions: string[]; exclu
 }
 
 export function ReviewsPage() {
-  const [filter, setFilter] = useState('All')
-  const filters = ['All', ...new Set(sampleReviews.map((review) => review.category))]
-  const shown = sampleReviews.filter((review) => filter === 'All' || review.category === filter)
+  const [rating, setRating] = useState('')
+  const [preparedReviewUrl, setPreparedReviewUrl] = useState<string | null>(null)
+
+  function prepareReview(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const fields = new FormData(event.currentTarget)
+    const message = [
+      'Hello AVELOF, I would like to submit a customer review for moderation.',
+      '',
+      `Guest name: ${String(fields.get('reviewerName') ?? '')}`,
+      `Booking ID: ${String(fields.get('bookingId') ?? '')}`,
+      `Booked package: ${String(fields.get('packageName') ?? '')}`,
+      `Rating: ${String(fields.get('rating') ?? '')}/5`,
+      '',
+      `Review: ${String(fields.get('reviewText') ?? '')}`,
+      '',
+      'The guest confirmed this is their own experience and agreed to publication consideration.',
+    ].join('\n')
+    setPreparedReviewUrl(createWhatsAppUrl(message))
+  }
+
   return <>
-    <section className="page-hero"><div className="page-width"><div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>Reviews</span></div><Eyebrow>Stories from the valley</Eyebrow><h1>Travel leaves<br /><em>a little something.</em></h1><p>Our reviews will grow with the journeys we make together. Preview entries below are clearly labelled and are not customer testimonials.</p></div></section>
-    <section className="reviews-page page-width"><div className="review-disclosure"><span className="preview-label">Design preview only</span><p>The content on this page is sample copy for layout review. No customer stories have been represented as genuine or verified.</p></div><div className="filter-pills" aria-label="Filter reviews">{filters.map((value) => <button key={value} className={filter === value ? 'is-selected' : ''} onClick={() => setFilter(value)}>{value}</button>)}</div><div className="review-grid">{shown.map((review) => <article className="review-card" key={review.id}><span className="preview-label">Sample · not verified</span><div className="stars" aria-label={`${review.rating} out of 5 stars`}>{Array.from({ length: review.rating }, (_, index) => <Star key={index} />)}</div><blockquote>{review.text}</blockquote><div className="review-card-footer"><span className="review-avatar">{review.name.charAt(0)}</span><div><strong>{review.name}</strong><span>{review.destination} · {review.category}</span></div><small>{review.date}</small></div></article>)}</div><div className="review-invite"><div><Eyebrow>Travelled with us?</Eyebrow><h2>We’d love to hear your story.</h2></div><Link className="button button-dark" to="/contact">Share your experience <ArrowRight size={16} /></Link></div></section>
+    <section className="page-hero"><div className="page-width"><div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>Reviews</span></div><Eyebrow>Stories from the valley</Eyebrow><h1>Travel leaves<br /><em>a little something.</em></h1><p>Every honest experience matters. We welcome positive, mixed, and critical feedback from our guests.</p></div></section>
+    <section className="reviews-page page-width">
+      <div className="review-disclosure"><strong>All perspectives are welcome</strong></div>
+      <div className="review-grid">{verifiedGuestRatings.map((review) => <article className="review-card" key={review.id}>
+        <div className="review-card-head"><strong>{review.name}</strong><span className="preview-review-label">Verified</span></div>
+        <div className="review-stars" aria-label={`${review.rating} out of 5 stars`}>{Array.from({ length: review.rating }, (_, index) => <Star key={index} />)}</div>
+        <h3 className="review-card-title">{review.reviewTitle}</h3>
+        <blockquote>{review.reviewText}</blockquote>
+        <div className="review-card-footer"><span>Package: {review.packageName}</span><small>Booking ID: {review.bookingId}</small></div>
+      </article>)}</div>
+      <div className="review-invite"><div><Eyebrow>Travelled with us?</Eyebrow><h2>We’d love to hear your story.</h2></div><a className="button button-dark" href="#share-review">Write a review <ArrowRight size={16} /></a></div>
+      <section className="review-submission" id="share-review" aria-labelledby="review-form-title">
+        <div><Eyebrow>Share your experience</Eyebrow><h2 id="review-form-title">Tell us about your trip.</h2><p>Positive, mixed, or critical feedback is welcome. Add your Booking ID so our team can check your booking before considering the review for publication.</p></div>
+        {preparedReviewUrl ? <div className="review-ready" role="status"><h3>Your review is ready to send.</h3><p>WhatsApp will open with your review addressed to AVELOF. Sending it does not publish it; our team will verify it before adding it to the site.</p><div className="review-ready-actions"><a className="button button-dark" href={preparedReviewUrl} target="_blank" rel="noreferrer">Open WhatsApp <ArrowUpRight size={16} /></a><button className="text-link" type="button" onClick={() => { setPreparedReviewUrl(null); setRating('') }}>Edit review</button></div></div> : <form className="review-submission-form" onSubmit={prepareReview}>
+          <label>Full name<input name="reviewerName" autoComplete="name" maxLength={100} required placeholder="Your name" /></label>
+          <label>Booking ID<input name="bookingId" autoComplete="off" maxLength={80} required placeholder="From your booking confirmation" /></label>
+          <label>Booked package<select name="packageName" defaultValue="" required><option value="" disabled>Select your package</option>{tourPackages.map((item) => <option key={item.id} value={item.name}>{item.name} · {item.duration}</option>)}</select></label>
+          <fieldset className="review-rating"><legend>Your rating</legend><div className="review-star-options">{Array.from({ length: 5 }, (_, index) => {
+            const value = String(index + 1)
+            return <label className={Number(rating) >= Number(value) ? 'is-selected' : ''} key={value}><input aria-label={`${value} star${value === '1' ? '' : 's'}`} type="radio" name="rating" value={value} checked={rating === value} onChange={(event) => setRating(event.target.value)} required /><Star aria-hidden="true" /></label>
+          })}</div></fieldset>
+          <label className="review-text-field">Your review<textarea name="reviewText" rows={5} minLength={20} maxLength={1600} required placeholder="What stood out about your Kashmir trip?" /></label>
+          <label className="review-consent"><input type="checkbox" name="publicationConsent" required /><span>I confirm this is my own experience and allow AVELOF to consider it for publication if verified.</span></label>
+          <button className="button button-dark" type="submit">Continue to WhatsApp <ArrowRight size={16} /></button>
+        </form>}
+      </section>
+    </section>
   </>
 }
 
@@ -185,7 +261,7 @@ export function ContactPage() {
 
   return <>
     <section className="page-hero contact-hero"><div className="page-width"><div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>Contact</span></div><Eyebrow>We’re a message away</Eyebrow><h1>Let’s talk<br /><em>about Kashmir.</em></h1><p>Whether you have dates in mind or just a first idea, we’d love to hear from you.</p></div></section>
-    <section className="contact-layout page-width"><div className="contact-details"><Eyebrow>Reach us directly</Eyebrow><h2>A real conversation,<br />with a local team.</h2><p>Tell us where you’re starting from. We’ll help with the next step.</p><a className="contact-method" href={`mailto:${business.email}`}><span><Mail /></span><div><small>Email enquiries</small><strong>{business.email}</strong></div><ArrowUpRight /></a><a className="contact-method" href={business.instagram} target="_blank" rel="noreferrer"><span><Compass /></span><div><small>Instagram</small><strong>{business.instagramHandle}</strong></div><ArrowUpRight /></a><div className="location-note"><MapPin size={16} /><span>Kashmir, India<br /><small>Local travel assistance across the valley</small></span></div></div>
+    <section className="contact-layout page-width"><div className="contact-details"><Eyebrow>Reach us directly</Eyebrow><h2>A real conversation,<br />with a local team.</h2><p>Tell us where you’re starting from. We’ll help with the next step.</p><a className="contact-method" href={`tel:${business.phone.replace(/[^+\d]/g, '')}`}><span><Phone /></span><div><small>Call us</small><strong>{business.phone}</strong></div><ArrowUpRight /></a><a className="contact-method" href={`mailto:${business.email}`}><span><Mail /></span><div><small>Email enquiries</small><strong>{business.email}</strong></div><ArrowUpRight /></a><a className="contact-method" href={business.instagram} target="_blank" rel="noreferrer"><span><Compass /></span><div><small>Instagram</small><strong>{business.instagramHandle}</strong></div><ArrowUpRight /></a><div className="location-note"><MapPin size={16} /><span>Kashmir, India<br /><small>Local travel assistance across the valley</small></span></div></div>
       <div className="contact-form-wrap"><Eyebrow>Enquire Now</Eyebrow><h2>Your Kashmir starts here.</h2><EnquiryForm kind="contact" onPrepared={setRequest} /></div>
     </section>
     {request && <BookingModal kind="contact" initialRequest={request} onClose={() => setRequest(null)} />}

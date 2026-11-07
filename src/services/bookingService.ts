@@ -2,10 +2,20 @@ import { business } from '../config'
 import type { BookingPayload, PreparedRequest } from '../types'
 
 const requestTitles = {
-  package: 'Tour Package Booking Request',
-  car: 'Car Rental Booking Request',
-  hotel: 'Hotel Reservation Request',
+  package: 'Tour Package Enquiry',
+  car: 'Car Rental Enquiry',
+  hotel: 'Hotel Enquiry',
   contact: 'Website Enquiry',
+}
+
+export function createWhatsAppUrl(message: string) {
+  const phone = business.phone.replace(/\D/g, '')
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+}
+
+export function enquiryWhatsAppUrl(selectedItem?: string) {
+  const interest = selectedItem ? `about ${selectedItem}` : 'about planning a trip to Kashmir'
+  return createWhatsAppUrl(`Hello AVELOF, I’d like to enquire ${interest}. Please share more details.`)
 }
 
 export function prepareRequest(payload: BookingPayload): PreparedRequest {
@@ -20,6 +30,6 @@ export function prepareRequest(payload: BookingPayload): PreparedRequest {
     reference,
     subject,
     message,
-    emailUrl: `mailto:${business.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`,
+    whatsappUrl: createWhatsAppUrl(message),
   }
 }

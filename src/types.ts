@@ -60,14 +60,14 @@ export interface Hotel extends CatalogBase {
 
 export type CatalogItem = TourPackage | RentalCar | Hotel
 
-export interface Review {
+export interface VerifiedGuestRating {
   id: string
   name: string
-  destination: string
-  category: string
   rating: number
-  text: string
-  date: string
+  packageName: string
+  bookingId: string
+  reviewTitle: string
+  reviewText: string
 }
 
 export interface BookingPayload {
@@ -79,5 +79,5 @@ export interface PreparedRequest {
   reference: string
   subject: string
   message: string
-  emailUrl: string
+  whatsappUrl: string
 }

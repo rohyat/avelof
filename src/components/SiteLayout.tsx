@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom'
 import { ArrowRight, Menu, MessageCircle, X } from 'lucide-react'
 import { business } from '../config'
 import { hotels, rentalCars, tourPackages } from '../data/catalog'
@@ -15,20 +15,91 @@ const navItems = [
   ['Destinations', '/destinations'], ['Reviews', '/reviews'], ['About Us', '/about'], ['Contact', '/contact'],
 ]
 const currentYear = new Date().getFullYear()
+const scrollStoragePrefix = 'avelof:scroll:'
+
+interface SavedScrollPosition {
+  x: number
+  y: number
+  savedAt: number
+}
+
+function readScrollPosition(key: string): SavedScrollPosition | null {
+  try {
+    const saved = sessionStorage.getItem(`${scrollStoragePrefix}${key}`)
+    if (!saved) return null
+    const position = JSON.parse(saved) as SavedScrollPosition
+    if (Date.now() - position.savedAt > 24 * 60 * 60 * 1000) {
+      sessionStorage.removeItem(`${scrollStoragePrefix}${key}`)
+      return null
+    }
+    return position
+  } catch {
+    return null
+  }
+}
+
+function saveScrollPosition(key: string, x: number, y: number) {
+  try {
+    sessionStorage.setItem(`${scrollStoragePrefix}${key}`, JSON.stringify({ x, y, savedAt: Date.now() }))
+  } catch {
+    return
+  }
+}
 
 export default function SiteLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [booking, setBooking] = useState<{ kind: BookingKind; item?: string } | null>(null)
-  const [plannerVisible, setPlannerVisible] = useState(false)
+  const [workflowVisible, setWorkflowVisible] = useState(false)
   const location = useLocation()
+  const navigationType = useNavigationType()
+  const previousLocation = useRef({ pathname: location.pathname, hash: location.hash })
+
+  useLayoutEffect(() => {
+    window.history.scrollRestoration = 'manual'
+  }, [])
+
+  useLayoutEffect(() => {
+    const previous = previousLocation.current
+    if (location.hash) {
+      const targetId = decodeURIComponent(location.hash.slice(1))
+      document.getElementById(targetId)?.scrollIntoView({ block: 'start' })
+    } else if (navigationType === 'POP') {
+      const saved = readScrollPosition(location.key)
+      window.scrollTo({ left: saved?.x ?? 0, top: saved?.y ?? 0, behavior: 'instant' })
+    } else if (previous.pathname !== location.pathname || previous.hash) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    }
+    previousLocation.current = { pathname: location.pathname, hash: location.hash }
+  }, [location.hash, location.key, location.pathname, navigationType])
 
   useEffect(() => {
-    const planners = ['visit-planner', 'custom-trip', 'package-planner']
+    let frame = 0
+    let pendingPosition = { x: window.scrollX, y: window.scrollY }
+    const save = () => {
+      pendingPosition = { x: window.scrollX, y: window.scrollY }
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        saveScrollPosition(location.key, pendingPosition.x, pendingPosition.y)
+      })
+    }
+    const saveOnPageHide = () => saveScrollPosition(location.key, window.scrollX, window.scrollY)
+    window.addEventListener('scroll', save, { passive: true })
+    window.addEventListener('pagehide', saveOnPageHide)
+    return () => {
+      if (frame) saveScrollPosition(location.key, pendingPosition.x, pendingPosition.y)
+      window.removeEventListener('scroll', save)
+      window.removeEventListener('pagehide', saveOnPageHide)
+    }
+  }, [location.key])
+
+  useEffect(() => {
+    const workflows = ['visit-planner', 'custom-trip', 'package-planner', 'share-review']
       .map((id) => document.getElementById(id))
-      .filter((planner): planner is HTMLElement => planner !== null)
-    if (!planners.length) return
-    const observer = new IntersectionObserver((entries) => setPlannerVisible(entries.some((entry) => entry.isIntersecting)))
-    planners.forEach((planner) => observer.observe(planner))
+      .filter((workflow): workflow is HTMLElement => workflow !== null)
+    if (!workflows.length) return
+    const observer = new IntersectionObserver((entries) => setWorkflowVisible(entries.some((entry) => entry.isIntersecting)))
+    workflows.forEach((workflow) => observer.observe(workflow))
     return () => observer.disconnect()
   }, [location.pathname])
 
@@ -40,9 +111,9 @@ export default function SiteLayout() {
       '/car-rentals': { title: 'Kashmir Car Rentals | AVELOF', description: 'Find comfortable vehicles and local drivers for airport transfers, day trips and Kashmir journeys.' },
       '/hotels': { title: 'Kashmir Hotels & Stays | AVELOF', description: 'Discover houseboats, boutique hotels, family stays and mountain retreats across Kashmir.' },
       '/destinations': { title: 'Kashmir Places & Visit Planner | AVELOF', description: 'Compare Srinagar driving distances, discover Kashmir attractions and select destinations for a personalised visit enquiry.' },
-      '/reviews': { title: 'Traveller Stories | AVELOF', description: 'Learn about AVELOF review previews and share your Kashmir travel experience.' },
+      '/reviews': { title: 'Guest Reviews | AVELOF', description: 'Share honest feedback about your Kashmir trip and learn how guest reviews are verified.' },
       '/about': { title: 'About AVELOF | Kashmir Travel, Thoughtfully', description: 'Meet AVELOF, a Kashmir travel company focused on thoughtful journeys and local expertise.' },
-      '/contact': { title: 'Contact AVELOF | Plan a Kashmir Trip', description: 'Email AVELOF or prepare an enquiry to start planning your Kashmir journey.' },
+      '/contact': { title: 'Contact AVELOF | Plan a Kashmir Trip', description: 'Call, email or WhatsApp AVELOF to start planning your Kashmir journey.' },
     }
     const details = catalogItem
       ? { title: `${catalogItem.name} | AVELOF Kashmir`, description: catalogItem.description }
@@ -56,7 +127,7 @@ export default function SiteLayout() {
 
   return (
     <>
-      <div className="topline"><span>A more personal Kashmir journey starts here.</span><a href="/#custom-trip">Build your trip <ArrowRight size={14} /></a></div>
+      <div className="topline"><span>A more personal Kashmir journey starts here.</span><Link to="/#custom-trip">Customize your trip <ArrowRight size={14} /></Link></div>
       <header className="site-header">
         <Link className="brand" to="/" aria-label="AVELOF home" onClick={closeMenu}><span className="brand-mark">A</span><span>AVELOF<small>JOURNEYS BEYOND IMAGINATION</small></span></Link>
         <button className="icon-button menu-toggle" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X /> : <Menu />}</button>
@@ -65,7 +136,7 @@ export default function SiteLayout() {
           <button className="button button-dark nav-book" onClick={() => { openBooking('package'); closeMenu() }}>Enquire Now <ArrowRight size={15} /></button>
         </nav>
       </header>
-      <main key={location.pathname}><Outlet context={{ openBooking } satisfies SiteContext} /></main>
+      <main><Outlet context={{ openBooking } satisfies SiteContext} /></main>
       <footer className="site-footer">
         <div className="footer-main">
           <div className="footer-brand"><Link className="brand brand-light" to="/"><span className="brand-mark">A</span><span>AVELOF<small>JOURNEYS BEYOND IMAGINATION</small></span></Link><p>Journeys with a sense of place.<br />Made thoughtfully, in Kashmir.</p></div>
@@ -75,7 +146,7 @@ export default function SiteLayout() {
         </div>
         <div className="footer-bottom"><span>© {currentYear} AVELOF. All journeys begin with a conversation.</span><a href={business.website}>avelof.in</a></div>
       </footer>
-      <button className="button floating-enquiry" hidden={location.pathname === '/destinations' && plannerVisible} onClick={() => { openBooking('package'); closeMenu() }}><MessageCircle size={19} /> Enquire Now <ArrowRight size={16} /></button>
+      <button className="button floating-enquiry" hidden={workflowVisible} onClick={() => { openBooking('package'); closeMenu() }}><MessageCircle size={19} /> Enquire Now <ArrowRight size={16} /></button>
       {booking && <BookingModal kind={booking.kind} selectedItem={booking.item} onClose={() => setBooking(null)} />}
     </>
   )

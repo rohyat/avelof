@@ -1,4 +1,4 @@
-import type { Destination, Hotel, RentalCar, Review, TourPackage } from '../types'
+import type { Destination, Hotel, RentalCar, TourPackage, VerifiedGuestRating } from '../types'
 
 const photos = {
   lake: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1400&q=85',
@@ -101,6 +101,19 @@ export const hotels: Hotel[] = [
   { id: 'willow-budget-stay', kind: 'hotel', name: 'Willow Guesthouse', location: 'Srinagar', image: photos.room, gallery: [photos.room, photos.houseboat, photos.lake], category: 'Budget stay', price: 3400, description: 'A simple, welcoming base for travellers who plan to spend their days exploring.', roomTypes: ['Standard room', 'Twin room'], facilities: ['Breakfast available', 'Wi-Fi', 'Heating'], checkIn: '12:00 PM', checkOut: '10:00 AM', highlights: ['Good value', 'Friendly hosting', 'Easy city access'] },
 ]
 
+export const verifiedGuestRatings: VerifiedGuestRating[] = [
+  { id: 'guest-rating-1', name: 'Amit Sharma', rating: 5, packageName: 'Premium', bookingId: 'PREN0100', reviewTitle: 'Amazing Kashmir Experience', reviewText: 'Had an amazing trip to Kashmir! The hotel stay was very comfortable, the cab service was excellent, and the driver was friendly and helpful. The beautiful scenery made the entire journey unforgettable.' },
+  { id: 'guest-rating-2', name: 'Rohit Singh', rating: 5, packageName: 'Premium', bookingId: 'PREN0200', reviewTitle: 'Wonderful Hospitality', reviewText: 'We had a wonderful experience exploring Kashmir. Everything, from hotel arrangements to transportation, was perfectly managed. Really appreciated the hospitality and professional service throughout the trip.' },
+  { id: 'guest-rating-3', name: 'Vikram Yadov', rating: 5, packageName: 'Premium', bookingId: 'PREN0300', reviewTitle: 'Beautiful Memories in Gulmarg', reviewText: 'Our Gulmarg visit was absolutely beautiful! The snow-covered mountains and breathtaking views were incredible. The cab was comfortable, and the hotel arrangements were excellent.' },
+  { id: 'guest-rating-4', name: 'Priya Gupta', rating: 5, packageName: 'Luxury', bookingId: 'LUX1001', reviewTitle: 'Highly Recommended Travel Service', reviewText: 'One of the best travel experiences we have had. The hotels were clean and comfortable, sightseeing was well planned, and our driver made every journey smooth and enjoyable. Highly recommended!' },
+  { id: 'guest-rating-5', name: 'Anjali Verma', rating: 5, packageName: 'Luxury', bookingId: 'LUX1002', reviewTitle: 'Unforgettable Pahalgam Trip', reviewText: 'Pahalgam was the highlight of our Kashmir holiday. The scenic valleys, rivers, and peaceful surroundings were amazing. Special thanks for arranging such a comfortable stay and reliable cab service.' },
+  { id: 'guest-rating-6', name: 'Arjun Reddy', rating: 5, packageName: 'Premium', bookingId: 'PREN0400', reviewTitle: 'Excellent Hotel and Cab Service', reviewText: 'Really happy with the overall arrangements. The hotel staff were welcoming, the rooms were good, and the cab service was always on time. We enjoyed every moment of our Kashmir vacation.' },
+  { id: 'guest-rating-7', name: 'Meera Iyer', rating: 5, packageName: 'Deluxe', bookingId: 'DEL1001', reviewTitle: 'A Perfect Family Vacation', reviewText: 'We travelled with our family and had a fantastic experience. Everything was well organised, from airport pickup to hotel stays and local sightseeing. Kashmir is truly paradise on earth!' },
+  { id: 'guest-rating-8', name: 'Kiran Nair', rating: 5, packageName: 'Premium', bookingId: 'PREN0500', reviewTitle: 'Dal Lake and Srinagar Memories', reviewText: 'Our Srinagar experience was fantastic! Dal Lake, the gardens, and the beautiful mountain views made our trip special. The accommodation and transportation arrangements were equally impressive.' },
+  { id: 'guest-rating-9', name: 'Sanjana Rao', rating: 5, packageName: 'Deluxe', bookingId: 'DEL1002', reviewTitle: 'Smooth and Hassle-Free Journey', reviewText: 'Everything was managed professionally, and we didn\'t have to worry about anything during our trip. Comfortable vehicles, good hotels, friendly drivers, and beautiful sightseeing locations made it a memorable holiday.' },
+  { id: 'guest-rating-10', name: 'Vishnu Menon', rating: 5, packageName: 'Deluxe', bookingId: 'DEL1003', reviewTitle: 'Best Kashmir Holiday Experience', reviewText: 'Kashmir exceeded all our expectations! From the breathtaking landscapes to the comfortable hotel stays and excellent cab service, everything was wonderful. We would definitely love to visit again!' },
+]
+
 export const destinations: Destination[] = [
   {
     id: 'srinagar', name: 'Srinagar', aliases: [], image: photos.lake, count: 'Lake & heritage',
@@ -200,8 +213,3 @@ export const destinations: Destination[] = [
   },
 ]
 
-export const sampleReviews: Review[] = [
-  { id: 'preview-1', name: 'Sample traveller', destination: 'Srinagar & Gulmarg', category: 'Couple journey', rating: 5, text: 'Preview content for the future reviews section. Replace with an approved customer review before publishing.', date: 'Design preview' },
-  { id: 'preview-2', name: 'Sample traveller', destination: 'Pahalgam', category: 'Family stay', rating: 5, text: 'This clearly labelled sample helps preview the layout; it is not a verified testimonial.', date: 'Design preview' },
-  { id: 'preview-3', name: 'Sample traveller', destination: 'Kashmir', category: 'Private tour', rating: 4, text: 'Sample review copy for design preview only. No customer feedback is being represented as genuine.', date: 'Design preview' },
-]

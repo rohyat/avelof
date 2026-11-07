@@ -1,12 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowRight, CalendarDays, MapPin, MoonStar } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { destinations, hotels } from '../data/catalog'
+import { clearSavedTripPlan, tripPlanStorageKey, tripReturnStorageKey } from '../services/tripPlanStorage'
 
 interface DayPlan {
   routeTo?: string
   stayAt?: string
   hotelId?: string
+}
+
+interface SavedTripPlan {
+  savedAt: number
+  startDate: string
+  endDate: string
+  plans: DayPlan[]
 }
 
 interface TripPlannerProps {
@@ -16,6 +24,55 @@ interface TripPlannerProps {
 
 const plannerStops = destinations.slice(0, 6)
 const overnightStops = new Set(['gulmarg', 'pahalgam', 'sonamarg'])
+const tripPlanLifetime = 24 * 60 * 60 * 1000
+
+function localDateValue(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function todayDateValue() {
+  return localDateValue(new Date())
+}
+
+function readTripPlan(sectionId: string): SavedTripPlan {
+  const emptyPlan = { savedAt: Date.now(), startDate: '', endDate: '', plans: [] }
+  try {
+    const storageKey = tripPlanStorageKey(sectionId)
+    const returnSection = sessionStorage.getItem(tripReturnStorageKey)
+    if (returnSection !== sectionId) {
+      sessionStorage.removeItem(storageKey)
+      return emptyPlan
+    }
+    sessionStorage.removeItem(tripReturnStorageKey)
+    const saved = sessionStorage.getItem(storageKey)
+    if (!saved) return emptyPlan
+    const parsed = JSON.parse(saved) as Partial<SavedTripPlan>
+    if (typeof parsed.savedAt !== 'number' || Date.now() - parsed.savedAt > tripPlanLifetime || typeof parsed.startDate !== 'string' || typeof parsed.endDate !== 'string' || !Array.isArray(parsed.plans)) {
+      sessionStorage.removeItem(storageKey)
+      return emptyPlan
+    }
+    const today = todayDateValue()
+    const dateDifference = parsed.startDate && parsed.endDate
+      ? Math.round((new Date(`${parsed.endDate}T12:00:00`).getTime() - new Date(`${parsed.startDate}T12:00:00`).getTime()) / 86400000)
+      : 0
+    if (parsed.startDate && (parsed.startDate < today || parsed.endDate <= parsed.startDate || dateDifference > 30)) {
+      sessionStorage.removeItem(storageKey)
+      return emptyPlan
+    }
+    const plans = parsed.plans.map((plan): DayPlan => {
+      if (!plan || typeof plan !== 'object') return {}
+      const saved = plan as DayPlan
+      return {
+        routeTo: plannerStops.some((place) => place.id === saved.routeTo) ? saved.routeTo : undefined,
+        stayAt: plannerStops.some((place) => place.id === saved.stayAt) ? saved.stayAt : undefined,
+        hotelId: hotels.some((hotel) => hotel.id === saved.hotelId) ? saved.hotelId : undefined,
+      }
+    })
+    return { savedAt: parsed.savedAt, startDate: parsed.startDate, endDate: parsed.endDate, plans }
+  } catch {
+    return emptyPlan
+  }
+}
 
 function addDays(date: string, days: number) {
   const next = new Date(`${date}T12:00:00`)
@@ -41,17 +98,17 @@ function hotelsAt(locationId: string) {
 }
 
 export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: TripPlannerProps) {
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [plans, setPlans] = useState<DayPlan[]>([])
+  const [savedPlan] = useState(() => readTripPlan(sectionId))
+  const [startDate, setStartDate] = useState(savedPlan.startDate)
+  const [endDate, setEndDate] = useState(savedPlan.endDate)
+  const [plans, setPlans] = useState<DayPlan[]>(savedPlan.plans)
   const [minDate] = useState(() => {
-    const today = new Date()
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    return todayDateValue()
   })
   const dateDifference = startDate && endDate
     ? Math.round((new Date(`${endDate}T12:00:00`).getTime() - new Date(`${startDate}T12:00:00`).getTime()) / 86400000)
     : -1
-  const tripDays = dateDifference >= 0 && dateDifference <= 30 ? dateDifference + 1 : 0
+  const tripDays = dateDifference > 0 && dateDifference <= 30 ? dateDifference + 1 : 0
   const nights = Math.max(0, tripDays - 1)
   const dayPlans = Array.from({ length: tripDays }).reduce<Array<DayPlan & { origin: string; routeTo: string; stayAt: string }>>((days, _, index) => {
     const origin = index === 0 ? 'srinagar' : days[index - 1].stayAt
@@ -63,14 +120,57 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
     return days
   }, [])
 
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(tripPlanStorageKey(sectionId), JSON.stringify({ savedAt: Date.now(), startDate, endDate, plans }))
+    } catch {
+      return
+    }
+  }, [endDate, plans, sectionId, startDate])
+
+  useEffect(() => () => {
+    try {
+      if (sessionStorage.getItem(tripReturnStorageKey) !== sectionId) clearSavedTripPlan(sectionId)
+    } catch {
+      return
+    }
+  }, [sectionId])
+
+  function preservePlanForHotelReturn() {
+    try {
+      sessionStorage.setItem(tripPlanStorageKey(sectionId), JSON.stringify({ savedAt: Date.now(), startDate, endDate, plans }))
+      sessionStorage.setItem(tripReturnStorageKey, sectionId)
+    } catch {
+      return
+    }
+  }
+
   function updatePlan(index: number, next: DayPlan) {
     setPlans((current) => [...current.slice(0, index), next])
   }
 
   function changeStartDate(value: string) {
+    if (value && value < minDate) return
+    if (!value) {
+      setStartDate('')
+      setEndDate('')
+      setPlans([])
+      return
+    }
     setStartDate(value)
     setPlans([])
-    if (!endDate || endDate < value || endDate > addDays(value, 30)) setEndDate(addDays(value, 4))
+    if (!endDate || endDate <= value || endDate > addDays(value, 30)) setEndDate(addDays(value, 4))
+  }
+
+  function changeEndDate(value: string) {
+    if (!value) {
+      setEndDate('')
+      setPlans([])
+      return
+    }
+    if (!startDate || value <= startDate || value > addDays(startDate, 30)) return
+    setEndDate(value)
+    setPlans([])
   }
 
   function continueToEnquiry() {
@@ -97,19 +197,19 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
   return <section className="custom-trip-section" id={sectionId}>
     <div className="page-width custom-trip-inner">
       <div className="custom-trip-intro">
-        <p className="eyebrow">A Kashmir journey, your way</p>
-        <h2>Come as a guest.<br /><em>Leave feeling at home.</em></h2>
-        <p>Honest recommendations, thoughtful local planning, and the kind of welcome we would give our own family. Start with the places that call to you; we’ll help shape the rest with care.</p>
+        <p className="eyebrow">Customise your trip</p>
+        <h2>Your Kashmir journey<br /><em>starts here.</em></h2>
+        <p>Choose your dates and places. We’ll shape a thoughtful itinerary around your interests, pace and stay preferences.</p>
       </div>
 
       <div className="trip-planner" aria-label="Customise your Kashmir journey">
         <div className="planner-heading">
-          <div><span className="planner-kicker">CUSTOMISE YOUR PACKAGE</span><h3>Let’s find your route.</h3></div>
+          <div><span className="planner-kicker">CUSTOMIZE YOUR TRIP</span><h3>Build your trip.</h3></div>
           <span className="planner-local"><MapPin size={15} /> Planned with local care</span>
         </div>
         <div className="trip-dates">
           <label><span><CalendarDays size={15} /> Start date</span><input type="date" min={minDate} value={startDate} onChange={(event) => changeStartDate(event.target.value)} /></label>
-          <label><span><CalendarDays size={15} /> End date</span><input type="date" min={startDate || minDate} max={startDate ? addDays(startDate, 30) : undefined} value={endDate} onChange={(event) => { setEndDate(event.target.value); setPlans([]) }} /></label>
+          <label className={!startDate ? 'trip-date-disabled' : undefined}><span><CalendarDays size={15} /> End date</span><input type="date" min={startDate ? addDays(startDate, 1) : addDays(minDate, 1)} max={startDate ? addDays(startDate, 30) : undefined} value={endDate} disabled={!startDate} onChange={(event) => changeEndDate(event.target.value)} /></label>
           <div className="trip-length" aria-live="polite"><strong>{tripDays || '—'}</strong><span>{tripDays ? `${tripDays === 1 ? 'day' : 'days'} · ${nights} ${nights === 1 ? 'night' : 'nights'}` : 'Trip length'}</span></div>
         </div>
 
@@ -140,7 +240,12 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
                     <option value="">Please recommend a stay</option>
                     {hotelsAt(day.stayAt).map((hotel) => <option key={hotel.id} value={hotel.id}>{hotel.name}</option>)}
                   </select></label>
-                  <Link className="planner-hotel-link" to={`/hotels?search=${encodeURIComponent(stopName(day.stayAt))}`}>View hotels in {stopName(day.stayAt)} <ArrowRight size={14} /></Link>
+                  <Link
+                    className="planner-hotel-link"
+                    to={{ pathname: '/hotels', search: `?location=${encodeURIComponent(stopName(day.stayAt))}` }}
+                    state={{ tripReturn: { sectionId, returnPath: sectionId === 'package-planner' ? '/tour-packages' : '/' } }}
+                    onClick={preservePlanForHotelReturn}
+                  >View hotels in {stopName(day.stayAt)} <ArrowRight size={14} /></Link>
                 </>}
                 <p className="day-route-note" aria-live="polite">{routeLabel}{index < tripDays - 1 ? ` · Overnight in ${stopName(day.stayAt)}` : ''}</p>
               </div>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { ArrowRight, Check, Mail, X } from 'lucide-react'
+import { ArrowRight, Check, MessageCircle, X } from 'lucide-react'
 import { business } from '../config'
 import { hotels, rentalCars, tourPackages } from '../data/catalog'
 import { prepareRequest } from '../services/bookingService'
@@ -53,7 +53,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     </select></label>
     <label className="full-field">Instructions or suggestions <span className="optional">Optional</span><textarea name="instructions" rows={3} maxLength={2000} placeholder="Travel dates, children's ages, room preferences, pickup location, or anything else on your mind" /></label>
     <button className="button button-dark enquiry-submit" type="submit" disabled={submitDisabled}>Submit enquiry <ArrowRight size={17} /></button>
-    <p className="privacy-note">Your email app will open with the enquiry addressed to {business.email}. Review it and press Send to submit. No booking or delivery is confirmed on this website.</p>
+    <p className="privacy-note">WhatsApp will open with a prepared message to {business.phone}. Review it and press Send to contact us. No booking or message is sent by this website.</p>
   </form>
 }
 
@@ -101,12 +101,12 @@ export default function BookingModal({ kind, selectedItem, initialFields, initia
       {request ? <>
         <span className="success-mark"><Check size={24} /></span>
         <p className="eyebrow">Enquiry prepared</p>
-        <h2 id="booking-title">Your email draft is ready.</h2>
-        <p id="booking-description">Review your enquiry, then send it from your email app to {business.email}.</p>
+        <h2 id="booking-title">Your WhatsApp message is ready.</h2>
+        <p id="booking-description">Review your enquiry, then send it to {business.phone} in WhatsApp.</p>
         <div className="modal-actions">
-          <a className="button button-dark" href={request.emailUrl}><Mail size={17} /> Open email to send</a>
+          <a className="button button-dark" href={request.whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle size={17} /> Open WhatsApp</a>
         </div>
-        <p className="privacy-note">Reference: {request.reference}. The enquiry is not delivered until you press Send in your email app.</p>
+        <p className="privacy-note">Enquiry reference: {request.reference}. This is not a booking confirmation. Your message is only sent after you press Send in WhatsApp.</p>
         <button className="text-link confirmation-done" onClick={onClose}>Done <ArrowRight size={16} /></button>
       </> : <>
         <p className="eyebrow">Your next chapter, Kashmir</p>
