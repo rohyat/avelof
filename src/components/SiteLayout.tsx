@@ -4,6 +4,7 @@ import { ArrowRight, Menu, MessageCircle, X } from 'lucide-react'
 import { business } from '../config'
 import { hotels, rentalCars, tourPackages } from '../data/catalog'
 import BookingModal from './BookingModal'
+import DiscountLabel from './DiscountLabel'
 import type { BookingKind } from '../types'
 
 export interface SiteContext {
@@ -127,7 +128,17 @@ export default function SiteLayout() {
 
   return (
     <>
-      <div className="topline"><span>A more personal Kashmir journey starts here.</span><Link to="/#custom-trip">Customize your trip <ArrowRight size={14} /></Link></div>
+      <div className="topline">
+        <div className="topline-offer-copy">
+          <span className="topline-offer-label"><span className="topline-diya" role="img" aria-label="Diwali diya lamp">🪔</span> DIWALI OFFER</span>
+          <span>{tourPackages[0].name} package Kashmir escape · {tourPackages[0].duration}</span>
+          <span className="topline-offer-price">
+            {tourPackages[0].originalPrice && <span className="topline-offer-original">Original price <s>₹{tourPackages[0].originalPrice.toLocaleString('en-IN')}</s><DiscountLabel price={tourPackages[0].price} originalPrice={tourPackages[0].originalPrice} /></span>}
+            <span><strong>₹{tourPackages[0].price.toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(tourPackages[0].price) ? 0 : 2, maximumFractionDigits: 2 })}</strong> per person</span>
+          </span>
+        </div>
+        <Link className="topline-offer-link" to={`/tour-packages/${tourPackages[0].id}`}>Explore Now</Link>
+      </div>
       <header className="site-header">
         <Link className="brand" to="/" aria-label="AVELOF home" onClick={closeMenu}><span className="brand-mark">A</span><span>AVELOF<small>JOURNEYS BEYOND IMAGINATION</small></span></Link>
         <button className="icon-button menu-toggle" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X /> : <Menu />}</button>

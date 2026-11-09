@@ -109,9 +109,9 @@ export default function BookingModal({ kind, selectedItem, initialFields, initia
         <p className="privacy-note">Enquiry reference: {request.reference}. This is not a booking confirmation. Your message is only sent after you press Send in WhatsApp.</p>
         <button className="text-link confirmation-done" onClick={onClose}>Done <ArrowRight size={16} /></button>
       </> : <>
-        <p className="eyebrow">Your next chapter, Kashmir</p>
-        <h2 id="booking-title">Make it your kind of trip.</h2>
-        <p id="booking-description" className="modal-intro">A few details for a journey shaped around you.</p>
+        <p className="eyebrow">Enquire Now</p>
+        <h2 id="booking-title">Send us your trip enquiry.</h2>
+        <p id="booking-description" className="modal-intro">Share a few details and we’ll help plan the next steps.</p>
         <EnquiryForm kind={kind} selectedItem={selectedItem} additionalFields={initialFields} onPrepared={prepared} />
       </>}
     </section>

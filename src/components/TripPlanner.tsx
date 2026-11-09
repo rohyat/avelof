@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { Children, useEffect, useRef, useState } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 import { ArrowRight, CalendarDays, MapPin, MoonStar } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { destinations, hotels } from '../data/catalog'
@@ -95,6 +96,80 @@ function stayOptions(destinationId: string) {
 function hotelsAt(locationId: string) {
   const locationName = stopName(locationId).toLowerCase()
   return hotels.filter((hotel) => hotel.location.toLowerCase().includes(locationName))
+}
+
+function SwipeRail({ label, className, children }: { label: string; className: string; children: ReactNode }) {
+  const railRef = useRef<HTMLDivElement>(null)
+  const count = Children.count(children)
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  useEffect(() => {
+    const rail = railRef.current
+    if (!rail) return
+    let frame = 0
+    const syncActiveSlide = () => {
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        const railBounds = rail.getBoundingClientRect()
+        const railCenter = railBounds.left + rail.clientWidth / 2
+        const slides = Array.from(rail.children) as HTMLElement[]
+        const closestIndex = slides.reduce((closest, slide, index) => {
+          const bounds = slide.getBoundingClientRect()
+          const distance = Math.abs(bounds.left + bounds.width / 2 - railCenter)
+          const closestBounds = slides[closest].getBoundingClientRect()
+          const closestDistance = Math.abs(closestBounds.left + closestBounds.width / 2 - railCenter)
+          return distance < closestDistance ? index : closest
+        }, 0)
+        setActiveIndex(closestIndex)
+      })
+    }
+    rail.addEventListener('scroll', syncActiveSlide, { passive: true })
+    const resizeObserver = new ResizeObserver(syncActiveSlide)
+    resizeObserver.observe(rail)
+    syncActiveSlide()
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+      rail.removeEventListener('scroll', syncActiveSlide)
+      resizeObserver.disconnect()
+    }
+  }, [count])
+
+  function scrollToSlide(index: number) {
+    const rail = railRef.current
+    const slide = rail?.children[index]
+    if (!rail || !(slide instanceof HTMLElement)) return
+    const railBounds = rail.getBoundingClientRect()
+    const slideBounds = slide.getBoundingClientRect()
+    const paddingLeft = Number.parseFloat(getComputedStyle(rail).paddingLeft) || 0
+    rail.scrollTo({ left: rail.scrollLeft + slideBounds.left - railBounds.left - paddingLeft, behavior: 'smooth' })
+    setActiveIndex(index)
+  }
+
+  function handleTileClick(event: MouseEvent<HTMLDivElement>) {
+    const rail = railRef.current
+    if (!rail) return
+    const target = event.target
+    if (!(target instanceof Element)) return
+    const slide = target.closest('.planner-swipe-slide')
+    if (slide?.parentElement === rail) setActiveIndex(Array.from(rail.children).indexOf(slide))
+  }
+
+  return <>
+    <div ref={railRef} className={`${className} planner-swipe-rail`} role="group" aria-label={label} onClickCapture={handleTileClick}>
+      {Children.map(children, (child) => <div className="planner-swipe-slide">{child}</div>)}
+    </div>
+    <div className="planner-swipe-dots" role="group" aria-label={`${label} pages`}>
+      {Array.from({ length: count }, (_, index) => <button
+        className={`planner-swipe-dot${activeIndex === index ? ' is-active' : ''}`}
+        type="button"
+        key={`${label}-${index}`}
+        aria-label={`Show ${label.toLowerCase()} ${index + 1} of ${count}`}
+        aria-current={activeIndex === index ? 'true' : undefined}
+        onClick={() => scrollToSlide(index)}
+      />)}
+    </div>
+  </>
 }
 
 export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: TripPlannerProps) {
@@ -198,7 +273,7 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
     <div className="page-width custom-trip-inner">
       <div className="custom-trip-intro">
         <p className="eyebrow">Customise your trip</p>
-        <h2>Your Kashmir journey<br /><em>starts here.</em></h2>
+        <h2>Plan your trip,<br /><em>your way.</em></h2>
         <p>Choose your dates and places. We’ll shape a thoughtful itinerary around your interests, pace and stay preferences.</p>
       </div>
 
@@ -223,29 +298,78 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
               <div className="day-marker"><span>{String(index + 1).padStart(2, '0')}</span><i /></div>
               <div className="day-plan-fields">
                 <div className="day-plan-title"><div><span>DAY {index + 1}</span><h4>{date}</h4></div>{index === tripDays - 1 && <span className="departure-label">Departure day</span>}</div>
-                <label className="planner-field"><span>What would you like to explore?</span><select value={day.routeTo} onChange={(event) => {
-                  const routeTo = event.target.value
-                  const options = stayOptions(routeTo)
-                  const selectedStay = plans[index]?.stayAt
-                  const stayAt = options.includes(selectedStay ?? '') ? selectedStay! : options.includes(routeTo) ? routeTo : 'srinagar'
-                  updatePlan(index, { routeTo, stayAt })
-                }}>
-                  {plannerStops.map((place) => <option key={place.id} value={place.id}>{place.id === day.origin ? `Explore ${place.name} locally` : `${stopName(day.origin)} to ${place.name}`}</option>)}
-                </select></label>
+                <fieldset className="planner-route-picker">
+                  <legend><span>Day {index + 1} · Where would you like to explore?</span><small className="planner-swipe-hint">Swipe for routes</small></legend>
+                  <SwipeRail label={`Day ${index + 1} route choices`} className="planner-route-tiles">
+                    {plannerStops.map((place) => {
+                      const selected = day.routeTo === place.id
+                      return <button
+                        className={`planner-route-tile${selected ? ' is-selected' : ''}`}
+                        type="button"
+                        key={place.id}
+                        aria-pressed={selected}
+                        onClick={() => {
+                          const options = stayOptions(place.id)
+                          const selectedStay = plans[index]?.stayAt
+                          const stayAt = options.includes(selectedStay ?? '') ? selectedStay! : options.includes(place.id) ? place.id : 'srinagar'
+                          updatePlan(index, { routeTo: place.id, stayAt })
+                        }}
+                      >
+                        <ArrowRight size={14} aria-hidden="true" />
+                        <strong>{place.id === day.origin ? `Explore ${stopName(day.origin)} locally` : `${stopName(day.origin)} to ${place.name}`}</strong>
+                      </button>
+                    })}
+                  </SwipeRail>
+                </fieldset>
                 {index < tripDays - 1 && <>
-                  <label className="planner-field overnight-field"><span><MoonStar size={15} /> Where would you like to stay?</span><select value={day.stayAt} onChange={(event) => updatePlan(index, { routeTo: day.routeTo, stayAt: event.target.value })}>
-                    {stayOptions(day.routeTo).map((id) => <option key={id} value={id}>Stay in {stopName(id)}</option>)}
-                  </select></label>
-                  <label className="planner-field overnight-field"><span>Which hotel in {stopName(day.stayAt)}?</span><select value={day.hotelId ?? ''} onChange={(event) => updatePlan(index, { routeTo: day.routeTo, stayAt: day.stayAt, hotelId: event.target.value || undefined })}>
-                    <option value="">Please recommend a stay</option>
-                    {hotelsAt(day.stayAt).map((hotel) => <option key={hotel.id} value={hotel.id}>{hotel.name}</option>)}
-                  </select></label>
-                  <Link
-                    className="planner-hotel-link"
-                    to={{ pathname: '/hotels', search: `?location=${encodeURIComponent(stopName(day.stayAt))}` }}
-                    state={{ tripReturn: { sectionId, returnPath: sectionId === 'package-planner' ? '/tour-packages' : '/' } }}
-                    onClick={preservePlanForHotelReturn}
-                  >View hotels in {stopName(day.stayAt)} <ArrowRight size={14} /></Link>
+                  <fieldset className="planner-stay-picker overnight-field">
+                    <legend><MoonStar size={15} /> Day {index + 1} · Where would you like to stay?</legend>
+                    <div className="planner-stay-tiles">
+                      {stayOptions(day.routeTo).map((id) => <button
+                        className={`planner-stay-tile${day.stayAt === id ? ' is-selected' : ''}`}
+                        type="button"
+                        key={id}
+                        aria-pressed={day.stayAt === id}
+                        onClick={() => updatePlan(index, { routeTo: day.routeTo, stayAt: id, hotelId: undefined })}
+                      >Stay in {stopName(id)}</button>)}
+                    </div>
+                  </fieldset>
+                  <div className="planner-field overnight-field">
+                    <span>Day {index + 1} · Choose a hotel in {stopName(day.stayAt)} <small className="planner-swipe-hint">Swipe for hotels</small></span>
+                    <SwipeRail label={`Day ${index + 1} hotels in ${stopName(day.stayAt)}`} className="planner-hotel-rail">
+                      {hotelsAt(day.stayAt).map((hotel) => <article className={`planner-hotel-card${day.hotelId === hotel.id ? ' is-selected' : ''}`} key={hotel.id}>
+                        <button
+                          className="planner-hotel-tile"
+                          type="button"
+                          aria-pressed={day.hotelId === hotel.id}
+                          onClick={() => updatePlan(index, { routeTo: day.routeTo, stayAt: day.stayAt, hotelId: hotel.id })}
+                        >
+                          <span className="planner-hotel-category">{hotel.category}</span>
+                          <strong>{hotel.name}</strong>
+                          <small>From ₹{hotel.price.toLocaleString('en-IN')} / night</small>
+                          <small>Breakfast and dinner are included.</small>
+                        </button>
+                        <Link
+                          className="planner-hotel-view-link"
+                          to={`/hotels/${hotel.id}`}
+                          state={{ tripReturn: { sectionId, returnPath: sectionId === 'package-planner' ? '/tour-packages' : '/' } }}
+                          onClick={preservePlanForHotelReturn}
+                        >View hotel <ArrowRight size={13} /></Link>
+                      </article>)}
+                      <article className={`planner-hotel-card planner-hotel-recommend-card${!day.hotelId ? ' is-selected' : ''}`}>
+                        <button
+                          className="planner-hotel-tile planner-hotel-recommend"
+                          type="button"
+                          aria-pressed={!day.hotelId}
+                          onClick={() => updatePlan(index, { routeTo: day.routeTo, stayAt: day.stayAt, hotelId: undefined })}
+                        >
+                          <span className="planner-hotel-category">AVELOF PICK</span>
+                          <strong>Want another option?</strong>
+                          <small>Not sure? We’ll help you find your kind of stay.</small>
+                        </button>
+                      </article>
+                    </SwipeRail>
+                  </div>
                 </>}
                 <p className="day-route-note" aria-live="polite">{routeLabel}{index < tripDays - 1 ? ` · Overnight in ${stopName(day.stayAt)}` : ''}</p>
               </div>

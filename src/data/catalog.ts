@@ -16,7 +16,7 @@ const photos = {
 export const tourPackages: TourPackage[] = [
   {
     id: 'deluxe', kind: 'package', name: 'Deluxe', location: 'Srinagar · Gulmarg · Pahalgam',
-    image: photos.lake, gallery: [photos.lake, photos.valley, photos.meadow], category: 'Deluxe', price: 28999,
+    image: photos.lake, gallery: [photos.lake, photos.valley, photos.meadow], category: 'Deluxe', price: 15399.30, originalPrice: 21999,
     duration: '4 nights · 5 days', description: 'A five-day Kashmir escape with stays in Srinagar, Gulmarg and Pahalgam.',
     itinerary: [
       { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Meet your local driver, check in at The Mallard and enjoy a relaxed first evening.' },

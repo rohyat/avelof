@@ -30,6 +30,7 @@ export interface CatalogBase {
 
 export interface TourPackage extends CatalogBase {
   kind: 'package'
+  originalPrice?: number
   duration: string
   itinerary: { day: string; title: string; detail: string }[]
   stay: string
