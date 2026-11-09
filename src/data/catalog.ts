@@ -1,5 +1,6 @@
 import type { Destination, Hotel, RentalCar, TourPackage, VerifiedGuestRating } from '../types'
 import { vehiclePhotos } from './vehiclePhotos'
+import { hotelPhoto } from './hotelPhotos'
 
 const photos = {
   lake: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1400&q=85',
@@ -7,8 +8,6 @@ const photos = {
   mountain: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1400&q=85',
   snow: 'https://images.unsplash.com/photo-1517299321609-52687d1bc55a?auto=format&fit=crop&w=1400&q=85',
   meadow: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?auto=format&fit=crop&w=1400&q=85',
-  hotel: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1400&q=85',
-  room: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1400&q=85',
 }
 
 const packageCatalog: TourPackage[] = [
@@ -118,8 +117,8 @@ const deluxeHotels: Hotel[] = [
 ].map((hotel) => ({
   ...hotel,
   kind: 'hotel',
-  image: photos.hotel,
-  gallery: [photos.hotel, photos.room, photos.lake],
+  image: hotelPhoto(hotel.id),
+  gallery: [hotelPhoto(hotel.id)],
   category: 'Deluxe package',
   packageId: 'deluxe',
   roomOnlyPrice: hotel.price - 1000,
@@ -147,8 +146,8 @@ const premiumHotels: Hotel[] = [
   kind: 'hotel',
   price: hotel.location === 'Srinagar' ? 4700 : 5100,
   roomOnlyPrice: (hotel.location === 'Srinagar' ? 4700 : 5100) - 1200,
-  image: photos.hotel,
-  gallery: [photos.hotel, photos.room, photos.lake],
+  image: hotelPhoto(hotel.id),
+  gallery: [hotelPhoto(hotel.id)],
   category: 'Premium package',
   packageId: 'premium',
   rateBasis: 'per couple per night',

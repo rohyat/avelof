@@ -94,8 +94,8 @@ export default function BookingModal({ kind, selectedItem, initialFields, initia
 
   useEffect(() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const alreadyLocked = document.body.classList.contains('enquiry-open')
+    document.body.classList.add('enquiry-open')
     dialogRef.current?.focus()
     function handleKey(event: KeyboardEvent) {
       if (event.key === 'Escape') onClose()
@@ -114,7 +114,7 @@ export default function BookingModal({ kind, selectedItem, initialFields, initia
     }
     document.addEventListener('keydown', handleKey)
     return () => {
-      document.body.style.overflow = previousOverflow
+      if (!alreadyLocked) document.body.classList.remove('enquiry-open')
       document.removeEventListener('keydown', handleKey)
       previousFocus?.focus()
     }

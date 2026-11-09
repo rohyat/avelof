@@ -2,9 +2,11 @@ import { Children, useEffect, useRef, useState } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 import { ArrowRight, CalendarDays, MapPin, MoonStar } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { destinations, hotels, rentalCars } from '../data/catalog'
+import { hotels, rentalCars } from '../data/catalog'
+import { combinedExcursionId, destinationOptionId, destinationOptions } from '../data/destinationOptions'
 import { clearSavedTripPlan, tripPlanStorageKey, tripReturnStorageKey } from '../services/tripPlanStorage'
 import HotelRates from './HotelRates'
+import DestinationPhotos from './DestinationPhotos'
 
 interface DayPlan {
   routeTo?: string
@@ -28,7 +30,9 @@ interface TripPlannerProps {
   sectionId?: string
 }
 
-const plannerStops = destinations
+const plannerStops = destinationOptions
+const defaultPlaceIds = ['srinagar', 'gulmarg', 'pahalgam']
+const srinagarExcursions = new Set(['sonamarg', 'doodhpathri', 'yusmarg', combinedExcursionId, 'manasbal', 'dachigam', 'wular'])
 const overnightStops = new Set(['gulmarg', 'pahalgam', 'sonamarg', 'gurez'])
 const tripPlanLifetime = 24 * 60 * 60 * 1000
 const plannerVehicles = rentalCars.filter((car) => car.category !== 'Tempo Traveller' || car.id === 'tempo-traveller')
@@ -37,12 +41,8 @@ function placeDays(id: string) {
   return id === 'gurez' ? 3 : 1
 }
 
-function fitPlaces(ids: string[], budget: number) {
-  let used = 0
-  return ids.filter((id) => {
-    used += placeDays(id)
-    return used <= budget
-  })
+function itineraryStops(ids: string[]) {
+  return ['srinagar', ...plannerStops.filter((place) => ids.includes(place.id)).flatMap((place) => place.id === 'gurez' ? ['gurez', 'gurez', 'srinagar'] : [place.id])]
 }
 
 function localDateValue(date: Date) {
@@ -51,6 +51,12 @@ function localDateValue(date: Date) {
 
 function todayDateValue() {
   return localDateValue(new Date())
+}
+
+function validDateValue(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const date = new Date(`${value}T12:00:00`)
+  return Number.isFinite(date.getTime()) && localDateValue(date) === value
 }
 
 function readTripPlan(sectionId: string): SavedTripPlan {
@@ -65,8 +71,12 @@ function readTripPlan(sectionId: string): SavedTripPlan {
     sessionStorage.removeItem(tripReturnStorageKey)
     const saved = sessionStorage.getItem(storageKey)
     if (!saved) return emptyPlan
+    if (saved.length > 32768) {
+      sessionStorage.removeItem(storageKey)
+      return emptyPlan
+    }
     const parsed = JSON.parse(saved) as Partial<SavedTripPlan>
-    if (typeof parsed.savedAt !== 'number' || Date.now() - parsed.savedAt > tripPlanLifetime || typeof parsed.startDate !== 'string' || typeof parsed.endDate !== 'string' || !Array.isArray(parsed.plans)) {
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.savedAt !== 'number' || !Number.isFinite(parsed.savedAt) || parsed.savedAt > Date.now() || Date.now() - parsed.savedAt > tripPlanLifetime || typeof parsed.startDate !== 'string' || typeof parsed.endDate !== 'string' || !Array.isArray(parsed.plans) || parsed.plans.length > 31) {
       sessionStorage.removeItem(storageKey)
       return emptyPlan
     }
@@ -74,7 +84,7 @@ function readTripPlan(sectionId: string): SavedTripPlan {
     const dateDifference = parsed.startDate && parsed.endDate
       ? Math.round((new Date(`${parsed.endDate}T12:00:00`).getTime() - new Date(`${parsed.startDate}T12:00:00`).getTime()) / 86400000)
       : 0
-    if (parsed.startDate && (parsed.startDate < today || parsed.endDate <= parsed.startDate || dateDifference > 30)) {
+    if ((parsed.startDate || parsed.endDate) && (!validDateValue(parsed.startDate) || !validDateValue(parsed.endDate) || parsed.startDate < today || parsed.endDate <= parsed.startDate || dateDifference > 30)) {
       sessionStorage.removeItem(storageKey)
       return emptyPlan
     }
@@ -89,11 +99,16 @@ function readTripPlan(sectionId: string): SavedTripPlan {
         dinner: saved.dinner === true,
       }
     })
-    const placeIds = Array.isArray(parsed.placeIds) ? [...new Set(parsed.placeIds.filter((id) => destinations.some((place) => place.id === id)))] : []
-    return { savedAt: parsed.savedAt, startDate: parsed.startDate, endDate: parsed.endDate, plans, placeIds: fitPlaces(placeIds, dateDifference), vehicleId: rentalCars.some((car) => car.id === parsed.vehicleId) ? parsed.vehicleId : undefined }
+    const placeIds = Array.isArray(parsed.placeIds) ? [...new Set(parsed.placeIds.filter((id): id is string => typeof id === 'string').map(destinationOptionId).filter((id) => plannerStops.some((place) => place.id === id)))] : []
+    return { savedAt: parsed.savedAt, startDate: parsed.startDate, endDate: parsed.endDate, plans, placeIds, vehicleId: rentalCars.some((car) => car.id === parsed.vehicleId) ? parsed.vehicleId : undefined }
   } catch {
+    clearSavedTripPlan(sectionId)
     return emptyPlan
   }
+}
+
+function saveTripPlan(sectionId: string, plan: Omit<SavedTripPlan, 'savedAt'>) {
+  sessionStorage.setItem(tripPlanStorageKey(sectionId), JSON.stringify({ ...plan, savedAt: Date.now() }))
 }
 
 function addDays(date: string, days: number) {
@@ -108,6 +123,18 @@ function formatDate(date: string) {
 
 function stopName(id: string) {
   return plannerStops.find((place) => place.id === id)?.name ?? id
+}
+
+function routeStops(origin: string, destination: string) {
+  return srinagarExcursions.has(destination) && origin !== 'srinagar' && origin !== destination
+    ? [origin, 'srinagar', destination]
+    : [origin, destination]
+}
+
+function dayRouteLabel(day: { origin: string; routeTo: string; routeStops: string[] }, index: number, totalDays: number) {
+  if (index === 0) return 'Arrival in Srinagar'
+  if (index === totalDays - 1) return day.origin === 'srinagar' ? 'Departure from Srinagar' : `${stopName(day.origin)} to Srinagar for departure`
+  return day.origin === day.routeTo ? `Explore ${stopName(day.origin)} locally` : day.routeStops.map(stopName).join(' to ')
 }
 
 function stayOptions(destinationId: string) {
@@ -199,8 +226,9 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
   const [endDate, setEndDate] = useState(savedPlan.endDate)
   const [plans, setPlans] = useState<DayPlan[]>(savedPlan.plans)
   const [vehicleId, setVehicleId] = useState(savedPlan.vehicleId ?? rentalCars[0].id)
-  const [placeIds, setPlaceIds] = useState<string[]>(savedPlan.placeIds ?? [])
+  const [placeIds, setPlaceIds] = useState<string[]>(savedPlan.placeIds ?? defaultPlaceIds)
   const [placeNotice, setPlaceNotice] = useState('')
+  const placeNoticeRef = useRef<HTMLParagraphElement>(null)
   const selectedVehicle = rentalCars.find((car) => car.id === vehicleId) ?? rentalCars[0]
   const [minDate] = useState(() => {
     return todayDateValue()
@@ -211,27 +239,26 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
   const tripDays = dateDifference > 0 && dateDifference <= 30 ? dateDifference + 1 : 0
   const nights = Math.max(0, tripDays - 1)
   const vehicleTotal = selectedVehicle.price * tripDays
-  const usedPlaceDays = placeIds.reduce((total, id) => total + placeDays(id), 0)
-  const dayPlans = Array.from({ length: tripDays }).reduce<Array<DayPlan & { origin: string; routeTo: string; stayAt: string; routeOptions: string[] }>>((days, _, index) => {
+  const scheduledStops = itineraryStops(placeIds)
+  const usedPlaceDays = scheduledStops.length
+  const capacityError = tripDays > 0 && usedPlaceDays > nights
+    ? `Not enough days for your selected places. Please increase your trip to at least ${usedPlaceDays + 1} days (${usedPlaceDays} nights), or remove a place. This includes a Srinagar arrival day and a departure day. Gurez needs 3 days with 2 nights in Gurez.`
+    : ''
+  const selectionError = capacityError || placeNotice
+  const dayPlans = Array.from({ length: capacityError ? 0 : tripDays }).reduce<Array<DayPlan & { origin: string; routeTo: string; stayAt: string; routeStops: string[] }>>((days, _, index) => {
     const origin = index === 0 ? 'srinagar' : days[index - 1].stayAt
     const saved = plans[index] ?? {}
-    const visited = new Set(days.map((day) => day.routeTo))
-    const gurezDays = days.filter((day) => day.routeTo === 'gurez').length
-    const returningFromGurez = origin === 'gurez' && gurezDays >= 2
-    const continuingGurez = origin === 'gurez' && gurezDays === 1
-    const remaining = placeIds.filter((id) => !visited.has(id) && (id !== 'gurez' || index <= tripDays - 4))
-    const routeOptions = index === tripDays - 1 || returningFromGurez ? ['srinagar'] : continuingGurez ? ['gurez'] : [...new Set([...remaining, 'srinagar', origin])]
-    const routeTo = routeOptions.includes(saved.routeTo ?? '') ? saved.routeTo! : routeOptions[0]
+    const routeTo = index === tripDays - 1 ? 'srinagar' : scheduledStops[index] ?? 'srinagar'
     const options = stayOptions(routeTo)
-    const stayAt = routeTo === 'gurez' ? 'gurez' : options.includes(saved.stayAt ?? '') ? saved.stayAt! : options.includes(routeTo) ? routeTo : 'srinagar'
+    const stayAt = routeTo === 'gurez' ? 'gurez' : options.includes(saved.stayAt ?? '') ? saved.stayAt! : 'srinagar'
     const validHotel = hotelsAt(stayAt).some((hotel) => hotel.id === saved.hotelId)
-    days.push({ origin, routeTo, stayAt, routeOptions, hotelId: validHotel ? saved.hotelId : undefined, breakfast: validHotel && saved.breakfast, dinner: validHotel && saved.dinner })
+    days.push({ origin, routeTo, stayAt, routeStops: routeStops(origin, routeTo), hotelId: validHotel ? saved.hotelId : undefined, breakfast: validHotel && saved.breakfast, dinner: validHotel && saved.dinner })
     return days
   }, [])
 
   useEffect(() => {
     try {
-      sessionStorage.setItem(tripPlanStorageKey(sectionId), JSON.stringify({ savedAt: Date.now(), startDate, endDate, plans, vehicleId, placeIds }))
+      saveTripPlan(sectionId, { startDate, endDate, plans, vehicleId, placeIds })
     } catch {
       return
     }
@@ -245,9 +272,21 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
     }
   }, [sectionId])
 
-  function preservePlanForHotelReturn() {
+  function showPlaceError() {
+    requestAnimationFrame(() => {
+      placeNoticeRef.current?.focus({ preventScroll: true })
+      placeNoticeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }
+
+  function preservePlanForHotelReturn(event: MouseEvent<HTMLAnchorElement>) {
+    if (selectionError) {
+      event.preventDefault()
+      showPlaceError()
+      return
+    }
     try {
-      sessionStorage.setItem(tripPlanStorageKey(sectionId), JSON.stringify({ savedAt: Date.now(), startDate, endDate, plans, vehicleId, placeIds }))
+      saveTripPlan(sectionId, { startDate, endDate, plans, vehicleId, placeIds })
       sessionStorage.setItem(tripReturnStorageKey, sectionId)
     } catch {
       return
@@ -255,14 +294,11 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
   }
 
   function updatePlan(index: number, next: DayPlan) {
-    setPlans((current) => [...current.slice(0, index), next])
-  }
-
-  function resizePlaces(nextStart: string, nextEnd: string) {
-    const budget = nextStart && nextEnd ? Math.max(0, Math.round((Date.parse(nextEnd) - Date.parse(nextStart)) / 86400000)) : 0
-    const fitting = fitPlaces(placeIds, budget)
-    setPlaceIds(fitting)
-    setPlaceNotice(fitting.length < placeIds.length ? 'Your dates changed. Places that no longer fit have been removed. Increase the number of days above to add them again.' : '')
+    setPlans((current) => {
+      const updated = [...current]
+      updated[index] = next
+      return updated
+    })
   }
 
   function toggleDestination(id: string) {
@@ -272,11 +308,14 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
       setPlans([])
       return
     }
-    if (usedPlaceDays + placeDays(id) > nights) {
-      setPlaceNotice('As per the number of days, this is the maximum number of places you can select. Please increase the number of days at the top. Gurez requires 3 days and 2 nights.')
+    const nextPlaces = [...placeIds, id]
+    const requiredNights = itineraryStops(nextPlaces).length
+    if (requiredNights > nights) {
+      setPlaceNotice(`${stopName(id)} was not added. Please increase your trip to at least ${requiredNights + 1} days (${requiredNights} nights), or remove another place first.`)
+      showPlaceError()
       return
     }
-    setPlaceIds([...placeIds, id])
+    setPlaceIds(nextPlaces)
     setPlaceNotice('')
     setPlans([])
   }
@@ -287,35 +326,39 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
       setStartDate('')
       setEndDate('')
       setPlans([])
-      resizePlaces('', '')
+      setPlaceNotice('')
       return
     }
     setStartDate(value)
     setPlans([])
     const nextEnd = !endDate || endDate <= value || endDate > addDays(value, 30) ? addDays(value, 4) : endDate
     setEndDate(nextEnd)
-    resizePlaces(value, nextEnd)
+    setPlaceNotice('')
   }
 
   function changeEndDate(value: string) {
     if (!value) {
       setEndDate('')
       setPlans([])
-      resizePlaces('', '')
+      setPlaceNotice('')
       return
     }
     if (!startDate || value <= startDate || value > addDays(startDate, 30)) return
     setEndDate(value)
     setPlans([])
-    resizePlaces(startDate, value)
+    setPlaceNotice('')
   }
 
   function continueToEnquiry() {
+    if (!tripDays) return
+    if (capacityError || placeIds.length === 0) {
+      if (!capacityError) setPlaceNotice('Please select at least one place to visit before continuing.')
+      showPlaceError()
+      return
+    }
     const itinerary = dayPlans.map((day, index) => {
       const date = formatDate(addDays(startDate, index))
-      const route = day.origin === day.routeTo
-        ? `Explore ${stopName(day.origin)} locally`
-        : `${stopName(day.origin)} to ${stopName(day.routeTo)}`
+      const route = dayRouteLabel(day, index, dayPlans.length)
       const overnight = index < dayPlans.length - 1 ? `; stay overnight in ${stopName(day.stayAt)}` : '; departure day'
       const selectedHotel = day.hotelId ? hotels.find((hotel) => hotel.id === day.hotelId) : undefined
       const basePrice = selectedHotel?.roomOnlyPrice ?? selectedHotel?.price ?? 0
@@ -361,16 +404,13 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
         {tripDays > 0 && <div className="planner-selection-sections">
         <fieldset className="planner-destination-picker">
           <legend>Choose your places to visit</legend>
-          <p className="planner-place-summary" role="status">{placeIds.length} places selected · {usedPlaceDays} of {nights} sightseeing days allocated · 1 departure day reserved. {usedPlaceDays === nights ? 'Maximum reached. Please increase the number of days at the top to select more places.' : `${nights - usedPlaceDays} sightseeing days remaining.`} Gurez requires 3 days and 2 nights.</p>
-          {placeNotice && <p className="planner-place-notice" role="alert">{placeNotice}</p>}
-          <div className="planner-destination-grid">{destinations.map((place) => <article className={`planner-place-card${placeIds.includes(place.id) ? ' is-selected' : ''}`} key={place.id}>
-            <div className="destination-photo-frame">
-              <img src={place.image} alt={place.photoCredit ? place.name : `${place.name}, illustrative landscape`} loading="lazy" />
-              {place.photoCredit && <small className="destination-photo-credit"><a href={place.photoCredit.source} target="_blank" rel="noreferrer">{place.photoCredit.author}</a> · <a href={place.photoCredit.licenseUrl} target="_blank" rel="noreferrer">CC BY-SA 4.0</a></small>}
-            </div>
+          <p className="planner-place-summary" role="status">{placeIds.length} places selected · {usedPlaceDays - 1} sightseeing days planned · 1 arrival day and 1 departure day reserved. {Math.max(0, nights - usedPlaceDays)} spare days. Gurez requires 3 days and 2 nights.</p>
+          <p ref={placeNoticeRef} className="planner-place-notice" role="alert" tabIndex={-1} hidden={!selectionError}>{selectionError}</p>
+          <div className="planner-destination-grid">{plannerStops.map((place) => <article className={`planner-place-card${placeIds.includes(place.id) ? ' is-selected' : ''}`} key={place.id}>
+            <DestinationPhotos places={place.includedPlaces} />
             <label><input type="checkbox" checked={placeIds.includes(place.id)} onChange={() => toggleDestination(place.id)} />
               <strong>{place.name}</strong>
-              <span>{placeDays(place.id)} {placeDays(place.id) === 1 ? 'day' : 'days · 2 nights'}</span>
+              <span>{placeDays(place.id)} {placeDays(place.id) === 1 ? 'day' : 'days · 2 nights'}{place.id === combinedExcursionId ? ' · From Srinagar' : ''}</span>
               <span>Price on enquiry</span>
             </label>
             <Link to={`/destinations?place=${encodeURIComponent(place.name)}`} state={{ tripReturn: { sectionId, returnPath: sectionId === 'package-planner' ? '/tour-packages' : '/' } }} onClick={preservePlanForHotelReturn}>View this place <ArrowRight size={13} /></Link>
@@ -395,28 +435,21 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
           <p className="planner-vehicle-total" role="status"><strong>Vehicle rental estimate: ₹{vehicleTotal.toLocaleString('en-IN')}</strong><span>₹{selectedVehicle.price.toLocaleString('en-IN')} × {tripDays} days · vehicle only, not the full package price</span></p>
         </div>
         </div>}
-        {tripDays > 0 ? <div className="day-plans">
+        {tripDays > 0 && !capacityError ? <div className="day-plans">
           {dayPlans.map((day, index) => {
-            const routeLabel = day.origin === day.routeTo
-              ? `Explore ${stopName(day.origin)} locally`
-              : `${stopName(day.origin)} to ${stopName(day.routeTo)}`
+            const routeLabel = dayRouteLabel(day, index, dayPlans.length)
             const date = formatDate(addDays(startDate, index))
             return <article className="day-plan" key={`${startDate}-${index}`}>
               <div className="day-marker"><span>{String(index + 1).padStart(2, '0')}</span><i /></div>
               <div className="day-plan-fields">
-                <div className="day-plan-title"><div><span>DAY {index + 1}</span><h4>{date}</h4></div>{index === tripDays - 1 && <span className="departure-label">Departure day</span>}</div>
-                <fieldset className="planner-route-picker">
-                  <legend>Day {index + 1} · Choose your route from {stopName(day.origin)}</legend>
-                  <div className="planner-daily-route-options">{day.routeOptions.map((id) => <button key={id} type="button" className={`planner-route-tile${day.routeTo === id ? ' is-selected' : ''}`} aria-pressed={day.routeTo === id} onClick={() => updatePlan(index, { routeTo: id, stayAt: id === 'gurez' ? 'gurez' : 'srinagar' })}>
-                    {id === day.origin ? `Explore ${stopName(id)} locally` : `${stopName(day.origin)} to ${stopName(id)}`}
-                  </button>)}</div>
-                </fieldset>
+                <div className="day-plan-title"><div><span>DAY {index + 1}</span><h4>{date}</h4></div>{(index === 0 || index === tripDays - 1) && <span className="departure-label">{index === 0 ? 'Arrival day' : 'Departure day'}</span>}</div>
+                <p className="planner-assigned-route"><MapPin size={15} /> {routeLabel}</p>
                 {day.routeTo === 'gurez' && <p className="planner-assigned-route">Gurez visit: 3 days and 2 nights reserved.</p>}
                 {index < tripDays - 1 && <>
-                  <fieldset className="planner-stay-picker overnight-field">
+                  {stayOptions(day.routeTo).length > 1 && day.routeTo !== 'gurez' ? <fieldset className="planner-stay-picker overnight-field">
                     <legend><MoonStar size={15} /> Day {index + 1} · Where would you like to stay?</legend>
                     <div className="planner-stay-tiles">
-                      {(day.routeTo === 'gurez' ? ['gurez'] : stayOptions(day.routeTo)).map((id) => <button
+                      {stayOptions(day.routeTo).map((id) => <button
                         className={`planner-stay-tile${day.stayAt === id ? ' is-selected' : ''}`}
                         type="button"
                         key={id}
@@ -424,7 +457,7 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
                         onClick={() => updatePlan(index, { routeTo: day.routeTo, stayAt: id, hotelId: undefined })}
                       >Stay in {stopName(id)}</button>)}
                     </div>
-                  </fieldset>
+                  </fieldset> : <p className="planner-assigned-route"><MoonStar size={15} /> Stay in {stopName(day.stayAt)}</p>}
                   <div className="planner-field overnight-field">
                     <span>Day {index + 1} · Choose a hotel in {stopName(day.stayAt)} <small className="planner-swipe-hint">Swipe for hotels</small></span>
                     <SwipeRail label={`Day ${index + 1} hotels in ${stopName(day.stayAt)}`} className="planner-hotel-rail">
@@ -437,7 +470,7 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
                         >
                           <span className="planner-hotel-category">{hotel.category}</span>
                           <strong>{hotel.name}</strong>
-                          <img className="planner-hotel-photo" src={hotel.image} alt={`${hotel.name}, illustrative hotel photo`} loading="lazy" />
+                          <img className="planner-hotel-photo" src={hotel.image} alt={`${hotel.name}, illustrative bedroom photo`} loading="lazy" />
                         </button>
                         <HotelRates hotel={hotel} meals={{ breakfast: day.hotelId === hotel.id && Boolean(day.breakfast), dinner: day.hotelId === hotel.id && Boolean(day.dinner) }} onChange={(breakfast, dinner) => setPlans((current) => {
                           const next = [...current]
@@ -451,9 +484,9 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
                           onClick={preservePlanForHotelReturn}
                         >View hotel <ArrowRight size={13} /></Link>
                       </article>)}
-                      <article className={`planner-hotel-card planner-hotel-recommend-card${!day.hotelId ? ' is-selected' : ''}`}>
+                      <article className={`planner-hotel-card${!day.hotelId ? ' is-selected' : ''}`}>
                         <button
-                          className="planner-hotel-tile planner-hotel-recommend"
+                          className="planner-hotel-tile"
                           type="button"
                           aria-pressed={!day.hotelId}
                           onClick={() => updatePlan(index, { routeTo: day.routeTo, stayAt: day.stayAt, hotelId: undefined })}
@@ -470,7 +503,7 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
               </div>
             </article>
           })}
-        </div> : <p className="planner-empty">Choose your start and end dates to build your day-by-day plan.</p>}
+        </div> : <p className="planner-empty">{capacityError ? 'Your itinerary will appear once your selected places fit within your dates.' : 'Choose your start and end dates to build your day-by-day plan.'}</p>}
 
         <div className="planner-footer"><p>Your route is a starting point. Our local team will help check travel times, access and availability.</p><button className="button button-dark" type="button" disabled={!tripDays} onClick={continueToEnquiry}>Continue with this plan <ArrowRight size={16} /></button></div>
       </div>

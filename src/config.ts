@@ -7,5 +7,3 @@ export const business = {
   phone: '+91 914-941-8161',
   destination: 'Kashmir, India',
 }
-
-export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? ''

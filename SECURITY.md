@@ -10,8 +10,10 @@ information in the source code or Vite environment variables.
 Production builds include a Content Security Policy that restricts scripts and
 connections to the same origin, disables embedded objects and native form
 submissions, and allows only the existing Google font and Unsplash image sources.
-Inline styling remains allowed for existing UI styles; inline scripts are blocked.
-The page also disables referrer sharing.
+Inline scripts, event handlers, inline styles, embedded frames and workers are
+blocked. Modal scroll locking uses a CSS class rather than inline styling.
+The page also disables referrer sharing. Cross-Origin-Opener-Policy isolates
+cross-origin windows, and legacy cross-domain policy files are disabled.
 
 Vite development and preview servers send anti-framing, MIME-sniffing, referrer,
 and permissions headers. Preview also sends the production CSP. Development
@@ -34,7 +36,9 @@ browser history may retain it. Do not claim that this flow never shares data.
 No booking or message is delivered by the website itself.
 
 Trip dates and hotel choices are temporarily stored in sessionStorage to restore
-the planner. This is not encrypted storage and is accessible to scripts running
+the planner. Restores reject snapshots larger than 32 KiB, more than 31 day plans,
+invalid calendar dates, expired snapshots and future timestamps; malformed data
+is discarded. This is not encrypted storage and is accessible to scripts running
 on this origin. Do not add contact details or payment information to this storage.
 Unsplash and Google receive asset requests, including ordinary network metadata
 such as the visitor's IP address, even with referrer sharing disabled. Self-host
