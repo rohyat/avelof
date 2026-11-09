@@ -13,11 +13,6 @@ export function createWhatsAppUrl(message: string) {
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
 }
 
-export function enquiryWhatsAppUrl(selectedItem?: string) {
-  const interest = selectedItem ? `about ${selectedItem}` : 'about planning a trip to Kashmir'
-  return createWhatsAppUrl(`Hello AVELOF, I’d like to enquire ${interest}. Please share more details.`)
-}
-
 export function prepareRequest(payload: BookingPayload): PreparedRequest {
   const reference = `AV-${new Date().toISOString().slice(2, 10).replaceAll('-', '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
   const subject = `${requestTitles[payload.kind]} | ${reference}`

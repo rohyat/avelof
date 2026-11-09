@@ -31,6 +31,7 @@ export interface CatalogBase {
 export interface TourPackage extends CatalogBase {
   kind: 'package'
   originalPrice?: number
+  underDevelopment?: boolean
   duration: string
   itinerary: { day: string; title: string; detail: string }[]
   stay: string
@@ -43,6 +44,8 @@ export interface TourPackage extends CatalogBase {
 
 export interface RentalCar extends CatalogBase {
   kind: 'car'
+  priceOnEnquiry?: boolean
+  photoCredit?: { author: string; source: string; license: string; licenseUrl: string }
   seats: number
   luggage: string
   ac: boolean
@@ -52,6 +55,10 @@ export interface RentalCar extends CatalogBase {
 
 export interface Hotel extends CatalogBase {
   kind: 'hotel'
+  roomOnlyPrice?: number
+  rateBasis?: string
+  mealPlan?: string
+  packageId?: string
   roomTypes: string[]
   facilities: string[]
   checkIn: string

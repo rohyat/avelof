@@ -8,6 +8,8 @@ import { createWhatsAppUrl } from '../services/bookingService'
 import BookingModal, { EnquiryForm } from '../components/BookingModal'
 import TripPlanner from '../components/TripPlanner'
 import DiscountLabel from '../components/DiscountLabel'
+import HotelRates from '../components/HotelRates'
+import VehiclePhotoCaption from '../components/VehiclePhotoCaption'
 import { clearSavedTripPlan } from '../services/tripPlanStorage'
 import type { CatalogItem, CatalogKind, Hotel, PreparedRequest, RentalCar, TourPackage } from '../types'
 import type { SiteContext } from '../components/SiteLayout'
@@ -37,19 +39,27 @@ function SectionHeading({ eyebrow, title, copy, link, to }: { eyebrow: string; t
   return <div className="section-heading"><div><Eyebrow>{eyebrow}</Eyebrow><h2>{title}</h2>{copy && <p>{copy}</p>}</div>{link && to && <Link className="text-link" to={to}>{link}<ArrowRight size={16} /></Link>}</div>
 }
 
-function CatalogCard({ item, kind }: { item: CatalogItem; kind: CatalogKind }) {
+function CatalogCard({ item: initialItem, kind }: { item: CatalogItem; kind: CatalogKind }) {
   const openBooking = useBooking()
+  const [searchParams] = useSearchParams()
+  const minimumSeats = Number(searchParams.get('seats')) || 0
+  const seatingOptions = initialItem.kind === 'car' && initialItem.category === 'Tempo Traveller' ? rentalCars.filter((car) => car.category === 'Tempo Traveller' && car.seats >= minimumSeats) : []
+  const [selectedVehicleId, setSelectedVehicleId] = useState(initialItem.id)
+  const item: CatalogItem = seatingOptions.length > 0 ? seatingOptions.find((car) => car.id === selectedVehicleId) ?? seatingOptions[0] : initialItem
   const detailUrl = `${routeFor[kind]}/${item.id}`
+  const underDevelopment = item.kind === 'package' && item.underDevelopment
   return (
-    <article className="catalog-card">
-      <Link to={detailUrl} className="catalog-image"><img src={item.image} alt={`${item.name}, ${item.location}`} loading="lazy" /><span className="image-tag">{item.category}</span><span className="image-arrow"><ArrowUpRight size={17} /></span></Link>
+    <article className={`catalog-card${underDevelopment ? ' is-under-development' : ''}${item.kind === 'car' ? ' vehicle-card' : ''}`}>
+      {underDevelopment ? <div className="catalog-image"><img src={item.image} alt={`${item.name}, ${item.location}`} loading="lazy" /><span className="image-tag">Under development</span></div> : <Link to={detailUrl} className="catalog-image"><img src={item.image} alt={`${item.name}, ${item.location}`} loading="lazy" /><span className="image-tag">{item.category}</span><span className="image-arrow"><ArrowUpRight size={17} /></span></Link>}
       <div className="catalog-content"><div className="catalog-meta"><span><MapPin size={13} /> {item.location.split('·')[0]}</span>{item.kind === 'package' && <span>{item.duration}</span>}</div>
-        <Link to={detailUrl} className="catalog-title"><h3>{item.name}</h3></Link><p className="card-copy">{item.description}</p>
+        {item.kind === 'car' && <VehiclePhotoCaption vehicle={item} />}
+        {underDevelopment ? <div className="catalog-title"><h3>{item.name}</h3></div> : <Link to={detailUrl} className="catalog-title"><h3>{seatingOptions.length ? 'Tempo Traveller' : item.name}</h3></Link>}<p className="card-copy">{underDevelopment ? 'We’re working on this package. Please explore Deluxe or Premium for now.' : item.description}</p>
+        {seatingOptions.length > 0 && <fieldset className="vehicle-seat-options"><legend>Seating capacity</legend>{seatingOptions.map((vehicle) => <label key={vehicle.id}><input type="radio" name={`vehicle-seats-${initialItem.id}`} value={vehicle.id} checked={item.id === vehicle.id} onChange={() => setSelectedVehicleId(vehicle.id)} />{vehicle.seats}-seater</label>)}</fieldset>}
         <div className={`catalog-bottom${kind === 'package' ? ' package-card-bottom' : ''}`}>
-          <p className="price">{item.kind === 'package' && item.originalPrice !== undefined && <span className="original-price"><s aria-label={`Original price ${money(item.originalPrice)}`}>{money(item.originalPrice)}</s><DiscountLabel price={item.price} originalPrice={item.originalPrice} /></span>}{money(item.price)}<small>{kind === 'package' ? ' / person' : kind === 'car' ? ' / day from' : ' / night from'}</small></p>
+          {item.kind === 'hotel' ? <HotelRates hotel={item} /> : item.kind === 'car' && item.priceOnEnquiry ? <p className="price">Price on enquiry</p> : <p className="price">{item.kind === 'package' && item.originalPrice !== undefined && <span className="original-price"><s aria-label={`Original price ${money(item.originalPrice)}`}>{money(item.originalPrice)}</s><DiscountLabel price={item.price} originalPrice={item.originalPrice} /></span>}{money(item.price)}<small>{kind === 'package' ? ' / person' : ' / day from'}</small></p>}
           {kind === 'package' ? <div className="package-card-actions">
-            <Link className="button button-mini package-explore" to={detailUrl}>Explore Now <ArrowUpRight size={14} /></Link>
-            <button className="button button-mini" onClick={() => openBooking(kind, item.name)}>Enquire Now <ArrowRight size={14} /></button>
+            {underDevelopment ? <button className="button button-mini package-explore" disabled>Explore Now <ArrowUpRight size={14} /></button> : <Link className="button button-mini package-explore" to={detailUrl}>Explore Now <ArrowUpRight size={14} /></Link>}
+            <button className="button button-mini" disabled={underDevelopment} onClick={() => openBooking(kind, item.name)}>Enquire Now <ArrowRight size={14} /></button>
           </div> : <button className="button button-mini" onClick={() => openBooking(kind, item.name)}>Enquire Now <ArrowRight size={14} /></button>}
         </div>
       </div>
@@ -73,7 +83,7 @@ export function HomePage() {
     <TripPlanner onContinue={setTripFields} />
     <section className="destination-band"><div className="page-width"><SectionHeading eyebrow="The valley, in many moods" title="Find your own kind of Kashmir." link="Explore destinations" to="/destinations" /><div className="destination-grid">{destinations.slice(0, 6).map((place, index) => <Link className={`destination-tile destination-tile-${index + 1}`} to={`/destinations?place=${encodeURIComponent(place.name)}`} key={place.name}><img src={place.image} alt={place.name} loading="lazy" /><span className="destination-overlay" /><span className="destination-text"><small>{place.count}</small><strong>{place.name}</strong><span>{place.detail}</span></span><ArrowUpRight className="destination-arrow" size={18} /></Link>)}</div></div></section>
     <section className="section page-width split-promo"><div className="promo-photo"><img src={rentalCars[1].image} alt="Comfortable vehicle for Kashmir mountain travel" loading="lazy" /><span>THE VALLEY, YOUR WAY</span></div><div className="promo-copy"><Eyebrow>Go at your own pace</Eyebrow><h2>Good roads.<br /><em>Better company.</em></h2><p>From a quick Srinagar pickup to a week on the mountain roads, travel with a local driver who knows the turns and the stories.</p><div className="service-points"><span><Check size={15} /> Comfortable vehicles</span><span><Check size={15} /> Local, experienced drivers</span><span><Check size={15} /> Routes made around you</span></div><Link className="button button-dark" to="/car-rentals">Explore car rentals <ArrowRight size={16} /></Link></div></section>
-    <section className="stay-strip"><div className="page-width stay-content"><div><Eyebrow>Stay a little longer</Eyebrow><h2>From lake mornings<br />to mountain evenings.</h2><p>Heritage houseboats, warm family stays and considered mountain retreats.</p><Link className="button button-ivory" to="/hotels">Find your stay <ArrowRight size={16} /></Link></div><div className="stay-image"><img src={hotels[0].image} alt="A peaceful stay on Dal Lake" loading="lazy" /></div></div></section>
+    <section className="stay-strip"><div className="page-width stay-content"><div><Eyebrow>Stay a little longer</Eyebrow><h2>From lake mornings<br />to mountain evenings.</h2><p>Deluxe stays in Srinagar and Pahalgam, with breakfast and dinner included.</p><Link className="button button-ivory" to="/hotels">Find your stay <ArrowRight size={16} /></Link></div><div className="stay-image"><img src={hotels[0].image} alt="Illustrative hotel photography" loading="lazy" /></div></div></section>
     <section className="section page-width reasons-section"><SectionHeading eyebrow="The AVELOF difference" title={'Local knowledge.\nPersonal by nature.'} copy="A well-made journey feels easy. We take care of the details, then leave room for the moments you came for." /><div className="reason-grid"><article><span>01</span><h3>From here, always</h3><p>Our roots are in Kashmir. The recommendations come from lived experience, not a checklist.</p></article><article><span>02</span><h3>Made around you</h3><p>Flexible plans for your pace, your people and the way you like to discover a place.</p></article><article><span>03</span><h3>People you can reach</h3><p>A real local team is here before, during and after your journey through the valley.</p></article><article><span>04</span><h3>Thoughtful details</h3><p>Comfortable transport, carefully chosen stays and practical advice at every turn.</p></article></div></section>
     <section className="final-cta page-width"><div><Eyebrow>Your Kashmir, your way</Eyebrow><h2>Let’s make room<br /><em>for the unexpected.</em></h2></div><div><p>Tell us what you’re dreaming about. We’ll help shape the rest.</p><button className="button button-dark" onClick={() => openBooking('package')}>Start a conversation <ArrowUpRight size={16} /></button></div></section>
     {tripFields && <BookingModal kind="package" selectedItem="Custom package" initialFields={tripFields} onClose={() => setTripFields(null)} />}
@@ -106,7 +116,7 @@ export function CollectionPage() {
     previousPath.current = location.pathname
   }, [location.pathname])
   const [tripFields, setTripFields] = useState<Record<string, string> | null>(null)
-  const items = allItems[kind]
+  const items = kind === 'car' ? rentalCars.filter((car) => car.category !== 'Tempo Traveller' || car.id === 'tempo-traveller') : allItems[kind]
   const category = searchParams.get('category') ?? 'All'
   const maxPrice = searchParams.get('price') ?? 'all'
   const locationFilter = searchParams.get('location') ?? 'all'
@@ -120,14 +130,14 @@ export function CollectionPage() {
   const headings: Record<CatalogKind, { label: string; title: string; copy: string }> = {
     package: { label: 'Journeys through Kashmir', title: 'Find your kind of journey.', copy: 'Small-group and private routes, shaped by local knowledge and a little breathing room.' },
     car: { label: 'The open road', title: 'The valley, at your pace.', copy: 'Comfortable vehicles and local drivers for airport transfers, day trips and longer journeys.' },
-    hotel: { label: 'A place to land', title: 'Stay somewhere that feels right.', copy: 'A considered collection of houseboats, boutique hotels and mountain stays.' },
+    hotel: { label: 'A place to land', title: 'Stay somewhere that feels right.', copy: 'Deluxe and Premium package hotels in Srinagar, Pahalgam and Gulmarg, with couple rates including breakfast and dinner.' },
   }
   const categories = ['All', ...new Set(items.map((item) => item.category))]
   const filtered = items.filter((item) => {
     const priceLimit = maxPrice === 'all' ? Infinity : Number(maxPrice)
-    const matchSeats = kind !== 'car' || seats === 'all' || (item as RentalCar).seats >= Number(seats)
+    const matchSeats = kind !== 'car' || seats === 'all' || (item as RentalCar).seats >= Number(seats) || (item.category === 'Tempo Traveller' && rentalCars.some((car) => car.category === 'Tempo Traveller' && car.seats >= Number(seats)))
     const matchLocation = kind !== 'hotel' || locationFilter === 'all' || item.location === locationFilter
-    return (category === 'All' || item.category === category) && item.price <= priceLimit && matchSeats && matchLocation
+    return (category === 'All' || item.category === category) && (kind === 'car' || item.price <= priceLimit) && matchSeats && matchLocation
   })
 
   return <>
@@ -139,7 +149,7 @@ export function CollectionPage() {
         <label><span>Category</span><select value={category} onChange={(event) => updateFilter('category', event.target.value, 'All')}>{categories.map((value) => <option key={value}>{value}</option>)}</select></label>
         {kind === 'hotel' && <label><span>Location</span><select value={locationFilter} onChange={(event) => updateFilter('location', event.target.value, 'all')}><option value="all">All locations</option>{hotelLocations.map((value) => <option key={value}>{value}</option>)}</select></label>}
         {kind === 'car' && <label><span>Seats</span><select value={seats} onChange={(event) => updateFilter('seats', event.target.value, 'all')}><option value="all">Any capacity</option><option value="4">4+ seats</option><option value="6">6+ seats</option><option value="8">8+ seats</option></select></label>}
-        <label><span>Price</span><select value={maxPrice} onChange={(event) => updateFilter('price', event.target.value, 'all')}><option value="all">Any price</option><option value="25000">Under ₹25,000</option><option value="35000">Under ₹35,000</option><option value="50000">Under ₹50,000</option></select></label>
+        {kind !== 'car' && <label><span>Price</span><select value={maxPrice} onChange={(event) => updateFilter('price', event.target.value, 'all')}><option value="all">Any price</option><option value="25000">Under ₹25,000</option><option value="35000">Under ₹35,000</option><option value="50000">Under ₹50,000</option></select></label>}
         <span className="result-count">{filtered.length} {filtered.length === 1 ? 'option' : 'options'}</span>
       </div>}
       {filtered.length ? <div className="catalog-grid">{filtered.map((item) => <CatalogCard key={item.id} item={item} kind={kind} />)}</div> : <div className="empty-state"><Compass size={28} /><h2>No matches just yet</h2><p>Try another category or clear a filter to see more of Kashmir.</p><button className="button button-outline" onClick={() => setSearchParams({}, { replace: true })}>Clear filters</button></div>}
@@ -161,16 +171,17 @@ export function DetailPage() {
   const item = allItems[kind].find((candidate) => candidate.id === slug)
   const openBooking = useBooking()
   if (!item) return <NotFoundPage />
+  if (item.kind === 'package' && item.underDevelopment) return <section className="section page-width"><Eyebrow>Under development</Eyebrow><h1>{item.name}</h1><p>We’re working on this package. Please explore Deluxe or Premium for now.</p><Link className="text-link" to="/tour-packages">Explore other packages <ArrowRight size={16} /></Link></section>
 
   return <>
     <section className="detail-top page-width"><div className="breadcrumb"><Link to="/">Home</Link><span>/</span><Link to={routeFor[kind]}>{kind === 'package' ? 'Tour packages' : kind === 'car' ? 'Car rentals' : 'Hotels'}</Link><span>/</span><span>{item.name}</span></div><div className="detail-heading"><div><Eyebrow>{item.category} · {item.location}</Eyebrow><h1>{item.name}</h1><p>{item.description}</p></div><button className="button button-dark" onClick={() => openBooking(kind, item.name)}>Enquire Now <ArrowRight size={16} /></button></div>{tripReturn && <button className="button button-outline trip-return-button" type="button" onClick={() => navigate(-1)}><ArrowLeft size={16} /> Back to your trip</button>}</section>
-    <section className="detail-gallery page-width"><img className="gallery-main" src={item.gallery[0]} alt={item.name} /><img src={item.gallery[1] ?? item.image} alt={`${item.name} view`} /><img src={item.gallery[2] ?? item.image} alt={`${item.name} detail`} /></section>
+    {item.kind === 'car' ? <section className="vehicle-detail-photo page-width"><img src={item.image} alt={`${item.name} model reference`} /><VehiclePhotoCaption vehicle={item} /></section> : <section className="detail-gallery page-width"><img className="gallery-main" src={item.gallery[0]} alt={item.name} /><img src={item.gallery[1] ?? item.image} alt={`${item.name} view`} /><img src={item.gallery[2] ?? item.image} alt={`${item.name} detail`} /></section>}
     <div className="detail-layout page-width"><div className="detail-body">
       {kind === 'package' && <PackageDetail item={item as TourPackage} />}
       {kind === 'car' && <CarDetail item={item as RentalCar} />}
       {kind === 'hotel' && <HotelDetail item={item as Hotel} />}
       <section className="detail-related"><Eyebrow>Keep exploring</Eyebrow><h2>More ways to see Kashmir</h2><div className="related-links"><Link to="/tour-packages">Journeys <ArrowRight size={15} /></Link><Link to="/car-rentals">Local transport <ArrowRight size={15} /></Link><Link to="/hotels">Stays <ArrowRight size={15} /></Link></div></section>
-    </div><aside className="detail-aside"><Eyebrow>From</Eyebrow>{item.kind === 'package' && item.originalPrice !== undefined && <div className="original-price"><s aria-label={`Original price ${money(item.originalPrice)}`}>{money(item.originalPrice)}</s><DiscountLabel price={item.price} originalPrice={item.originalPrice} /></div>}<strong>{money(item.price)}</strong><span>{kind === 'package' ? 'per person' : kind === 'car' ? 'per day, estimated' : 'per night, estimated'}</span><p>Final price depends on dates, availability and the details of your trip. We’ll confirm everything with you directly.</p><button className="button button-dark" onClick={() => openBooking(kind, item.name)}>Enquire Now <ArrowRight size={16} /></button><a href={`mailto:${business.email}`} className="aside-email"><Mail size={16} /> Email AVELOF</a></aside></div>
+    </div><aside className="detail-aside"><Eyebrow>{item.kind === 'car' && item.priceOnEnquiry ? 'Rental fare' : 'From'}</Eyebrow>{item.kind === 'hotel' ? <HotelRates hotel={item} /> : item.kind === 'car' && item.priceOnEnquiry ? <strong className="quote-only-price">Price on enquiry</strong> : <>{item.kind === 'package' && item.originalPrice !== undefined && <div className="original-price"><s aria-label={`Original price ${money(item.originalPrice)}`}>{money(item.originalPrice)}</s><DiscountLabel price={item.price} originalPrice={item.originalPrice} /></div>}<strong>{money(item.price)}</strong><span>{kind === 'package' ? 'per person' : 'per day, estimated'}</span></>}<p>Final price depends on dates, availability and the details of your trip. We’ll confirm everything with you directly.</p><button className="button button-dark" onClick={() => openBooking(kind, item.name)}>Enquire Now <ArrowRight size={16} /></button><a href={`mailto:${business.email}`} className="aside-email"><Mail size={16} /> Email AVELOF</a></aside></div>
   </>
 }
 
@@ -195,6 +206,7 @@ function CarDetail({ item }: { item: RentalCar }) {
 
 function HotelDetail({ item }: { item: Hotel }) {
   return <>
+    {item.packageId && <Link className="text-link" to={`/tour-packages/${item.packageId}`}>{item.category} <ArrowUpRight size={16} /></Link>}
     <section className="detail-section"><Eyebrow>The stay</Eyebrow><h2>A softer place to land.</h2><p>{item.description}</p><div className="fact-list"><span><strong>Check-in</strong>{item.checkIn}</span><span><strong>Check-out</strong>{item.checkOut}</span><span><strong>Location</strong>{item.location}</span></div></section>
     <section className="detail-section"><Eyebrow>Rooms & facilities</Eyebrow><h2>Make yourself at home.</h2><h3>Room types</h3><ul className="detail-list">{item.roomTypes.map((room) => <li key={room}>{room}</li>)}</ul><h3 className="subheading-gap">Facilities</h3><div className="tag-list">{item.facilities.map((facility) => <span key={facility}>{facility}</span>)}</div></section>
     <section className="detail-section"><Eyebrow>Highlights</Eyebrow><h2>What makes it special</h2><ul className="detail-list">{item.highlights.map((highlight) => <li key={highlight}>{highlight}</li>)}</ul></section>

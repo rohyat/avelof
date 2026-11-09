@@ -1,4 +1,5 @@
 import type { Destination, Hotel, RentalCar, TourPackage, VerifiedGuestRating } from '../types'
+import { vehiclePhotos } from './vehiclePhotos'
 
 const photos = {
   lake: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1400&q=85',
@@ -6,61 +7,57 @@ const photos = {
   mountain: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1400&q=85',
   snow: 'https://images.unsplash.com/photo-1517299321609-52687d1bc55a?auto=format&fit=crop&w=1400&q=85',
   meadow: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?auto=format&fit=crop&w=1400&q=85',
-  houseboat: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1400&q=85',
   hotel: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1400&q=85',
-  car: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1400&q=85',
-  suv: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=1400&q=85',
   room: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?auto=format&fit=crop&w=1400&q=85',
 }
 
-export const tourPackages: TourPackage[] = [
+const packageCatalog: TourPackage[] = [
   {
     id: 'deluxe', kind: 'package', name: 'Deluxe', location: 'Srinagar · Gulmarg · Pahalgam',
     image: photos.lake, gallery: [photos.lake, photos.valley, photos.meadow], category: 'Deluxe', price: 15399.30, originalPrice: 21999,
-    duration: '4 nights · 5 days', description: 'A five-day Kashmir escape with stays in Srinagar, Gulmarg and Pahalgam.',
+    duration: '4 nights · 5 days', description: 'A five-day Kashmir escape with stays in Srinagar and Pahalgam, plus a Gulmarg day trip.',
     itinerary: [
       { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Meet your local driver, check in at The Mallard and enjoy a relaxed first evening.' },
-      { day: 'Day 02', title: 'Srinagar to Gulmarg', detail: 'Travel to Gulmarg for a mountain stay and time to explore the meadows.' },
-      { day: 'Day 03', title: 'Gulmarg to Pahalgam', detail: 'Continue to Pahalgam and check in at Home 2 for a night beside the valley.' },
+      { day: 'Day 02', title: 'Gulmarg day trip', detail: 'Travel from Srinagar to Gulmarg to explore the meadows, then return to your Srinagar hotel for the night.' },
+      { day: 'Day 03', title: 'Srinagar to Pahalgam', detail: 'Continue to Pahalgam and check in at a Deluxe package hotel for a night beside the valley.' },
       { day: 'Day 04', title: 'Pahalgam to Srinagar', detail: 'Enjoy the Pahalgam scenery before returning to Srinagar for the final night.' },
       { day: 'Day 05', title: 'Departure', detail: 'Transfer to Srinagar airport for your onward journey.' },
     ],
-    stay: 'Two nights in Srinagar, one night in Gulmarg and one night in Pahalgam.',
+    stay: 'Three nights in Srinagar and one night in Pahalgam. No overnight stay in Gulmarg.',
     stays: [
-      { location: 'Srinagar', nights: 2, hotel: 'The Garden House' },
-      { location: 'Gulmarg', nights: 1, hotel: 'Pine Ridge Retreat' },
-      { location: 'Pahalgam', nights: 1, hotel: 'Riverstone Pahalgam' },
+      { location: 'Srinagar', nights: 3, hotel: 'Hotel Royal Imsar, Hotel Fair View, Hotel Star of Kashmir or The Mallard, subject to availability' },
+      { location: 'Pahalgam', nights: 1, hotel: 'The Cedar Pahalgam, Hotel Diamond Dreams or Home 2, subject to availability' },
     ],
     transport: 'Private air-conditioned vehicle with a local driver throughout.',
-    experiences: ['Srinagar city and lake time', 'Gulmarg mountain stay', 'Pahalgam valley visit'],
-    inclusions: ['4 nights accommodation', 'Daily breakfast', 'Private transfers and sightseeing', 'Local trip assistance'],
-    exclusions: ['Flights and travel insurance', 'Gondola tickets and optional activities', 'Lunches and dinners unless stated'],
+    experiences: ['Srinagar city and lake time', 'Gulmarg day trip', 'Pahalgam valley visit'],
+    inclusions: ['4 nights accommodation', 'Daily breakfast and dinner', 'Same private vehicle throughout the trip', 'Private transfers and sightseeing', 'All toll taxes', 'Complimentary Shikara ride'],
+    exclusions: ['Gondola tickets', 'Optional activities', 'Union cabs', 'Flights and travel insurance', 'Lunches'],
   },
   {
     id: 'premium', kind: 'package', name: 'Premium', location: 'Srinagar · Gulmarg · Pahalgam',
-    image: photos.mountain, gallery: [photos.mountain, photos.snow, photos.lake], category: 'Premium', price: 36999,
-    duration: '5 nights · 6 days', description: 'A six-day Kashmir stay with Jamal Resorts, Hotel Signature and Twin Towers.',
+    image: photos.mountain, gallery: [photos.mountain, photos.snow, photos.lake], category: 'Premium', price: 25899.30, originalPrice: 36999,
+    duration: '5 nights · 6 days', description: "A six-day Kashmir stay with Jamal Resorts, Hotel Signature and Twin Towers by D'foy.",
     itinerary: [
       { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Check in at Jamal Resorts and settle into the city.' },
       { day: 'Day 02', title: 'Discover Srinagar', detail: 'Enjoy a full day for the lake, gardens and old city before another night at Jamal Resorts.' },
       { day: 'Day 03', title: 'Srinagar to Gulmarg', detail: 'Head to Gulmarg and stay at Hotel Signature.' },
-      { day: 'Day 04', title: 'Gulmarg to Pahalgam', detail: 'Travel through the valley and check in at Twin Towers.' },
-      { day: 'Day 05', title: 'A slower day in Pahalgam', detail: 'Spend another night at Twin Towers and explore the valley at an easy pace.' },
+      { day: 'Day 04', title: 'Gulmarg to Pahalgam', detail: "Travel through the valley and check in at Twin Towers by D'foy." },
+      { day: 'Day 05', title: 'A slower day in Pahalgam', detail: "Spend another night at Twin Towers by D'foy and explore the valley at an easy pace." },
       { day: 'Day 06', title: 'Departure', detail: 'Transfer from Pahalgam to Srinagar airport for your onward journey.' },
     ],
     stay: 'Two nights in Srinagar, one night in Gulmarg and two nights in Pahalgam.',
     stays: [
       { location: 'Srinagar', nights: 2, hotel: 'Jamal Resorts' },
       { location: 'Gulmarg', nights: 1, hotel: 'Hotel Signature' },
-      { location: 'Pahalgam', nights: 2, hotel: 'Twin Towers' },
+      { location: 'Pahalgam', nights: 2, hotel: "Twin Towers by D'foy" },
     ],
     transport: 'Private air-conditioned vehicle with a local driver throughout.',
     experiences: ['Srinagar city and lake time', 'Gulmarg mountain stay', 'Pahalgam valley visit'],
-    inclusions: ['5 nights accommodation', 'Daily breakfast', 'Private transfers and sightseeing', 'Local trip assistance'],
-    exclusions: ['Flights and travel insurance', 'Gondola tickets and optional activities', 'Lunches and dinners unless stated'],
+    inclusions: ['5 nights accommodation', 'Daily breakfast and dinner', 'Private transfers', 'Sightseeing', 'All toll taxes', 'Complimentary one-hour Shikara ride', 'Premium hotels with breakfast and dinner', 'Centralized heating system', 'Union cabs in Tangmarg, Pahalgam and Gulmarg'],
+    exclusions: ['Gondola tickets', 'Optional activities', 'Flights and travel insurance', 'Lunches'],
   },
   {
-    id: 'luxury', kind: 'package', name: 'Luxury', location: 'Srinagar · Gulmarg · Pahalgam',
+    id: 'luxury', kind: 'package', name: 'Luxury', location: 'Srinagar · Gulmarg · Pahalgam', underDevelopment: true,
     image: photos.meadow, gallery: [photos.meadow, photos.valley, photos.lake], category: 'Luxury', price: 52999,
     duration: '5 nights · 6 days', description: 'A six-day Kashmir escape with distinctive stays across Srinagar, Gulmarg and Pahalgam.',
     itinerary: [
@@ -84,22 +81,87 @@ export const tourPackages: TourPackage[] = [
   },
 ]
 
-export const rentalCars: RentalCar[] = [
-  { id: 'swift-dzire', kind: 'car', name: 'Comfort Sedan', location: 'Srinagar', image: photos.car, gallery: [photos.car, photos.valley], category: 'Sedan', price: 3200, description: 'A comfortable choice for airport transfers and easy valley drives.', seats: 4, luggage: '2 medium bags', ac: true, tripTypes: ['Airport transfer', 'Local sightseeing', 'Intercity'], conditions: ['Price varies by route and season.', 'Driver allowance and applicable taxes are confirmed in your quote.'] },
-  { id: 'innova-crysta', kind: 'car', name: 'Innova Crysta', location: 'Srinagar', image: photos.suv, gallery: [photos.suv, photos.mountain], category: 'Premium SUV', price: 5500, description: 'Extra room and a relaxed ride for families and longer mountain routes.', seats: 6, luggage: '3 medium bags', ac: true, tripTypes: ['Airport transfer', 'Multi-day tour', 'Intercity'], conditions: ['Availability depends on travel dates.', 'Final fare is confirmed after route and duration review.'] },
-  { id: 'urban-suv', kind: 'car', name: 'Compact SUV', location: 'Srinagar', image: photos.car, gallery: [photos.car, photos.lake], category: 'SUV', price: 4200, description: 'A versatile vehicle for couples or small groups exploring the valley.', seats: 5, luggage: '2 medium bags', ac: true, tripTypes: ['Local sightseeing', 'Airport transfer', 'Intercity'], conditions: ['Route restrictions may apply in peak season.', 'Ask us to confirm luggage capacity for your group.'] },
-  { id: 'tempo-traveller', kind: 'car', name: 'Tempo Traveller', location: 'Srinagar', image: photos.suv, gallery: [photos.suv, photos.valley], category: 'Tempo Traveller', price: 7800, description: 'A practical option for larger groups travelling together.', seats: 12, luggage: 'Group luggage space', ac: true, tripTypes: ['Group tours', 'Airport transfer', 'Multi-day tour'], conditions: ['Vehicle layout varies by availability.', 'Share your group and luggage size for a suitable quote.'] },
-  { id: 'city-economy', kind: 'car', name: 'City Economy', location: 'Srinagar', image: photos.car, gallery: [photos.car, photos.lake], category: 'Economy', price: 2700, description: 'A compact, easygoing option for airport transfers and city travel.', seats: 4, luggage: '1 medium bag', ac: true, tripTypes: ['Airport transfer', 'Local sightseeing'], conditions: ['Best suited to light luggage.', 'Final fare depends on route and travel dates.'] },
-]
+export const tourPackages: TourPackage[] = packageCatalog
 
-export const hotels: Hotel[] = [
-  { id: 'dal-lake-houseboat', kind: 'hotel', name: 'Dal Lake Heritage Houseboat', location: 'Dal Lake, Srinagar', image: photos.houseboat, gallery: [photos.houseboat, photos.lake, photos.room], category: 'Houseboat', price: 8500, description: 'A calm, characterful stay on the water with mountain views and attentive local hosting.', roomTypes: ['Deluxe lake-view room', 'Heritage suite'], facilities: ['Breakfast', 'Private deck', 'Shikara access', 'Heating'], checkIn: '12:00 PM', checkOut: '11:00 AM', highlights: ['Lake-facing rooms', 'Traditional interiors', 'Quiet location'] },
-  { id: 'pine-ridge-resort', kind: 'hotel', name: 'Pine Ridge Retreat', location: 'Gulmarg', image: photos.hotel, gallery: [photos.hotel, photos.snow, photos.room], category: 'Premium resort', price: 14500, description: 'A warm mountain hideaway close to the meadow, made for slow mornings after a day outdoors.', roomTypes: ['Deluxe room', 'Mountain suite', 'Family room'], facilities: ['Restaurant', 'Heating', 'Garden', 'Room service'], checkIn: '2:00 PM', checkOut: '11:00 AM', highlights: ['Mountain views', 'Near meadow trails', 'Family-friendly rooms'] },
-  { id: 'riverstone-pahalgam', kind: 'hotel', name: 'Riverstone Pahalgam', location: 'Pahalgam', image: photos.valley, gallery: [photos.valley, photos.meadow, photos.room], category: 'Family stay', price: 9200, description: 'A welcoming base near the river, with easy access to Pahalgam’s walking paths.', roomTypes: ['Classic room', 'River-view room', 'Family suite'], facilities: ['Restaurant', 'Garden', 'Heating', 'Parking'], checkIn: '1:00 PM', checkOut: '11:00 AM', highlights: ['River nearby', 'Spacious rooms', 'Local dining'] },
-  { id: 'garden-house-srinagar', kind: 'hotel', name: 'The Garden House', location: 'Srinagar', image: photos.room, gallery: [photos.room, photos.lake, photos.hotel], category: 'Boutique hotel', price: 6800, description: 'An intimate city stay with leafy corners and thoughtful, personal service.', roomTypes: ['Classic room', 'Superior room'], facilities: ['Breakfast', 'Garden', 'Wi-Fi', 'Heating'], checkIn: '12:00 PM', checkOut: '10:00 AM', highlights: ['Quiet garden', 'Central location', 'Good for short stays'] },
-  { id: 'cedar-grand', kind: 'hotel', name: 'Cedar Grand Srinagar', location: 'Srinagar', image: photos.hotel, gallery: [photos.hotel, photos.room, photos.lake], category: 'Luxury hotel', price: 18500, description: 'A polished city retreat with generous rooms and attentive hospitality.', roomTypes: ['Deluxe room', 'Executive suite'], facilities: ['Restaurant', 'Spa', 'Room service', 'Heating'], checkIn: '2:00 PM', checkOut: '12:00 PM', highlights: ['Full-service stay', 'Spacious rooms', 'Central Srinagar'] },
-  { id: 'willow-budget-stay', kind: 'hotel', name: 'Willow Guesthouse', location: 'Srinagar', image: photos.room, gallery: [photos.room, photos.houseboat, photos.lake], category: 'Budget stay', price: 3400, description: 'A simple, welcoming base for travellers who plan to spend their days exploring.', roomTypes: ['Standard room', 'Twin room'], facilities: ['Breakfast available', 'Wi-Fi', 'Heating'], checkIn: '12:00 PM', checkOut: '10:00 AM', highlights: ['Good value', 'Friendly hosting', 'Easy city access'] },
-]
+export const rentalCars: RentalCar[] = [
+  { id: 'swift-dzire', name: 'Comfort Sedan', category: 'Sedan', seats: 4, price: 2000 },
+  { id: 'ertiga', name: 'Maruti Suzuki Ertiga', category: 'MPV', seats: 6, price: 2500 },
+  { id: 'innova', name: 'Toyota Innova', category: 'MPV', seats: 6, price: 3500 },
+  { id: 'innova-crysta', name: 'Toyota Innova Crysta', category: 'Premium MPV', seats: 6, price: 3500 },
+  { id: 'tempo-traveller', name: 'Tempo Traveller 12-seater', category: 'Tempo Traveller', seats: 12, price: 3800 },
+  { id: 'tempo-traveller-14', name: 'Tempo Traveller 14-seater', category: 'Tempo Traveller', seats: 14, price: 4000 },
+  { id: 'tempo-traveller-20', name: 'Tempo Traveller 20-seater', category: 'Tempo Traveller', seats: 20, price: 5000 },
+  { id: 'bus-26', name: 'Bus 16-seater', category: 'Bus', seats: 16, price: 6500 },
+].map((vehicle) => ({
+  ...vehicle,
+  kind: 'car',
+  location: 'Srinagar',
+  priceOnEnquiry: false,
+  image: (vehicle.category === 'Tempo Traveller' ? vehiclePhotos.traveller : vehiclePhotos[vehicle.id as keyof typeof vehiclePhotos]).image,
+  gallery: [(vehicle.category === 'Tempo Traveller' ? vehiclePhotos.traveller : vehiclePhotos[vehicle.id as keyof typeof vehiclePhotos]).image],
+  photoCredit: vehicle.category === 'Tempo Traveller' ? vehiclePhotos.traveller : vehiclePhotos[vehicle.id as keyof typeof vehiclePhotos],
+  description: `${vehicle.name} for Kashmir transfers, sightseeing and group travel. Contact AVELOF for a fare based on your route and dates.`,
+  luggage: 'Confirm luggage capacity with AVELOF',
+  ac: true,
+  tripTypes: ['Airport transfer', 'Local sightseeing', 'Multi-day tour'],
+  conditions: ['Prices will be confirmed on enquiry.', 'Passenger capacity and air conditioning depend on the allocated vehicle.', 'Photos show reference models, not the allocated vehicle. Tempo Travellers are manufactured by Force Motors.'],
+}))
+
+const deluxeHotels: Hotel[] = [
+  { id: 'hotel-royal-imsar', name: 'Hotel Royal Imsar', location: 'Srinagar', price: 3500 },
+  { id: 'hotel-fair-view', name: 'Hotel Fair View', location: 'Srinagar', price: 3500 },
+  { id: 'hotel-star-of-kashmir', name: 'Hotel Star of Kashmir', location: 'Srinagar', price: 3500 },
+  { id: 'the-mallard', name: 'The Mallard', location: 'Srinagar', price: 3500 },
+  { id: 'the-cedar-pahalgam', name: 'The Cedar Pahalgam', location: 'Pahalgam', price: 4000 },
+  { id: 'hotel-diamond-dreams', name: 'Hotel Diamond Dreams', location: 'Pahalgam', price: 4000 },
+  { id: 'home-2', name: 'Home 2', location: 'Pahalgam', price: 4000 },
+].map((hotel) => ({
+  ...hotel,
+  kind: 'hotel',
+  image: photos.hotel,
+  gallery: [photos.hotel, photos.room, photos.lake],
+  category: 'Deluxe package',
+  packageId: 'deluxe',
+  roomOnlyPrice: hotel.price - 1000,
+  rateBasis: 'per couple per night',
+  mealPlan: 'Breakfast and dinner included',
+  description: `${hotel.name} in ${hotel.location}, a Deluxe package stay for a couple with breakfast and dinner included.`,
+  roomTypes: ['Room for a couple'],
+  facilities: ['Breakfast included', 'Dinner included'],
+  checkIn: 'Confirm with AVELOF',
+  checkOut: 'Confirm with AVELOF',
+  highlights: ['Deluxe package', 'Breakfast and dinner included'],
+}))
+
+const premiumHotels: Hotel[] = [
+  { id: 'hotel-crown-prince', name: 'Hotel Crown Prince', location: 'Srinagar' },
+  { id: 'luxury-heritage-hotel', name: 'Hotel The Luxury Heritage', location: 'Srinagar' },
+  { id: 'jamal-resorts', name: 'Jamal Resorts', location: 'Srinagar' },
+  { id: 'hotel-white-water-resort', name: 'Hotel White Water Resort', location: 'Pahalgam' },
+  { id: 'twin-towers-by-defy', name: "Twin Towers by D'foy", location: 'Pahalgam' },
+  { id: 'himalayan-hills', name: 'Himalayan Hills', location: 'Pahalgam' },
+  { id: 'hotel-signature', name: 'Hotel Signature', location: 'Gulmarg' },
+  { id: 'the-gulmarg-house', name: 'The Gulmarg House', location: 'Gulmarg' },
+].map((hotel) => ({
+  ...hotel,
+  kind: 'hotel',
+  price: hotel.location === 'Srinagar' ? 4700 : 5100,
+  roomOnlyPrice: (hotel.location === 'Srinagar' ? 4700 : 5100) - 1200,
+  image: photos.hotel,
+  gallery: [photos.hotel, photos.room, photos.lake],
+  category: 'Premium package',
+  packageId: 'premium',
+  rateBasis: 'per couple per night',
+  mealPlan: 'Breakfast and dinner included',
+  description: `${hotel.name} in ${hotel.location}, a Premium package stay for a couple with breakfast and dinner included.`,
+  roomTypes: ['Room for a couple'],
+  facilities: ['Breakfast included', 'Dinner included'],
+  checkIn: 'Confirm with AVELOF',
+  checkOut: 'Confirm with AVELOF',
+  highlights: ['Premium package', 'Breakfast and dinner included'],
+}))
+
+export const hotels: Hotel[] = [...deluxeHotels, ...premiumHotels]
 
 export const verifiedGuestRatings: VerifiedGuestRating[] = [
   { id: 'guest-rating-1', name: 'Amit Sharma', rating: 5, packageName: 'Premium', bookingId: 'PREN0100', reviewTitle: 'Amazing Kashmir Experience', reviewText: 'Had an amazing trip to Kashmir! The hotel stay was very comfortable, the cab service was excellent, and the driver was friendly and helpful. The beautiful scenery made the entire journey unforgettable.' },

@@ -4,6 +4,7 @@ import { ArrowRight, Check, MessageCircle, X } from 'lucide-react'
 import { business } from '../config'
 import { hotels, rentalCars, tourPackages } from '../data/catalog'
 import { prepareRequest } from '../services/bookingService'
+import HotelRates from './HotelRates'
 import type { BookingKind, PreparedRequest } from '../types'
 
 interface BookingModalProps {
@@ -22,11 +23,23 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   children?: ReactNode
   submitDisabled?: boolean
 }) {
+  const [checkInDate, setCheckInDate] = useState('')
+  const [checkOutDate, setCheckOutDate] = useState('')
+  const [preferredStay, setPreferredStay] = useState(selectedItem ?? hotels[0].name)
+  const [hotelMeals, setHotelMeals] = useState({ breakfast: false, dinner: false })
+  const selectedHotel = hotels.find((hotel) => hotel.name === preferredStay) ?? hotels[0]
+  const roomOnlyPrice = selectedHotel.roomOnlyPrice ?? selectedHotel.price
+  const selectedNightlyRate = roomOnlyPrice + (selectedHotel.price - roomOnlyPrice) / 2 * (Number(hotelMeals.breakfast) + Number(hotelMeals.dinner))
+  const millisecondsPerDay = 24 * 60 * 60 * 1000
+  const nights = checkInDate && checkOutDate ? (Date.parse(checkOutDate) - Date.parse(checkInDate)) / millisecondsPerDay : 0
+  const stayDuration = nights > 0 ? `${nights + 1} days, ${nights} ${nights === 1 ? 'night' : 'nights'}` : ''
+  const earliestCheckout = checkInDate ? new Date(Date.parse(checkInDate) + millisecondsPerDay).toISOString().slice(0, 10) : undefined
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const fields = Object.fromEntries([...new FormData(event.currentTarget).entries()].map(([key, value]) => [key, String(value)]))
-    if (submitDisabled) return
-    onPrepared(prepareRequest({ kind, fields: { ...fields, ...additionalFields } }))
+    if (submitDisabled || (kind === 'hotel' && !stayDuration)) return
+    onPrepared(prepareRequest({ kind, fields: { ...fields, ...additionalFields, ...(kind === 'hotel' ? { stayDuration, breakfast: hotelMeals.breakfast ? 'Included' : 'Not included', dinner: hotelMeals.dinner ? 'Included' : 'Not included', nightlyRate: `₹${selectedNightlyRate.toLocaleString('en-IN')} per couple per night` } : {}) } }))
   }
 
   return <form onSubmit={submit} className="enquiry-form">
@@ -35,23 +48,30 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       <label>Name<input name="fullName" autoComplete="name" required maxLength={100} placeholder="Your full name" /></label>
       <label>Phone number<input name="phoneNumber" type="tel" autoComplete="tel" required pattern={'[+0-9\\s\\(\\)\\-]{7,25}'} title="Enter a phone number with 7 to 25 characters, including your country code." placeholder="+91 98765 43210" /></label>
     </div>
-    <label className="full-field">Package preference<select name="packagePreference" defaultValue={kind === 'package' && selectedItem ? selectedItem : tourPackages[0].name} required>
-      {tourPackages.map((item) => <option key={item.id} value={item.name}>{item.name} - {item.duration}</option>)}
+    {(kind === 'package' || kind === 'contact') && <label className="full-field">Package preference<select name="packagePreference" defaultValue={kind === 'package' && selectedItem ? selectedItem : tourPackages[0].name} required>
+      {tourPackages.filter((item) => !item.underDevelopment).map((item) => <option key={item.id} value={item.name}>{item.name} - {item.duration}</option>)}
       <option value="Custom package">A custom journey</option><option value="Stay or car only">Stay or car only</option>
-    </select></label>
-    {kind === 'hotel' && <label className="full-field">Preferred stay<select name="preferredStay" defaultValue={selectedItem ?? hotels[0].name}>{hotels.map((hotel) => <option key={hotel.id}>{hotel.name}</option>)}</select></label>}
-    <fieldset className="guest-fields"><legend>Who will stay?</legend>
+    </select></label>}
+    {kind === 'hotel' && <label className="full-field">Preferred stay<select name="preferredStay" value={preferredStay} onChange={(event) => { setPreferredStay(event.target.value); setHotelMeals({ breakfast: false, dinner: false }) }}>{hotels.map((hotel) => <option key={hotel.id} value={hotel.name}>{hotel.name} - {hotel.location} - {hotel.category.replace(/ package$/i, '')}</option>)}</select></label>}
+    <fieldset className="guest-fields"><legend>{kind === 'car' ? 'Who will travel?' : 'Who will stay?'}</legend>
       <div className="form-grid">
         <label>Adults<input name="adults" type="number" min="1" max="100" defaultValue="2" required /></label>
         <label>Children<input name="children" type="number" min="0" max="100" defaultValue="0" required /></label>
       </div>
-      <label className="full-field">Travelling as<select name="travelGroup" defaultValue="Couple"><option>Couple</option><option>Family</option><option>Friends</option><option>Solo traveller</option><option>Group</option></select></label>
+      {(kind === 'package' || kind === 'contact') && <label className="full-field">Travelling as<select name="travelGroup" defaultValue="Couple"><option>Couple</option><option>Family</option><option>Friends</option><option>Solo traveller</option><option>Group</option></select></label>}
     </fieldset>
-    <label className="full-field">Car rental<select name="carRental" defaultValue={kind === 'car' ? selectedItem ?? rentalCars[0].name : 'Please recommend a car'}>
+    {kind === 'hotel' ? <>
+      <div className="form-grid">
+        <label>Check-in date<input name="checkInDate" type="date" value={checkInDate} onChange={(event) => setCheckInDate(event.target.value)} required /></label>
+        <label>Check-out date<input name="checkOutDate" type="date" value={checkOutDate} min={earliestCheckout} onChange={(event) => setCheckOutDate(event.target.value)} required /></label>
+      </div>
+      <p className="privacy-note" role="status">{stayDuration ? <strong>{stayDuration}</strong> : checkInDate && checkOutDate ? 'Check-out must be after check-in.' : null}</p>
+      <HotelRates key={selectedHotel.id} hotel={selectedHotel} onChange={(breakfast, dinner) => setHotelMeals({ breakfast, dinner })} />
+    </> : <label className="full-field">{kind === 'car' ? 'Preferred vehicle' : 'Car rental'}<select name="carRental" defaultValue={additionalFields.carRental ?? (kind === 'car' ? selectedItem ?? rentalCars[0].name : 'Please recommend a car')}>
       <option>Please recommend a car</option><option>No car needed</option>
       {rentalCars.map((car) => <option key={car.id} value={car.name}>{car.name} - {car.seats} seats</option>)}
-    </select></label>
-    <label className="full-field">Instructions or suggestions <span className="optional">Optional</span><textarea name="instructions" rows={3} maxLength={2000} placeholder="Travel dates, children's ages, room preferences, pickup location, or anything else on your mind" /></label>
+    </select></label>}
+    {kind !== 'hotel' && <label className="full-field">Instructions or suggestions <span className="optional">Optional</span><textarea name="instructions" rows={3} maxLength={2000} placeholder="Travel dates, children's ages, room preferences, pickup location, or anything else on your mind" /></label>}
     <button className="button button-dark enquiry-submit" type="submit" disabled={submitDisabled}>Submit enquiry <ArrowRight size={17} /></button>
     <p className="privacy-note">WhatsApp will open with a prepared message to {business.phone}. Review it and press Send to contact us. No booking or message is sent by this website.</p>
   </form>
@@ -110,7 +130,7 @@ export default function BookingModal({ kind, selectedItem, initialFields, initia
         <button className="text-link confirmation-done" onClick={onClose}>Done <ArrowRight size={16} /></button>
       </> : <>
         <p className="eyebrow">Enquire Now</p>
-        <h2 id="booking-title">Send us your trip enquiry.</h2>
+        <h2 id="booking-title">{kind === 'hotel' ? 'Send us your hotel enquiry.' : kind === 'car' ? 'Send us your car rental enquiry.' : 'Send us your trip enquiry.'}</h2>
         <p id="booking-description" className="modal-intro">Share a few details and we’ll help plan the next steps.</p>
         <EnquiryForm kind={kind} selectedItem={selectedItem} additionalFields={initialFields} onPrepared={prepared} />
       </>}

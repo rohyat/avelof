@@ -2,13 +2,16 @@ import { Children, useEffect, useRef, useState } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 import { ArrowRight, CalendarDays, MapPin, MoonStar } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { destinations, hotels } from '../data/catalog'
+import { destinations, hotels, rentalCars } from '../data/catalog'
 import { clearSavedTripPlan, tripPlanStorageKey, tripReturnStorageKey } from '../services/tripPlanStorage'
+import HotelRates from './HotelRates'
 
 interface DayPlan {
   routeTo?: string
   stayAt?: string
   hotelId?: string
+  breakfast?: boolean
+  dinner?: boolean
 }
 
 interface SavedTripPlan {
@@ -16,6 +19,7 @@ interface SavedTripPlan {
   startDate: string
   endDate: string
   plans: DayPlan[]
+  vehicleId?: string
 }
 
 interface TripPlannerProps {
@@ -26,6 +30,7 @@ interface TripPlannerProps {
 const plannerStops = destinations.slice(0, 6)
 const overnightStops = new Set(['gulmarg', 'pahalgam', 'sonamarg'])
 const tripPlanLifetime = 24 * 60 * 60 * 1000
+const plannerVehicles = rentalCars.filter((car) => car.category !== 'Tempo Traveller' || car.id === 'tempo-traveller')
 
 function localDateValue(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -67,9 +72,11 @@ function readTripPlan(sectionId: string): SavedTripPlan {
         routeTo: plannerStops.some((place) => place.id === saved.routeTo) ? saved.routeTo : undefined,
         stayAt: plannerStops.some((place) => place.id === saved.stayAt) ? saved.stayAt : undefined,
         hotelId: hotels.some((hotel) => hotel.id === saved.hotelId) ? saved.hotelId : undefined,
+        breakfast: saved.breakfast === true,
+        dinner: saved.dinner === true,
       }
     })
-    return { savedAt: parsed.savedAt, startDate: parsed.startDate, endDate: parsed.endDate, plans }
+    return { savedAt: parsed.savedAt, startDate: parsed.startDate, endDate: parsed.endDate, plans, vehicleId: rentalCars.some((car) => car.id === parsed.vehicleId) ? parsed.vehicleId : undefined }
   } catch {
     return emptyPlan
   }
@@ -177,6 +184,8 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
   const [startDate, setStartDate] = useState(savedPlan.startDate)
   const [endDate, setEndDate] = useState(savedPlan.endDate)
   const [plans, setPlans] = useState<DayPlan[]>(savedPlan.plans)
+  const [vehicleId, setVehicleId] = useState(savedPlan.vehicleId ?? rentalCars[0].id)
+  const selectedVehicle = rentalCars.find((car) => car.id === vehicleId) ?? rentalCars[0]
   const [minDate] = useState(() => {
     return todayDateValue()
   })
@@ -185,23 +194,24 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
     : -1
   const tripDays = dateDifference > 0 && dateDifference <= 30 ? dateDifference + 1 : 0
   const nights = Math.max(0, tripDays - 1)
+  const vehicleTotal = selectedVehicle.price * tripDays
   const dayPlans = Array.from({ length: tripDays }).reduce<Array<DayPlan & { origin: string; routeTo: string; stayAt: string }>>((days, _, index) => {
     const origin = index === 0 ? 'srinagar' : days[index - 1].stayAt
     const saved = plans[index] ?? {}
     const routeTo = saved.routeTo ?? origin
     const options = stayOptions(routeTo)
     const stayAt = options.includes(saved.stayAt ?? '') ? saved.stayAt! : options.includes(routeTo) ? routeTo : 'srinagar'
-    days.push({ origin, routeTo, stayAt, hotelId: saved.hotelId })
+    days.push({ origin, routeTo, stayAt, hotelId: saved.hotelId, breakfast: saved.breakfast, dinner: saved.dinner })
     return days
   }, [])
 
   useEffect(() => {
     try {
-      sessionStorage.setItem(tripPlanStorageKey(sectionId), JSON.stringify({ savedAt: Date.now(), startDate, endDate, plans }))
+      sessionStorage.setItem(tripPlanStorageKey(sectionId), JSON.stringify({ savedAt: Date.now(), startDate, endDate, plans, vehicleId }))
     } catch {
       return
     }
-  }, [endDate, plans, sectionId, startDate])
+  }, [endDate, plans, sectionId, startDate, vehicleId])
 
   useEffect(() => () => {
     try {
@@ -213,7 +223,7 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
 
   function preservePlanForHotelReturn() {
     try {
-      sessionStorage.setItem(tripPlanStorageKey(sectionId), JSON.stringify({ savedAt: Date.now(), startDate, endDate, plans }))
+      sessionStorage.setItem(tripPlanStorageKey(sectionId), JSON.stringify({ savedAt: Date.now(), startDate, endDate, plans, vehicleId }))
       sessionStorage.setItem(tripReturnStorageKey, sectionId)
     } catch {
       return
@@ -255,8 +265,11 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
         ? `Explore ${stopName(day.origin)} locally`
         : `${stopName(day.origin)} to ${stopName(day.routeTo)}`
       const overnight = index < dayPlans.length - 1 ? `; stay overnight in ${stopName(day.stayAt)}` : '; departure day'
-      const selectedHotel = day.hotelId ? hotels.find((hotel) => hotel.id === day.hotelId)?.name : undefined
-      const hotelNote = index < dayPlans.length - 1 ? `; hotel: ${selectedHotel ?? 'please recommend a stay'}` : ''
+      const selectedHotel = day.hotelId ? hotels.find((hotel) => hotel.id === day.hotelId) : undefined
+      const basePrice = selectedHotel?.roomOnlyPrice ?? selectedHotel?.price ?? 0
+      const rate = basePrice + ((selectedHotel?.price ?? basePrice) - basePrice) / 2 * (Number(Boolean(day.breakfast)) + Number(Boolean(day.dinner)))
+      const mealNote = selectedHotel ? `; breakfast: ${day.breakfast ? 'included' : 'not included'}; dinner: ${day.dinner ? 'included' : 'not included'}; hotel rate: ₹${rate.toLocaleString('en-IN')} per couple per night` : ''
+      const hotelNote = index < dayPlans.length - 1 ? `; hotel: ${selectedHotel?.name ?? 'please recommend a stay'}${mealNote}` : ''
       return `Day ${index + 1} (${date}): ${route}${overnight}${hotelNote}.`
     }).join('\n')
 
@@ -265,6 +278,9 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
       departureDate: endDate,
       tripDays: String(tripDays),
       tripNights: String(nights),
+      carRental: selectedVehicle.name,
+      vehicleDailyRate: `₹${selectedVehicle.price.toLocaleString('en-IN')}`,
+      vehicleRentalEstimate: `₹${vehicleTotal.toLocaleString('en-IN')} for ${tripDays} days; excludes hotel costs and optional extras`,
       placesToVisit: itinerary,
     })
   }
@@ -288,6 +304,24 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
           <div className="trip-length" aria-live="polite"><strong>{tripDays || '—'}</strong><span>{tripDays ? `${tripDays === 1 ? 'day' : 'days'} · ${nights} ${nights === 1 ? 'night' : 'nights'}` : 'Trip length'}</span></div>
         </div>
 
+        {tripDays > 0 && <div className="planner-vehicle-section">
+          <fieldset className="planner-vehicle-picker"><legend>Choose your vehicle</legend>
+            <div className="planner-vehicle-grid">{plannerVehicles.map((vehicle) => {
+              const isTraveller = vehicle.category === 'Tempo Traveller'
+              const selected = isTraveller ? selectedVehicle.category === 'Tempo Traveller' : selectedVehicle.id === vehicle.id
+              const displayed = selected ? selectedVehicle : vehicle
+              return <div key={vehicle.id} className={`planner-vehicle-choice${selected ? ' is-selected' : ''}`}>
+                <label><input type="radio" name={`${sectionId}-vehicle`} checked={selected} onChange={() => setVehicleId(vehicle.id)} />
+                  <img src={vehicle.image} alt={vehicle.name} loading="lazy" />
+                  <strong>{isTraveller ? 'Tempo Traveller' : vehicle.name}</strong>
+                  <span>₹{displayed.price.toLocaleString('en-IN')} per day</span>
+                </label>
+                {isTraveller && <label className="planner-vehicle-size">Seats<select aria-label="Traveller seating capacity" value={selectedVehicle.category === 'Tempo Traveller' ? selectedVehicle.id : vehicle.id} onChange={(event) => setVehicleId(event.target.value)}>{rentalCars.filter((car) => car.category === 'Tempo Traveller').map((car) => <option key={car.id} value={car.id}>{car.seats}-seater</option>)}</select></label>}
+              </div>
+            })}</div>
+          </fieldset>
+          <p className="planner-vehicle-total" role="status"><strong>Vehicle rental estimate: ₹{vehicleTotal.toLocaleString('en-IN')}</strong><span>₹{selectedVehicle.price.toLocaleString('en-IN')} × {tripDays} days · vehicle only, not the full package price</span></p>
+        </div>}
         {tripDays > 0 ? <div className="day-plans">
           {dayPlans.map((day, index) => {
             const routeLabel = day.origin === day.routeTo
@@ -346,9 +380,12 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
                         >
                           <span className="planner-hotel-category">{hotel.category}</span>
                           <strong>{hotel.name}</strong>
-                          <small>From ₹{hotel.price.toLocaleString('en-IN')} / night</small>
-                          <small>Breakfast and dinner are included.</small>
                         </button>
+                        <HotelRates hotel={hotel} meals={{ breakfast: day.hotelId === hotel.id && Boolean(day.breakfast), dinner: day.hotelId === hotel.id && Boolean(day.dinner) }} onChange={(breakfast, dinner) => setPlans((current) => {
+                          const next = [...current]
+                          next[index] = { routeTo: day.routeTo, stayAt: day.stayAt, hotelId: hotel.id, breakfast, dinner }
+                          return next
+                        })} />
                         <Link
                           className="planner-hotel-view-link"
                           to={`/hotels/${hotel.id}`}

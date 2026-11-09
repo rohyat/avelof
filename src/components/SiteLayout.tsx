@@ -125,19 +125,22 @@ export default function SiteLayout() {
 
   const openBooking = (kind: BookingKind, selectedItem?: string) => setBooking({ kind, item: selectedItem })
   const closeMenu = () => setMenuOpen(false)
+  const [offerPackageId, setOfferPackageId] = useState('premium')
+  const offerPackage = tourPackages.find((item) => item.id === offerPackageId) ?? tourPackages[0]
 
   return (
     <>
       <div className="topline">
         <div className="topline-offer-copy">
           <span className="topline-offer-label"><span className="topline-diya" role="img" aria-label="Diwali diya lamp">🪔</span> DIWALI OFFER</span>
-          <span>{tourPackages[0].name} package Kashmir escape · {tourPackages[0].duration}</span>
+          <label className="topline-package-choice"><span className="sr-only">Diwali offer package</span><select value={offerPackage.id} onChange={(event) => setOfferPackageId(event.target.value)}>{tourPackages.filter((item) => !item.underDevelopment).map((item) => <option key={item.id} value={item.id}>{item.name} package Kashmir escape</option>)}</select></label>
+          <span>{offerPackage.duration}</span>
           <span className="topline-offer-price">
-            {tourPackages[0].originalPrice && <span className="topline-offer-original">Original price <s>₹{tourPackages[0].originalPrice.toLocaleString('en-IN')}</s><DiscountLabel price={tourPackages[0].price} originalPrice={tourPackages[0].originalPrice} /></span>}
-            <span><strong>₹{tourPackages[0].price.toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(tourPackages[0].price) ? 0 : 2, maximumFractionDigits: 2 })}</strong> per person</span>
+            {offerPackage.originalPrice && <span className="topline-offer-original">Original price <s>₹{offerPackage.originalPrice.toLocaleString('en-IN')}</s><DiscountLabel price={offerPackage.price} originalPrice={offerPackage.originalPrice} /></span>}
+            <span><strong>₹{offerPackage.price.toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(offerPackage.price) ? 0 : 2, maximumFractionDigits: 2 })}</strong> per person</span>
           </span>
         </div>
-        <Link className="topline-offer-link" to={`/tour-packages/${tourPackages[0].id}`}>Explore Now</Link>
+        <Link className="topline-offer-link" to={`/tour-packages/${offerPackage.id}`}>Explore Now</Link>
       </div>
       <header className="site-header">
         <Link className="brand" to="/" aria-label="AVELOF home" onClick={closeMenu}><span className="brand-mark">A</span><span>AVELOF<small>JOURNEYS BEYOND IMAGINATION</small></span></Link>
