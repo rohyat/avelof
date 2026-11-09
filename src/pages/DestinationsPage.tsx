@@ -1,12 +1,16 @@
 import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { ArrowDown, Clock, MapPin, Route, Search, X } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ArrowDown, ArrowLeft, Clock, MapPin, Route, Search, X } from 'lucide-react'
 import BookingModal, { EnquiryForm } from '../components/BookingModal'
 import { destinations } from '../data/catalog'
 import type { PreparedRequest } from '../types'
 
 export default function DestinationsPage() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const navigationState = location.state as { tripReturn?: { sectionId?: string; returnPath?: string } } | null
+  const tripReturn = (navigationState?.tripReturn?.sectionId === 'custom-trip' && navigationState.tripReturn.returnPath === '/')
+    || (navigationState?.tripReturn?.sectionId === 'package-planner' && navigationState.tripReturn.returnPath === '/tour-packages')
   const [search, setSearch] = useState(new URLSearchParams(location.search).get('place') ?? '')
   const [driveLimit, setDriveLimit] = useState('all')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -32,7 +36,10 @@ export default function DestinationsPage() {
         <p className="eyebrow">Near the lake. Beyond the mountains.</p>
         <h1>Places to visit<br /><em>in Kashmir.</em></h1>
         <p>Find the places that fit your pace, from a Srinagar morning to a few nights in the high valleys.</p>
-        <a className="button button-dark" href="#visit-planner">Plan your visit <ArrowDown size={17} /></a>
+        <div className="destination-hero-actions">
+          <a className="button button-dark" href="#visit-planner">Plan your visit <ArrowDown size={17} /></a>
+          {tripReturn && <button className="button button-outline" type="button" onClick={() => navigate(-1)}><ArrowLeft size={16} /> Back to your trip</button>}
+        </div>
       </div>
     </section>
     <div className="page-width destination-guide-layout">
@@ -46,7 +53,7 @@ export default function DestinationsPage() {
         {filtered.length ? <div className="place-list">{filtered.map((place) => <article className="place-entry" key={place.id}>
           <div className="place-travel-facts"><span><MapPin size={16} /><strong>{place.distance}</strong> from Srinagar</span><span><Clock size={16} /><strong>{place.travelTime}</strong> one way</span></div>
           <div className="place-entry-main">
-            <figure><img src={place.image} alt={`Illustrative ${place.count.toLowerCase()} travel landscape`} loading="lazy" /><figcaption>Illustrative travel photography</figcaption></figure>
+            <figure><div className="destination-photo-frame"><img src={place.image} alt={place.photoCredit ? place.name : `Illustrative ${place.count.toLowerCase()} travel landscape`} loading="lazy" />{place.photoCredit && <small className="destination-photo-credit"><a href={place.photoCredit.source} target="_blank" rel="noreferrer">{place.photoCredit.author}</a> · <a href={place.photoCredit.licenseUrl} target="_blank" rel="noreferrer">CC BY-SA 4.0</a></small>}</div>{!place.photoCredit && <figcaption>Illustrative travel photography</figcaption>}</figure>
             <div className="place-entry-copy"><p className="eyebrow">{place.count}</p><h2>{place.name}</h2><p>{place.detail}</p><dl><div><dt>Time to spend</dt><dd>{place.suggestedVisit}</dd></div><div><dt>Best season</dt><dd>{place.season}</dd></div></dl>
               <label className="place-select"><input type="checkbox" checked={selectedIds.includes(place.id)} onChange={() => togglePlace(place.id)} /><span>Add {place.name} to my visit</span></label>
             </div>

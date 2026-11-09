@@ -1,6 +1,6 @@
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import SiteLayout from './components/SiteLayout'
-import { AboutPage, CollectionPage, ContactPage, DetailPage, HomePage, NotFoundPage, ReviewsPage } from './pages/Pages'
+import { AboutPage, CollectionPage, DetailPage, HomePage, NotFoundPage, ReviewsPage } from './pages/Pages'
 import DestinationsPage from './pages/DestinationsPage'
 
 export default function App() {
@@ -17,7 +17,7 @@ export default function App() {
         <Route path="destinations" element={<DestinationsPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="about" element={<AboutPage />} />
-        <Route path="contact" element={<ContactPage />} />
+        <Route path="contact" element={<Navigate to="/about#contact" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

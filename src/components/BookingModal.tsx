@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { ArrowRight, Check, MessageCircle, X } from 'lucide-react'
+import { ArrowRight, MessageCircle, X } from 'lucide-react'
 import { business } from '../config'
 import { hotels, rentalCars, tourPackages } from '../data/catalog'
 import { prepareRequest } from '../services/bookingService'
@@ -23,8 +23,9 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   children?: ReactNode
   submitDisabled?: boolean
 }) {
-  const [checkInDate, setCheckInDate] = useState('')
-  const [checkOutDate, setCheckOutDate] = useState('')
+  const [checkInDate, setCheckInDate] = useState(kind === 'package' ? additionalFields.arrivalDate ?? '' : '')
+  const [checkOutDate, setCheckOutDate] = useState(kind === 'package' ? additionalFields.departureDate ?? '' : '')
+  const plannerDates = kind === 'package' && Boolean(additionalFields.arrivalDate && additionalFields.departureDate && additionalFields.placesToVisit)
   const [preferredStay, setPreferredStay] = useState(selectedItem ?? hotels[0].name)
   const [hotelMeals, setHotelMeals] = useState({ breakfast: false, dinner: false })
   const selectedHotel = hotels.find((hotel) => hotel.name === preferredStay) ?? hotels[0]
@@ -33,13 +34,16 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   const millisecondsPerDay = 24 * 60 * 60 * 1000
   const nights = checkInDate && checkOutDate ? (Date.parse(checkOutDate) - Date.parse(checkInDate)) / millisecondsPerDay : 0
   const stayDuration = nights > 0 ? `${nights + 1} days, ${nights} ${nights === 1 ? 'night' : 'nights'}` : ''
+  const rentalDays = checkInDate && checkOutDate && nights >= 0 ? nights + 1 : 0
   const earliestCheckout = checkInDate ? new Date(Date.parse(checkInDate) + millisecondsPerDay).toISOString().slice(0, 10) : undefined
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const fields = Object.fromEntries([...new FormData(event.currentTarget).entries()].map(([key, value]) => [key, String(value)]))
-    if (submitDisabled || (kind === 'hotel' && !stayDuration)) return
-    onPrepared(prepareRequest({ kind, fields: { ...fields, ...additionalFields, ...(kind === 'hotel' ? { stayDuration, breakfast: hotelMeals.breakfast ? 'Included' : 'Not included', dinner: hotelMeals.dinner ? 'Included' : 'Not included', nightlyRate: `₹${selectedNightlyRate.toLocaleString('en-IN')} per couple per night` } : {}) } }))
+    if (submitDisabled || ((kind === 'hotel' || kind === 'package') && !stayDuration) || (kind === 'car' && !rentalDays)) return
+    const request = prepareRequest({ kind, fields: { ...fields, ...additionalFields, ...(kind === 'package' ? { arrivalDate: checkInDate, departureDate: checkOutDate, tripDays: String(nights + 1), tripNights: String(nights) } : {}), ...(kind === 'car' ? { rentalDays: String(rentalDays) } : {}), ...(kind === 'hotel' ? { stayDuration, breakfast: hotelMeals.breakfast ? 'Included' : 'Not included', dinner: hotelMeals.dinner ? 'Included' : 'Not included', nightlyRate: `₹${selectedNightlyRate.toLocaleString('en-IN')} per couple per night` } : {}) } })
+    window.open(request.whatsappUrl, '_blank', 'noopener,noreferrer')
+    onPrepared(request)
   }
 
   return <form onSubmit={submit} className="enquiry-form">
@@ -48,6 +52,14 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       <label>Name<input name="fullName" autoComplete="name" required maxLength={100} placeholder="Your full name" /></label>
       <label>Phone number<input name="phoneNumber" type="tel" autoComplete="tel" required pattern={'[+0-9\\s\\(\\)\\-]{7,25}'} title="Enter a phone number with 7 to 25 characters, including your country code." placeholder="+91 98765 43210" /></label>
     </div>
+    {(kind === 'car' || kind === 'package') && <>
+      <div className="form-grid rental-enquiry-dates">
+        <label>Start date<input name={kind === 'package' ? 'arrivalDate' : 'startDate'} type="date" value={checkInDate} readOnly={plannerDates} onChange={(event) => setCheckInDate(event.target.value)} required /></label>
+        <label>End date<input name={kind === 'package' ? 'departureDate' : 'endDate'} type="date" value={checkOutDate} readOnly={plannerDates} min={kind === 'package' ? earliestCheckout : checkInDate || undefined} onChange={(event) => setCheckOutDate(event.target.value)} required /></label>
+      </div>
+      <p className="privacy-note" role="status">{kind === 'package' ? stayDuration ? <strong>{stayDuration}</strong> : checkInDate && checkOutDate ? 'End date must be after the start date.' : null : rentalDays ? <strong>{rentalDays} {rentalDays === 1 ? 'day' : 'days'}</strong> : checkInDate && checkOutDate ? 'End date must be on or after the start date.' : null}</p>
+      {plannerDates && <p className="privacy-note">Dates match your custom itinerary. To change them, close this form and update your planner dates.</p>}
+    </>}
     {(kind === 'package' || kind === 'contact') && <label className="full-field">Package preference<select name="packagePreference" defaultValue={kind === 'package' && selectedItem ? selectedItem : tourPackages[0].name} required>
       {tourPackages.filter((item) => !item.underDevelopment).map((item) => <option key={item.id} value={item.name}>{item.name} - {item.duration}</option>)}
       <option value="Custom package">A custom journey</option><option value="Stay or car only">Stay or car only</option>
@@ -71,7 +83,6 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       <option>Please recommend a car</option><option>No car needed</option>
       {rentalCars.map((car) => <option key={car.id} value={car.name}>{car.name} - {car.seats} seats</option>)}
     </select></label>}
-    {kind !== 'hotel' && <label className="full-field">Instructions or suggestions <span className="optional">Optional</span><textarea name="instructions" rows={3} maxLength={2000} placeholder="Travel dates, children's ages, room preferences, pickup location, or anything else on your mind" /></label>}
     <button className="button button-dark enquiry-submit" type="submit" disabled={submitDisabled}>Submit enquiry <ArrowRight size={17} /></button>
     <p className="privacy-note">WhatsApp will open with a prepared message to {business.phone}. Review it and press Send to contact us. No booking or message is sent by this website.</p>
   </form>
@@ -119,10 +130,10 @@ export default function BookingModal({ kind, selectedItem, initialFields, initia
     <section ref={dialogRef} tabIndex={-1} className={`booking-modal${request ? ' confirmation-modal' : ''}`} role="dialog" aria-modal="true" aria-labelledby="booking-title" aria-describedby="booking-description">
       <button className="modal-close icon-button" onClick={onClose} aria-label="Close enquiry"><X /></button>
       {request ? <>
-        <span className="success-mark"><Check size={24} /></span>
-        <p className="eyebrow">Enquiry prepared</p>
-        <h2 id="booking-title">Your WhatsApp message is ready.</h2>
-        <p id="booking-description">Review your enquiry, then send it to {business.phone} in WhatsApp.</p>
+        <span className="success-mark"><MessageCircle size={24} /></span>
+        <p className="eyebrow">Continue in WhatsApp</p>
+        <h2 id="booking-title">Tap Send in WhatsApp.</h2>
+        <p id="booking-description">WhatsApp should open automatically with your enquiry. If it didn’t open, use the link below.</p>
         <div className="modal-actions">
           <a className="button button-dark" href={request.whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle size={17} /> Open WhatsApp</a>
         </div>

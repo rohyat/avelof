@@ -91,7 +91,7 @@ export const rentalCars: RentalCar[] = [
   { id: 'tempo-traveller', name: 'Tempo Traveller 12-seater', category: 'Tempo Traveller', seats: 12, price: 3800 },
   { id: 'tempo-traveller-14', name: 'Tempo Traveller 14-seater', category: 'Tempo Traveller', seats: 14, price: 4000 },
   { id: 'tempo-traveller-20', name: 'Tempo Traveller 20-seater', category: 'Tempo Traveller', seats: 20, price: 5000 },
-  { id: 'bus-26', name: 'Bus 16-seater', category: 'Bus', seats: 16, price: 6500 },
+  { id: 'bus-26', name: 'Bus 26-seater', category: 'Bus', seats: 26, price: 6500 },
 ].map((vehicle) => ({
   ...vehicle,
   kind: 'car',
@@ -234,7 +234,8 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Peer Ki Gali pass & shrine', detail: 'Mountain views and a shrine at the pass.' }, { name: 'Mughal Road viewpoints', detail: 'Scenic stops on the approach, where parking is safe.' }, { name: 'Dubjan', detail: 'Forest and river scenery along the Shopian approach.' }],
   },
   {
-    id: 'aharbal', name: 'Aharbal Waterfall', aliases: ['Herbal Waterfall', 'Aharbal', 'Aherbal'], image: photos.valley, count: 'Waterfall & forest',
+    id: 'aharbal', name: 'Aharbal Waterfall', aliases: ['Herbal Waterfall', 'Aharbal', 'Aherbal'], image: '/images/destinations/aharbal.jpg', count: 'Waterfall & forest',
+    photoCredit: { author: 'TheAutumnal', source: 'https://commons.wikimedia.org/wiki/File:Aharbal_Waterfall,_Kashmir.jpg', licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/' },
     distance: '70-75 km', travelTime: '2-3 hours', maxDriveHours: 3,
     detail: 'A striking waterfall on the Veshu River, surrounded by wooded scenery in the southern valley.',
     suggestedVisit: 'Full day', season: 'Spring-autumn; winter access varies',
@@ -250,7 +251,8 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Habba Khatoon peak', detail: 'Distinctive mountain views near Dawar.' }, { name: 'Kishanganga River', detail: 'Valley scenery and village-side walks.' }, { name: 'Razdan Pass', detail: 'A seasonal viewpoint on the approach.' }, { name: 'Tulail Valley', detail: 'An additional onward excursion with extra travel and access checks.' }],
   },
   {
-    id: 'manasbal', name: 'Manasbal Lake', aliases: ['Manasbal', 'Safapora'], image: photos.lake, count: 'Lake day out',
+    id: 'manasbal', name: 'Manasbal Lake', aliases: ['Manasbal', 'Safapora'], image: '/images/destinations/manasbal.jpg', count: 'Lake day out',
+    photoCredit: { author: 'Nsheenm', source: 'https://commons.wikimedia.org/wiki/File:Manasbal_lake.jpg', licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/' },
     distance: '30-35 km', travelTime: '1-1.5 hours', maxDriveHours: 1.5,
     detail: 'A quieter lake north of Srinagar, with garden views and relaxed time by the water.',
     suggestedVisit: 'Half day', season: 'Spring-autumn',

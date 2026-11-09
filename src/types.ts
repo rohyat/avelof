@@ -7,6 +7,7 @@ export interface Destination {
   aliases: string[]
   detail: string
   image: string
+  photoCredit?: { author: string; source: string; licenseUrl: string }
   count: string
   distance: string
   travelTime: string

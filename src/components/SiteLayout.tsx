@@ -13,7 +13,7 @@ export interface SiteContext {
 
 const navItems = [
   ['Tour Packages', '/tour-packages'], ['Car Rentals', '/car-rentals'], ['Hotels', '/hotels'],
-  ['Destinations', '/destinations'], ['Reviews', '/reviews'], ['About Us', '/about'], ['Contact', '/contact'],
+  ['Destinations', '/destinations'], ['Reviews', '/reviews'], ['About & Contact', '/about'],
 ]
 const currentYear = new Date().getFullYear()
 const scrollStoragePrefix = 'avelof:scroll:'
@@ -113,7 +113,7 @@ export default function SiteLayout() {
       '/hotels': { title: 'Kashmir Hotels & Stays | AVELOF', description: 'Discover houseboats, boutique hotels, family stays and mountain retreats across Kashmir.' },
       '/destinations': { title: 'Kashmir Places & Visit Planner | AVELOF', description: 'Compare Srinagar driving distances, discover Kashmir attractions and select destinations for a personalised visit enquiry.' },
       '/reviews': { title: 'Guest Reviews | AVELOF', description: 'Share honest feedback about your Kashmir trip and learn how guest reviews are verified.' },
-      '/about': { title: 'About AVELOF | Kashmir Travel, Thoughtfully', description: 'Meet AVELOF, a Kashmir travel company focused on thoughtful journeys and local expertise.' },
+      '/about': { title: 'About & Contact AVELOF | Kashmir Travel', description: 'Meet AVELOF, your local Kashmir travel team. Call, email or prepare a trip enquiry with us.' },
       '/contact': { title: 'Contact AVELOF | Plan a Kashmir Trip', description: 'Call, email or WhatsApp AVELOF to start planning your Kashmir journey.' },
     }
     const details = catalogItem
@@ -147,7 +147,6 @@ export default function SiteLayout() {
         <button className="icon-button menu-toggle" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X /> : <Menu />}</button>
         <nav className={menuOpen ? 'main-nav is-open' : 'main-nav'} aria-label="Main navigation">
           {navItems.map(([label, href]) => <NavLink key={href} to={href} onClick={closeMenu}>{label}</NavLink>)}
-          <button className="button button-dark nav-book" onClick={() => { openBooking('package'); closeMenu() }}>Enquire Now <ArrowRight size={15} /></button>
         </nav>
       </header>
       <main><Outlet context={{ openBooking } satisfies SiteContext} /></main>
@@ -155,7 +154,7 @@ export default function SiteLayout() {
         <div className="footer-main">
           <div className="footer-brand"><Link className="brand brand-light" to="/"><span className="brand-mark">A</span><span>AVELOF<small>JOURNEYS BEYOND IMAGINATION</small></span></Link><p>Journeys with a sense of place.<br />Made thoughtfully, in Kashmir.</p></div>
           <div><h3>Explore</h3><Link to="/tour-packages">Tour packages</Link><Link to="/car-rentals">Car rentals</Link><Link to="/hotels">Hotels & stays</Link><Link to="/destinations">Destinations</Link></div>
-          <div><h3>AVELOF</h3><Link to="/about">Our story</Link><Link to="/reviews">Reviews</Link><Link to="/contact">Contact</Link><a href={business.instagram} target="_blank" rel="noreferrer">Instagram</a></div>
+          <div><h3>AVELOF</h3><Link to="/about">About & Contact</Link><Link to="/reviews">Reviews</Link><a href={business.instagram} target="_blank" rel="noreferrer">Instagram</a></div>
           <div><h3>Email our team</h3><a href={`mailto:${business.email}`}>{business.email}</a><span>Kashmir, India</span></div>
         </div>
         <div className="footer-bottom"><span>© {currentYear} AVELOF. All journeys begin with a conversation.</span><a href={business.website}>avelof.in</a></div>
