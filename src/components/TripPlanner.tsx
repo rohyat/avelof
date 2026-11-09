@@ -6,6 +6,7 @@ import { hotels, rentalCars } from '../data/catalog'
 import { combinedExcursionId, destinationOptionId, destinationOptions } from '../data/destinationOptions'
 import { clearSavedTripPlan, tripPlanStorageKey, tripReturnStorageKey } from '../services/tripPlanStorage'
 import HotelRates from './HotelRates'
+import OfferPrice from './OfferPrice'
 import DestinationPhotos from './DestinationPhotos'
 
 interface DayPlan {
@@ -426,13 +427,14 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
                 <label><input type="radio" name={`${sectionId}-vehicle`} checked={selected} onChange={() => setVehicleId(vehicle.id)} />
                   <img src={vehicle.image} alt={vehicle.name} loading="lazy" />
                   <strong>{isTraveller ? 'Tempo Traveller' : vehicle.name}</strong>
+                  <OfferPrice price={displayed.price} />
                   <span>₹{displayed.price.toLocaleString('en-IN')} per day</span>
                 </label>
                 {isTraveller && <label className="planner-vehicle-size">Seats<select aria-label="Traveller seating capacity" value={selectedVehicle.category === 'Tempo Traveller' ? selectedVehicle.id : vehicle.id} onChange={(event) => setVehicleId(event.target.value)}>{rentalCars.filter((car) => car.category === 'Tempo Traveller').map((car) => <option key={car.id} value={car.id}>{car.seats}-seater</option>)}</select></label>}
               </div>
             })}</div>
           </fieldset>
-          <p className="planner-vehicle-total" role="status"><strong>Vehicle rental estimate: ₹{vehicleTotal.toLocaleString('en-IN')}</strong><span>₹{selectedVehicle.price.toLocaleString('en-IN')} × {tripDays} days · vehicle only, not the full package price</span></p>
+          <div className="planner-vehicle-total" role="status"><OfferPrice price={vehicleTotal} /><strong>Vehicle rental estimate: ₹{vehicleTotal.toLocaleString('en-IN')}</strong><span>₹{selectedVehicle.price.toLocaleString('en-IN')} × {tripDays} days · vehicle only, not the full package price</span></div>
         </div>
         </div>}
         {tripDays > 0 && !capacityError ? <div className="day-plans">

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Hotel } from '../types'
+import OfferPrice from './OfferPrice'
 
 export default function HotelRates({ hotel, meals, onChange }: { hotel: Hotel; meals?: { breakfast: boolean; dinner: boolean }; onChange?: (breakfast: boolean, dinner: boolean, price: number) => void }) {
   const [localBreakfast, setBreakfast] = useState(false)
@@ -18,6 +19,7 @@ export default function HotelRates({ hotel, meals, onChange }: { hotel: Hotel; m
 
   return <div className="hotel-rates">
     <span className="hotel-rate-basis">{hotel.rateBasis ?? 'per night'}</span>
+    <OfferPrice price={price} />
     <div><strong role="status">₹{price.toLocaleString('en-IN')}</strong><span>{breakfast && dinner ? 'Breakfast and dinner included' : breakfast ? 'Breakfast included; dinner excluded' : dinner ? 'Dinner included; breakfast excluded' : 'Without breakfast and dinner'}</span></div>
     {hotel.roomOnlyPrice !== undefined && <fieldset className="hotel-meal-options">
       <legend>Meals</legend>

@@ -4,7 +4,7 @@ import { ArrowRight, Menu, MessageCircle, X } from 'lucide-react'
 import { business } from '../config'
 import { hotels, rentalCars, tourPackages } from '../data/catalog'
 import BookingModal from './BookingModal'
-import DiscountLabel from './DiscountLabel'
+import OfferBanner from './OfferBanner'
 import type { BookingKind } from '../types'
 
 export interface SiteContext {
@@ -125,23 +125,10 @@ export default function SiteLayout() {
 
   const openBooking = (kind: BookingKind, selectedItem?: string) => setBooking({ kind, item: selectedItem })
   const closeMenu = () => setMenuOpen(false)
-  const [offerPackageId, setOfferPackageId] = useState('premium')
-  const offerPackage = tourPackages.find((item) => item.id === offerPackageId) ?? tourPackages[0]
 
   return (
     <>
-      <div className="topline">
-        <div className="topline-offer-copy">
-          <span className="topline-offer-label"><span className="topline-diya" role="img" aria-label="Diwali diya lamp">🪔</span> DIWALI OFFER</span>
-          <label className="topline-package-choice"><span className="sr-only">Diwali offer package</span><select value={offerPackage.id} onChange={(event) => setOfferPackageId(event.target.value)}>{tourPackages.filter((item) => !item.underDevelopment).map((item) => <option key={item.id} value={item.id}>{item.name} package Kashmir escape</option>)}</select></label>
-          <span>{offerPackage.duration}</span>
-          <span className="topline-offer-price">
-            {offerPackage.originalPrice && <span className="topline-offer-original">Original price <s>₹{offerPackage.originalPrice.toLocaleString('en-IN')}</s><DiscountLabel price={offerPackage.price} originalPrice={offerPackage.originalPrice} /></span>}
-            <span><strong>₹{offerPackage.price.toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(offerPackage.price) ? 0 : 2, maximumFractionDigits: 2 })}</strong> per person</span>
-          </span>
-        </div>
-        <Link className="topline-offer-link" to={`/tour-packages/${offerPackage.id}`}>Explore Now</Link>
-      </div>
+      <OfferBanner />
       <header className="site-header">
         <Link className="brand" to="/" aria-label="AVELOF home" onClick={closeMenu}><span className="brand-mark">A</span><span>AVELOF<small>JOURNEYS BEYOND IMAGINATION</small></span></Link>
         <button className="icon-button menu-toggle" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X /> : <Menu />}</button>
