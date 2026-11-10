@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:cloudflare": "wrangler pages dev dist --port 8791",
     "build": "tsc -b && tsc -p tsconfig.functions.json && vite build",
+    "deploy": "wrangler pages deploy dist --project-name avelof --branch main",
     "test": "node --test functions/api/enquiries.test.mjs",
     "test:reviews-ui": "node --test tests/review-carousel.test.mjs",
     "setup:access": "node scripts/setup-enquiry-access.mjs",

@@ -48,8 +48,28 @@ future changes, sign in with Wrangler and run from the project root:
 
 ```powershell
 npm run build
-npx wrangler pages deploy dist --project-name avelof --branch main --commit-dirty=true
+npm run deploy
 ```
+
+`npm run deploy` deploys the built `dist` assets and the root `functions/`
+directory to the existing `avelof` Pages project on the production branch.
+It does not build first or apply database migrations automatically. Apply any
+pending production/preview migrations before publishing API changes.
+
+If a Cloudflare build log shows `Executing user deploy command: npx wrangler
+deploy`, the pipeline is using the Workers deployment command against this Pages
+project. Change that pipeline's deploy command to `npm run deploy`, keeping the
+build command `npm run build` and repository root directory. The credential used
+by that pipeline must have access to the existing Pages project; a Workers-only
+deployment token may not. Do not paste credentials into chat or source control.
+
+For a Pages Git-integrated project instead, configure build command `npm run
+build` and build output directory `dist`; Pages performs deployment itself, so no
+custom Workers deploy step is needed. This existing project uses direct uploads;
+creating a separate Git-integrated Pages project is a distinct setup decision.
+Do not add a Worker `main` or use `wrangler deploy --assets=dist` to silence the
+error: static-only Workers assets would not deploy the Pages Functions handling
+enquiries, reviews and admin access. `/admin/panel` and its APIs must stay together.
 
 On this Windows machine, a certificate trust issue required
 `$env:NODE_USE_SYSTEM_CA = '1'` in the terminal before Wrangler network commands.
