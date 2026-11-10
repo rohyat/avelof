@@ -69,7 +69,7 @@ export interface Hotel extends CatalogBase {
 
 export type CatalogItem = TourPackage | RentalCar | Hotel
 
-export interface VerifiedGuestRating {
+export interface OwnerProvidedGuestReview {
   id: string
   name: string
   rating: number
@@ -89,4 +89,34 @@ export interface PreparedRequest {
   subject: string
   message: string
   whatsappUrl: string
+}
+
+export type BookingStatus = 'received' | 'booked' | 'running' | 'completed'
+
+export interface RequestedBookingDetails {
+  type: string
+  name: string
+  startLabel: string
+  endLabel: string
+  startDate: string | null
+  endDate: string | null
+}
+
+export interface BookingSummary {
+  reference: string
+  kind: BookingKind
+  status: BookingStatus
+  maskedName: string
+  maskedPhone: string
+  bookingDetails: RequestedBookingDetails
+}
+
+export interface EnquirySummary {
+  reference: string
+  kind: BookingKind
+  status: BookingStatus
+  statusVersion: number
+  statusUpdatedAt: string | null
+  createdAt: string
+  fields: Record<string, string>
 }

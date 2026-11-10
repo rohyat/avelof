@@ -14,6 +14,7 @@ export interface SiteContext {
 const navItems = [
   ['Tour Packages', '/tour-packages'], ['Car Rentals', '/car-rentals'], ['Hotels', '/hotels'],
   ['Destinations', '/destinations'], ['Reviews', '/reviews'], ['About & Contact', '/about'],
+  ['Check Bookings', '/my-enquiries'],
 ]
 const currentYear = new Date().getFullYear()
 const scrollStoragePrefix = 'avelof:scroll:'
@@ -112,9 +113,12 @@ export default function SiteLayout() {
       '/car-rentals': { title: 'Kashmir Car Rentals | AVELOF', description: 'Find comfortable vehicles and local drivers for airport transfers, day trips and Kashmir journeys.' },
       '/hotels': { title: 'Kashmir Hotels & Stays | AVELOF', description: 'Discover houseboats, boutique hotels, family stays and mountain retreats across Kashmir.' },
       '/destinations': { title: 'Kashmir Places & Visit Planner | AVELOF', description: 'Compare Srinagar driving distances, discover Kashmir attractions and select destinations for a personalised visit enquiry.' },
-      '/reviews': { title: 'Guest Reviews | AVELOF', description: 'Share honest feedback about your Kashmir trip and learn how guest reviews are verified.' },
+      '/reviews': { title: 'Guest Reviews | AVELOF', description: 'Read published guest submissions and share your Kashmir experience for moderation.' },
       '/about': { title: 'About & Contact AVELOF | Kashmir Travel', description: 'Meet AVELOF, your local Kashmir travel team. Call, email or prepare a trip enquiry with us.' },
       '/contact': { title: 'Contact AVELOF | Plan a Kashmir Trip', description: 'Call, email or WhatsApp AVELOF to start planning your Kashmir journey.' },
+      '/my-enquiries': { title: 'Check Your Bookings | AVELOF', description: 'View your private AVELOF booking enquiry summary.' },
+      '/admin/panel': { title: 'Owner Enquiry Dashboard | AVELOF', description: 'Private AVELOF owner sign-in.' },
+      '/admin/panel/reviews': { title: 'Review Moderation | AVELOF', description: 'Private AVELOF review approval dashboard.' },
     }
     const details = catalogItem
       ? { title: `${catalogItem.name} | AVELOF Kashmir`, description: catalogItem.description }
@@ -141,12 +145,12 @@ export default function SiteLayout() {
         <div className="footer-main">
           <div className="footer-brand"><Link className="brand brand-light" to="/"><span className="brand-mark">A</span><span>AVELOF<small>JOURNEYS BEYOND IMAGINATION</small></span></Link><p>Journeys with a sense of place.<br />Made thoughtfully, in Kashmir.</p></div>
           <div><h3>Explore</h3><Link to="/tour-packages">Tour packages</Link><Link to="/car-rentals">Car rentals</Link><Link to="/hotels">Hotels & stays</Link><Link to="/destinations">Destinations</Link></div>
-          <div><h3>AVELOF</h3><Link to="/about">About & Contact</Link><Link to="/reviews">Reviews</Link><a href={business.instagram} target="_blank" rel="noreferrer">Instagram</a></div>
+          <div><h3>AVELOF</h3><Link to="/about">About & Contact</Link><Link to="/reviews">Reviews</Link><Link to="/my-enquiries">Check bookings</Link><a href={business.instagram} target="_blank" rel="noreferrer">Instagram</a></div>
           <div><h3>Email our team</h3><a href={`mailto:${business.email}`}>{business.email}</a><span>Kashmir, India</span></div>
         </div>
         <div className="footer-bottom"><span>© {currentYear} AVELOF. All journeys begin with a conversation.</span><a href={business.website}>avelof.in</a></div>
       </footer>
-      <button className="button floating-enquiry" hidden={workflowVisible} onClick={() => { openBooking('package'); closeMenu() }}><MessageCircle size={19} /> Enquire Now <ArrowRight size={16} /></button>
+      <button className="button floating-enquiry" hidden={workflowVisible || location.pathname.startsWith('/my-enquiries') || location.pathname.startsWith('/admin/')} onClick={() => { openBooking('package'); closeMenu() }}><MessageCircle size={19} /> Enquire Now <ArrowRight size={16} /></button>
       {booking && <BookingModal kind={booking.kind} selectedItem={booking.item} onClose={() => setBooking(null)} />}
     </>
   )

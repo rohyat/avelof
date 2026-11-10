@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import type { FormEvent } from 'react'
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Check, Compass, Mail, MapPin, Phone, Plus, Star, Users } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Check, Compass, Mail, MapPin, Phone, Plus, Users } from 'lucide-react'
 import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import { business } from '../config'
-import { destinations, hotels, rentalCars, tourPackages, verifiedGuestRatings } from '../data/catalog'
-import { createWhatsAppUrl } from '../services/bookingService'
+import { destinations, hotels, rentalCars, tourPackages } from '../data/catalog'
 import BookingModal, { EnquiryForm } from '../components/BookingModal'
 import TripPlanner from '../components/TripPlanner'
 import DiscountLabel from '../components/DiscountLabel'
@@ -219,58 +217,7 @@ function IncludedLists({ inclusions, exclusions }: { inclusions: string[]; exclu
   return <section className="detail-section"><Eyebrow>Included in your request</Eyebrow><h2>Clear from the start.</h2><div className="include-grid"><div><h3>Included</h3><ul className="detail-list">{inclusions.map((entry) => <li key={entry}>{entry}</li>)}</ul></div><div><h3>Not included</h3><ul className="detail-list">{exclusions.map((entry) => <li key={entry}>{entry}</li>)}</ul></div></div></section>
 }
 
-export function ReviewsPage() {
-  const [rating, setRating] = useState('')
-  const [preparedReviewUrl, setPreparedReviewUrl] = useState<string | null>(null)
-
-  function prepareReview(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const fields = new FormData(event.currentTarget)
-    const message = [
-      'Hello AVELOF, I would like to submit a customer review for moderation.',
-      '',
-      `Guest name: ${String(fields.get('reviewerName') ?? '')}`,
-      `Booking ID: ${String(fields.get('bookingId') ?? '')}`,
-      `Booked package: ${String(fields.get('packageName') ?? '')}`,
-      `Rating: ${String(fields.get('rating') ?? '')}/5`,
-      '',
-      `Review: ${String(fields.get('reviewText') ?? '')}`,
-      '',
-      'The guest confirmed this is their own experience and agreed to publication consideration.',
-    ].join('\n')
-    setPreparedReviewUrl(createWhatsAppUrl(message))
-  }
-
-  return <>
-    <section className="page-hero"><div className="page-width"><div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>Reviews</span></div><Eyebrow>Stories from the valley</Eyebrow><h1>Travel leaves<br /><em>a little something.</em></h1><p>Every honest experience matters. We welcome positive, mixed, and critical feedback from our guests.</p></div></section>
-    <section className="reviews-page page-width">
-      <div className="review-disclosure"><strong>All perspectives are welcome</strong></div>
-      <div className="review-grid">{verifiedGuestRatings.map((review) => <article className="review-card" key={review.id}>
-        <div className="review-card-head"><strong>{review.name}</strong><span className="preview-review-label">Verified</span></div>
-        <div className="review-stars" aria-label={`${review.rating} out of 5 stars`}>{Array.from({ length: review.rating }, (_, index) => <Star key={index} />)}</div>
-        <h3 className="review-card-title">{review.reviewTitle}</h3>
-        <blockquote>{review.reviewText}</blockquote>
-        <div className="review-card-footer"><span>Package: {review.packageName}</span><small>Booking ID: {review.bookingId}</small></div>
-      </article>)}</div>
-      <div className="review-invite"><div><Eyebrow>Travelled with us?</Eyebrow><h2>We’d love to hear your story.</h2></div><a className="button button-dark" href="#share-review">Write a review <ArrowRight size={16} /></a></div>
-      <section className="review-submission" id="share-review" aria-labelledby="review-form-title">
-        <div><Eyebrow>Share your experience</Eyebrow><h2 id="review-form-title">Tell us about your trip.</h2><p>Positive, mixed, or critical feedback is welcome. Add your Booking ID so our team can check your booking before considering the review for publication.</p></div>
-        {preparedReviewUrl ? <div className="review-ready" role="status"><h3>Your review is ready to send.</h3><p>WhatsApp will open with your review addressed to AVELOF. Sending it does not publish it; our team will verify it before adding it to the site.</p><div className="review-ready-actions"><a className="button button-dark" href={preparedReviewUrl} target="_blank" rel="noreferrer">Open WhatsApp <ArrowUpRight size={16} /></a><button className="text-link" type="button" onClick={() => { setPreparedReviewUrl(null); setRating('') }}>Edit review</button></div></div> : <form className="review-submission-form" onSubmit={prepareReview}>
-          <label>Full name<input name="reviewerName" autoComplete="name" maxLength={100} required placeholder="Your name" /></label>
-          <label>Booking ID<input name="bookingId" autoComplete="off" maxLength={80} required placeholder="From your booking confirmation" /></label>
-          <label>Booked package<select name="packageName" defaultValue="" required><option value="" disabled>Select your package</option>{tourPackages.map((item) => <option key={item.id} value={item.name}>{item.name} · {item.duration}</option>)}</select></label>
-          <fieldset className="review-rating"><legend>Your rating</legend><div className="review-star-options">{Array.from({ length: 5 }, (_, index) => {
-            const value = String(index + 1)
-            return <label className={Number(rating) >= Number(value) ? 'is-selected' : ''} key={value}><input aria-label={`${value} star${value === '1' ? '' : 's'}`} type="radio" name="rating" value={value} checked={rating === value} onChange={(event) => setRating(event.target.value)} required /><Star aria-hidden="true" /></label>
-          })}</div></fieldset>
-          <label className="review-text-field">Your review<textarea name="reviewText" rows={5} minLength={20} maxLength={1600} required placeholder="What stood out about your Kashmir trip?" /></label>
-          <label className="review-consent"><input type="checkbox" name="publicationConsent" required /><span>I confirm this is my own experience and allow AVELOF to consider it for publication if verified.</span></label>
-          <button className="button button-dark" type="submit">Continue to WhatsApp <ArrowRight size={16} /></button>
-        </form>}
-      </section>
-    </section>
-  </>
-}
+export { default as ReviewsPage } from './ReviewsPage'
 
 export function AboutPage() {
   return <>

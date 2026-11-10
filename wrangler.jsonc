@@ -1,0 +1,26 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "avelof",
+	"pages_build_output_dir": "./dist",
+	"compatibility_date": "2026-01-01",
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "avelof-enquiries",
+			"database_id": "f1e267ee-cc0f-49c4-ae45-37118e44e3c5",
+			"migrations_dir": "migrations"
+		}
+	],
+	"env": {
+		"preview": {
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "avelof-enquiries-preview",
+					"database_id": "dfdaa4f1-54bd-463a-9ead-86c306305f91",
+					"migrations_dir": "migrations"
+				}
+			]
+		}
+	}
+}

@@ -1,14 +1,7 @@
-import type { Destination, Hotel, RentalCar, TourPackage, VerifiedGuestRating } from '../types'
-import { vehiclePhotos } from './vehiclePhotos'
-import { hotelPhoto } from './hotelPhotos'
-
-const photos = {
-  lake: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1400&q=85',
-  valley: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1400&q=85',
-  mountain: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1400&q=85',
-  snow: 'https://images.unsplash.com/photo-1517299321609-52687d1bc55a?auto=format&fit=crop&w=1400&q=85',
-  meadow: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?auto=format&fit=crop&w=1400&q=85',
-}
+import type { Destination, Hotel, RentalCar, TourPackage, OwnerProvidedGuestReview } from '../types'
+import { vehiclePhotos } from './vehiclePhotos.ts'
+import { hotelPhoto } from './hotelPhotos.ts'
+import { catalogPhotos as photos } from './previewPhotos.ts'
 
 const packageCatalog: TourPackage[] = [
   {
@@ -162,7 +155,14 @@ const premiumHotels: Hotel[] = [
 
 export const hotels: Hotel[] = [...deluxeHotels, ...premiumHotels]
 
-export const verifiedGuestRatings: VerifiedGuestRating[] = [
+export const ownerGuestReviewMonths: Record<string, string> = {
+  'guest-rating-1': '2025-01', 'guest-rating-2': '2025-01',
+  'guest-rating-3': '2025-03', 'guest-rating-4': '2025-03', 'guest-rating-5': '2025-03', 'guest-rating-6': '2025-03',
+  'guest-rating-7': '2025-06', 'guest-rating-8': '2025-06',
+  'guest-rating-9': '2025-12', 'guest-rating-10': '2025-12',
+}
+
+export const ownerProvidedGuestReviews: OwnerProvidedGuestReview[] = [
   { id: 'guest-rating-1', name: 'Amit Sharma', rating: 5, packageName: 'Premium', bookingId: 'PREN0100', reviewTitle: 'Amazing Kashmir Experience', reviewText: 'Had an amazing trip to Kashmir! The hotel stay was very comfortable, the cab service was excellent, and the driver was friendly and helpful. The beautiful scenery made the entire journey unforgettable.' },
   { id: 'guest-rating-2', name: 'Rohit Singh', rating: 5, packageName: 'Premium', bookingId: 'PREN0200', reviewTitle: 'Wonderful Hospitality', reviewText: 'We had a wonderful experience exploring Kashmir. Everything, from hotel arrangements to transportation, was perfectly managed. Really appreciated the hospitality and professional service throughout the trip.' },
   { id: 'guest-rating-3', name: 'Vikram Yadov', rating: 5, packageName: 'Premium', bookingId: 'PREN0300', reviewTitle: 'Beautiful Memories in Gulmarg', reviewText: 'Our Gulmarg visit was absolutely beautiful! The snow-covered mountains and breathtaking views were incredible. The cab was comfortable, and the hotel arrangements were excellent.' },
