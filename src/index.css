@@ -602,6 +602,9 @@ body.enquiry-open { overflow: hidden; }
 .confirmation-actions .button { min-width: 0; padding-inline: 10px; }
 .confirmation-close { color: var(--forest-deep); background: transparent; border: 1px solid var(--line); }
 .confirmation-close:hover { background: var(--glacier); }
+.trip-chat-help { flex: 0 0 auto; margin: 0; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.45; }
+.trip-chat-help a { color: var(--forest); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.trip-chat-help a:hover { color: var(--forest-deep); }
 @media (max-width: 560px) {
   .floating-trip-chat { right: 18px; bottom: 82px; }
   .trip-chat-panel { right: 16px; bottom: 138px; width: calc(100vw - 32px); max-height: calc(100dvh - 160px); padding: 14px; }
