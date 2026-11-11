@@ -26,7 +26,11 @@ test('trip chat renders a local answer without an API request or mobile overflow
     })
     try {
       await page.goto(origin)
-      await page.getByRole('button', { name: 'Ask AVELOF' }).click()
+      const launcher = page.getByRole('button', { name: 'Ask AVELOF' })
+      assert.equal(await launcher.isVisible(), true)
+      assert.equal(await page.locator('.floating-enquiry').count(), 0)
+      assert.equal(await launcher.evaluate((button) => getComputedStyle(button).fontWeight), '700')
+      await launcher.click()
       await page.getByText('Messages aren’t sent to an AI provider or saved by AVELOF.', { exact: false }).waitFor()
       const helpLink = page.getByRole('link', { name: 'Contact us' })
       assert.equal(await helpLink.isVisible(), true)

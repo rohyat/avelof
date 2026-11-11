@@ -200,7 +200,7 @@ export default function BookingModal({ kind, selectedItem, initialFields, initia
           <button className="button confirmation-close" onClick={onClose}><X size={17} /> No Thanks</button>
         </div>
       </> : <>
-        <p className="eyebrow">Enquire Now</p>
+        <p className="eyebrow">Book Now</p>
         <h2 id="booking-title">{kind === 'hotel' ? 'Send us your hotel enquiry.' : kind === 'car' ? 'Send us your car rental enquiry.' : 'Send us your trip enquiry.'}</h2>
         <p id="booking-description" className="modal-intro">Share a few details and we’ll help plan the next steps.</p>
         <EnquiryForm kind={kind} selectedItem={selectedItem} additionalFields={initialFields} onPrepared={prepared} />

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom'
-import { ArrowRight, Menu, MessageCircle, X } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { business } from '../config'
 import { hotels, rentalCars, tourPackages } from '../data/catalog'
 import AskAIWidget from './AskAIWidget'
@@ -52,7 +52,6 @@ function saveScrollPosition(key: string, x: number, y: number) {
 export default function SiteLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [booking, setBooking] = useState<{ kind: BookingKind; item?: string } | null>(null)
-  const [workflowVisible, setWorkflowVisible] = useState(false)
   const location = useLocation()
   const navigationType = useNavigationType()
   const previousLocation = useRef({ pathname: location.pathname, hash: location.hash })
@@ -95,16 +94,6 @@ export default function SiteLayout() {
       window.removeEventListener('pagehide', saveOnPageHide)
     }
   }, [location.key])
-
-  useEffect(() => {
-    const workflows = ['visit-planner', 'custom-trip', 'package-planner', 'share-review']
-      .map((id) => document.getElementById(id))
-      .filter((workflow): workflow is HTMLElement => workflow !== null)
-    if (!workflows.length) return
-    const observer = new IntersectionObserver((entries) => setWorkflowVisible(entries.some((entry) => entry.isIntersecting)))
-    workflows.forEach((workflow) => observer.observe(workflow))
-    return () => observer.disconnect()
-  }, [location.pathname])
 
   useEffect(() => {
     const catalogItem = [...tourPackages, ...rentalCars, ...hotels].find((item) => item.id === location.pathname.split('/').at(-1))
@@ -151,7 +140,6 @@ export default function SiteLayout() {
         </div>
         <div className="footer-bottom"><span>© {currentYear} AVELOF. All journeys begin with a conversation.</span><a href={business.website}>avelof.in</a></div>
       </footer>
-      <button className="button floating-enquiry" hidden={workflowVisible || location.pathname.startsWith('/my-enquiries') || location.pathname.startsWith('/admin/')} onClick={() => { openBooking('package'); closeMenu() }}><MessageCircle size={19} /> Enquire Now <ArrowRight size={16} /></button>
       <AskAIWidget hidden={location.pathname.startsWith('/my-enquiries') || location.pathname.startsWith('/admin/')} />
       {booking && <BookingModal kind={booking.kind} selectedItem={booking.item} onClose={() => setBooking(null)} />}
     </>

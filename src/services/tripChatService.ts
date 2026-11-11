@@ -80,7 +80,7 @@ export function getTripChatReply(question: string) {
   }
 
   if (hasAny(query, ['book', 'booking', 'enquire', 'enquiry', 'contact', 'availability', 'quote', 'price', 'cost', 'service'])) {
-    return 'AVELOF helps arrange Kashmir tour packages, hotel stays, private vehicles, and custom itineraries. I can share published catalog details, but can’t check live availability or confirm a booking. Use Enquire Now to ask the team about your dates and final quote.'
+    return 'AVELOF helps arrange Kashmir tour packages, hotel stays, private vehicles, and custom itineraries. I can share published catalog details, but can’t check live availability or confirm a booking. Use Book Now to ask the team about your dates and final quote.'
   }
 
   return 'I can answer from AVELOF’s published catalog. Try asking about Deluxe or Premium packages, hotels in Srinagar, car options, or places such as Gulmarg, Sonamarg, and Pahalgam.'
