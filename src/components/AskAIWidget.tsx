@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowUp, ArrowUpRight, Sparkles, X } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { createWhatsAppUrl } from '../services/bookingService'
 import { getTripChatReply } from '../services/tripChatService'
 import type { ChatMessage } from '../services/tripChatService'
 
@@ -47,7 +47,7 @@ export default function AskAIWidget({ hidden = false }: { hidden?: boolean }) {
         <textarea id="trip-chat-input" value={draft} maxLength={900} rows={2} placeholder="Ask about packages, hotels or places…" onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage() } }} />
         <button className="button button-dark" type="submit" disabled={!draft.trim()} aria-label="Send question"><ArrowUp size={18} /></button>
       </form>
-      <div className="trip-chat-help"><span>Need specific help or information?</span><Link to="/contact">Contact us <ArrowUpRight size={14} /></Link></div>
+      <div className="trip-chat-help"><span>Need specific help or information?</span><a href={createWhatsAppUrl('Hello AVELOF, I need specific help or information about planning a Kashmir trip.')} target="_blank" rel="noreferrer">Contact us <ArrowUpRight size={14} /></a></div>
     </section>}
   </>
 }
