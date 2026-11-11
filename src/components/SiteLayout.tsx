@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-rou
 import { ArrowRight, Menu, MessageCircle, X } from 'lucide-react'
 import { business } from '../config'
 import { hotels, rentalCars, tourPackages } from '../data/catalog'
+import AskAIWidget from './AskAIWidget'
 import BookingModal from './BookingModal'
 import OfferBanner from './OfferBanner'
 import type { BookingKind } from '../types'
@@ -151,6 +152,7 @@ export default function SiteLayout() {
         <div className="footer-bottom"><span>© {currentYear} AVELOF. All journeys begin with a conversation.</span><a href={business.website}>avelof.in</a></div>
       </footer>
       <button className="button floating-enquiry" hidden={workflowVisible || location.pathname.startsWith('/my-enquiries') || location.pathname.startsWith('/admin/')} onClick={() => { openBooking('package'); closeMenu() }}><MessageCircle size={19} /> Enquire Now <ArrowRight size={16} /></button>
+      <AskAIWidget hidden={location.pathname.startsWith('/my-enquiries') || location.pathname.startsWith('/admin/')} />
       {booking && <BookingModal kind={booking.kind} selectedItem={booking.item} onClose={() => setBooking(null)} />}
     </>
   )

@@ -192,9 +192,20 @@ phone numbers, booking details or review text. Push delivery is best-effort and
 runs after the D1 write, so push-service failure does not invalidate a saved
 booking or review. Owners can disable each device from either dashboard section.
 
+## Trip Chat
+
+Trip Chat builds replies in the visitor’s browser using only the public catalog
+of packages, hotels, vehicles and destinations. It does not call an AI provider
+or API, access D1, or save conversation history. Questions remain in page memory
+until the page is closed. No AI binding or provider account is required, and no
+AI usage charges are generated. Responses are catalog guidance, not live
+availability, weather, road status, or a booking confirmation. The UI warns
+visitors not to enter personal, payment or booking information.
+
 ## Verification
 
-Run `npm run build`, `npm run lint` and `npm test`. For the complete enquiry
-flow, apply local migrations and use `npm run dev:cloudflare`; Vite preview
-alone has no enquiry API. Check response headers, CSP console violations,
-successful saves, error/retry behavior, optional WhatsApp help and mobile layout.
+Run `npm run build`, `npm run lint`, `npm test` and `npm run test:trip-chat`. For
+the complete enquiry flow, apply local migrations and use `npm run dev:cloudflare`;
+Vite preview alone has no enquiry API. Check response headers, CSP console
+violations, successful saves, error/retry behavior, optional WhatsApp help and
+mobile layout.

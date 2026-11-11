@@ -50,6 +50,14 @@ command is `npx wrangler pages deploy dist --project-name avelof --branch main`.
 Commit and push source changes first, then confirm the Cloudflare build reports
 deployment success before checking the live domains.
 
+### Free trip chat
+
+Trip Chat is a browser-only guide built from the public package, hotel, vehicle
+and destination catalog. It does not call an AI provider, require an AI binding,
+send chat messages to a server, or save conversation history. It can share
+published service details and route guidance, but cannot check live availability
+or confirm bookings. Rates and travel conditions should be confirmed with AVELOF.
+
 For a manual operator deployment, sign in with Wrangler and run from the project
 root:
 
