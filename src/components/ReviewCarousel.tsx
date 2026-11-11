@@ -58,7 +58,7 @@ export default function ReviewCarousel({ children }: { children: ReactNode }) {
       const next = current >= lastIndex ? 0 : current + 1
       const target = rail.children[next]
       if (target instanceof HTMLElement) rail.scrollTo({ left: target.offsetLeft, behavior: 'smooth' })
-    }, 1000)
+    }, 2000)
     return () => window.clearInterval(timer)
   }, [compact, reducedMotion, paused, hovered, lastIndex])
 

@@ -315,7 +315,7 @@ after verification. Published synthetic content is explicitly marked as a test.
 
 At 900px and below, guest review cards use a horizontal scroll-snap carousel
 with the existing responsive card widths, padding and typography. Reviews
-advance one at a time every second and loop. Offer-style dots select a position.
+advance one at a time every two seconds and loop. Offer-style dots select a position.
 Touch, dot selection or keyboard interaction stops autoplay; there is no
 pause/play button. Mouse hover pauses temporarily, hidden tabs do not advance,
 and reduced-motion preferences disable autoplay.

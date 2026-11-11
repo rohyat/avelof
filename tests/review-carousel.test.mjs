@@ -115,7 +115,7 @@ test('review carousel preserves layout and supports accessible automatic and man
       } finally { await page.close() }
     })
 
-    await context.test('one-second autoplay pauses on manual dot or keyboard interaction', async () => {
+    await context.test('two-second autoplay pauses on manual dot or keyboard interaction', async () => {
       const page = await openReviews(browser)
       try {
         await page.clock.install()
@@ -125,7 +125,7 @@ test('review carousel preserves layout and supports accessible automatic and man
         const rail = page.locator('.review-carousel-rail')
         assert.equal(await page.locator('.review-autoplay-toggle').count(), 0)
         await page.clock.runFor(50)
-        await page.clock.fastForward(1100)
+        await page.clock.fastForward(2100)
         assert.ok(await rail.evaluate((element) => element.scrollLeft > 0))
         await page.getByRole('button', { name: 'Show review 4', exact: true }).evaluate((button) => button.click())
         await page.clock.runFor(30)
