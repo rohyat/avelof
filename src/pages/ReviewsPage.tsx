@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, RefreshCw, Star, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import ReviewCarousel from '../components/ReviewCarousel'
+import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import { deleteReview as deleteReviewRequest, loadAdminReviews, loadPublicReviews, moderateReview, ReviewError, saveReview } from '../services/reviewService'
 import { reviewSubmissionSchema } from '../services/reviewSchema'
 import type { AdminReview, PublicReview, ReviewStatus } from '../services/reviewSchema'
@@ -184,6 +185,7 @@ export function AdminReviewsPage() {
     <div className="enquiry-access-heading"><Star size={28} /><div><p className="eyebrow">AVELOF owner access</p><h1>Review moderation</h1></div></div>
     {signedOut ? <p>Please <Link className="text-link" to="/admin/panel">sign in to the owner dashboard</Link> before managing reviews.</p> : <>
       <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><span aria-current="page">Reviews</span></nav>
+      <OwnerPushNotifications />
       <div className="admin-enquiry-toolbar"><strong>{listing?.total ?? 0} {listing?.total === 1 ? 'review' : 'reviews'}</strong><label className="full-field admin-status-filter"><span className="sr-only">Review status</span><select value={filters.status} onChange={(event) => refresh(1, event.target.value as ReviewStatus | 'all')} disabled={loading || Boolean(savingId)}><option value="pending">Awaiting approval</option><option value="published">Published</option><option value="rejected">Hidden</option><option value="all">All reviews</option></select></label><button className="icon-button" title="Refresh reviews" aria-label="Refresh reviews" disabled={loading || Boolean(savingId)} onClick={() => refresh()}><RefreshCw size={18} /></button></div>
       {notice && <p className="booking-admin-notice" role="status">{notice}</p>}
       {loading && <p role="status">Loading reviews...</p>}

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { reviewStatusSchema, reviewSubmissionSchema } from '../../src/services/reviewSchema.ts'
 import { allowAccessAttempt, hashText, isAdmin, privateReply, sameOrigin } from '../_lib/enquiryAccess.ts'
+import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 import type { AccessEnv } from '../_lib/enquiryAccess.ts'
 
 interface ReviewRow {
@@ -52,7 +53,7 @@ async function readBody(request: Request) {
   }
 }
 
-export const onRequest: PagesFunction<AccessEnv> = async ({ request, env }) => {
+export const onRequest: PagesFunction<AccessEnv> = async ({ request, env, waitUntil }) => {
   if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) return privateReply({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST, PATCH, DELETE' })
   if (request.method !== 'GET' && !sameOrigin(request)) return privateReply({ error: 'Origin not allowed.' }, 403)
   if (!env.DB) return privateReply({ error: 'Review storage is unavailable.' }, 503)
@@ -101,10 +102,16 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env }) => {
       ? privateReply({ saved: true, id, status: existing.status })
       : privateReply({ error: 'This submission ID has already been used. Start a new review.' }, 409)
     if (!await allowAccessAttempt(request, env.DB, 'review-submit', 3)) return privateReply({ error: 'Too many reviews. Please try again in ten minutes.' }, 429, { 'Retry-After': '600' })
-    await env.DB.prepare("INSERT INTO reviews (id, reviewer_name, booking_id, experience, rating, title, review_text, publication_consent, payload_hash, status, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 'published', strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ON CONFLICT (id) DO NOTHING")
+    const inserted = await env.DB.prepare("INSERT INTO reviews (id, reviewer_name, booking_id, experience, rating, title, review_text, publication_consent, payload_hash, status, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 'published', strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ON CONFLICT (id) DO NOTHING")
       .bind(id, reviewerName, bookingId, experience, rating, title, reviewText, payloadHash).run()
     const saved = await env.DB.prepare('SELECT status, payload_hash FROM reviews WHERE id = ?').bind(id).first<ReviewRow>()
     if (!saved || saved.payload_hash !== payloadHash) return privateReply({ error: 'Review could not be saved with this ID.' }, 409)
+    if (Number(inserted.meta?.changes ?? 0) > 0) queueOwnerPush(env, waitUntil, {
+      title: 'New guest review',
+      body: `1 new review · ${rating} ${rating === 1 ? 'star' : 'stars'}`,
+      url: '/admin/panel/reviews',
+      tag: `review-${id}`,
+    })
     return privateReply({ saved: true, id, status: saved.status }, 201)
   } catch {
     return privateReply({ error: 'Reviews are temporarily unavailable. Please try again.' }, 503)

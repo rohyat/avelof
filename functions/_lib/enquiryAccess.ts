@@ -5,6 +5,9 @@ export interface AccessEnv {
   DB?: D1Database
   ENQUIRY_ACCESS_SECRET?: string
   ENQUIRY_ADMIN_CODE_HASH?: string
+  ENQUIRY_VAPID_PUBLIC_KEY?: string
+  ENQUIRY_VAPID_PRIVATE_KEY?: string
+  ENQUIRY_VAPID_SUBJECT?: string
 }
 
 const encoder = new TextEncoder()

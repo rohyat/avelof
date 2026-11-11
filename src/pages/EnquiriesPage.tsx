@@ -6,6 +6,7 @@ import { business } from '../config'
 import { deleteAdminEnquiry, EnquiryAccessError, loadAdminEnquiries, lookupBookingSummaries, signInAdmin, signOutAdmin, updateBookingStatus } from '../services/enquiryAccessService'
 import { indianPhoneNumber } from '../services/phoneNumbers'
 import { requestedBooking } from '../services/bookingDetails'
+import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import type { BookingStatus, BookingSummary, EnquirySummary } from '../types'
 
 const typeLabels = { package: 'Tour package', hotel: 'Hotel', car: 'Cab', contact: 'General' }
@@ -253,6 +254,7 @@ export function AdminEnquiriesPage() {
       <button className="button button-dark" disabled={busy} type="submit"><LockKeyhole size={17} /> {busy ? 'Signing in...' : 'Sign in'}</button>
     </form> : <>
       <nav className="admin-section-nav" aria-label="Owner sections"><span aria-current="page">Enquiries</span><Link to="/admin/panel/reviews">Reviews</Link></nav>
+      <OwnerPushNotifications />
       <div className="admin-enquiry-toolbar">
         <strong>{total} {total === 1 ? 'enquiry' : 'enquiries'}</strong>
         <form className="admin-enquiry-search" onSubmit={(event) => { event.preventDefault(); reload({ ...filters, reference: query.trim().toUpperCase(), page: 1 }) }}>

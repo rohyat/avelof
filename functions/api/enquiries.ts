@@ -1,5 +1,6 @@
 import { enquirySchema } from '../../src/services/enquirySchema.ts'
 import { accessConfigured, customerAccessCode, hashText } from '../_lib/enquiryAccess.ts'
+import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 import type { AccessEnv } from '../_lib/enquiryAccess.ts'
 
 type Env = AccessEnv
@@ -46,7 +47,7 @@ async function digest(value: string) {
   return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
-async function savedReply(database: D1Database, reference: string, payloadHash: string, prefix: string, status: number, env: Env) {
+async function savedReply(database: D1Database, reference: string, payloadHash: string, prefix: string, status: number, env: Env, waitUntil?: (promise: Promise<unknown>) => void, notify = false) {
   await database.prepare('INSERT INTO enquiry_reference_numbers (request_reference) SELECT ? WHERE NOT EXISTS (SELECT 1 FROM enquiry_reference_numbers WHERE request_reference = ?)')
     .bind(reference, reference).run()
   await database.prepare("UPDATE enquiries SET public_reference = 'AVELOF_' || ? || '_' || (SELECT number + 10000 FROM enquiry_reference_numbers WHERE request_reference = ?) WHERE reference = ? AND public_reference IS NULL")
@@ -61,10 +62,16 @@ async function savedReply(database: D1Database, reference: string, payloadHash: 
     const access = await database.prepare('SELECT access_code_hash FROM enquiries WHERE reference = ?').bind(reference).first<{ access_code_hash: string }>()
     if (access?.access_code_hash === accessHash) accessCode = candidate
   }
+  if (notify && waitUntil) queueOwnerPush(env, waitUntil, {
+    title: 'New booking enquiry',
+    body: `1 new booking · ${saved.public_reference}`,
+    url: '/admin/panel',
+    tag: `booking-${saved.public_reference}`,
+  })
   return reply({ saved: true, reference: saved.public_reference, requestReference: reference, ...(accessCode ? { accessCode } : {}) }, status)
 }
 
-export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequest: PagesFunction<Env> = async ({ request, env, waitUntil }) => {
   if (request.method !== 'POST') return reply({ error: 'Method not allowed.' }, 405, { Allow: 'POST' })
   if (request.headers.get('Origin') !== new URL(request.url).origin || request.headers.get('Sec-Fetch-Site') === 'cross-site') {
     return reply({ error: 'Origin not allowed.' }, 403)
@@ -101,11 +108,11 @@ export const onRequest: PagesFunction<Env> = async ({ request, env }) => {
     const attempts = await env.DB.prepare('INSERT INTO enquiry_rate_limits (bucket, client_hash, attempts) VALUES (?, ?, 1) ON CONFLICT (bucket, client_hash) DO UPDATE SET attempts = attempts + 1 RETURNING attempts').bind(bucket, clientHash).first<{ attempts: number }>()
     if (!attempts || attempts.attempts > 5) return reply({ error: 'Too many enquiries.' }, 429, { 'Retry-After': '600' })
     const details = fields.customDetails ?? ''
-    await env.DB.prepare('INSERT INTO enquiries (reference, kind, full_name, phone_number, adults, children, details, fields_json, payload_hash, phone_lookup) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (reference) DO NOTHING')
+    const inserted = await env.DB.prepare('INSERT INTO enquiries (reference, kind, full_name, phone_number, adults, children, details, fields_json, payload_hash, phone_lookup) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (reference) DO NOTHING')
       .bind(reference, kind, fields.fullName, fields.phoneNumber, Number(fields.adults), Number(fields.children), details, fieldsJson, payloadHash, fields.phoneNumber.replace(/\D/g, '')).run()
     const saved = await env.DB.prepare('SELECT payload_hash FROM enquiries WHERE reference = ?').bind(reference).first<{ payload_hash: string }>()
     if (saved?.payload_hash !== payloadHash) return reply({ error: 'Enquiry could not be saved with this reference.' }, 409)
-    return await savedReply(env.DB, reference, payloadHash, prefix, 201, env)
+    return await savedReply(env.DB, reference, payloadHash, prefix, 201, env, waitUntil, Number(inserted.meta?.changes ?? 0) > 0)
   } catch {
     return reply({ error: 'Enquiry storage is temporarily unavailable.' }, 503)
   }

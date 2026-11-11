@@ -2,11 +2,14 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import assert from 'node:assert/strict'
 import { pbkdf2Sync } from 'node:crypto'
+import { createECDH, randomBytes } from 'node:crypto'
 import { business } from '../../src/config.ts'
 import { test } from 'node:test'
 import { onRequest } from './enquiries.ts'
 import { onRequest as onAccessRequest } from './enquiry-access.ts'
 import { onRequest as onReviewRequest } from './reviews.ts'
+import { onRequest as onPushRequest } from './push.ts'
+import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 import { adminCookie, correctAdminUsername, createAdminSession, customerAccessCode, hashText, isAdmin, phoneCandidates, verifyAdminPassword } from '../_lib/enquiryAccess.ts'
 import { indianPhoneNumber } from '../../src/services/phoneNumbers.ts'
 import { requestedBooking } from '../../src/services/bookingDetails.ts'
@@ -27,7 +30,7 @@ function database() {
         bind(...values) {
           return {
             async first() { return sqlite.prepare(sql).get(...values) ?? null },
-            async run() { return sqlite.prepare(sql).run(...values) },
+            async run() { const result = sqlite.prepare(sql).run(...values); return { meta: { changes: Number(result.changes) } } },
             async all() { return { results: sqlite.prepare(sql).all(...values) } },
           }
         },
@@ -54,7 +57,7 @@ async function send(DB, body, options = {}) {
     method: 'POST', headers: { Origin: 'https://avelof.test', 'Content-Type': 'application/json', ...options.headers },
     body: typeof body === 'string' ? body : JSON.stringify(body),
   })
-  return onRequest({ request, env: { DB, ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters' } })
+  return onRequest({ request, env: { DB, ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters', ...options.env }, ...(options.waitUntil ? { waitUntil: options.waitUntil } : {}) })
 }
 
 test('all enquiry types save with unique references and preserve custom itinerary text', async () => {
@@ -240,6 +243,22 @@ async function access(DB, body, options = {}) {
   return onAccessRequest({ request, env: { DB, ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters', ENQUIRY_ADMIN_CODE_HASH: await hashText('123456789012345678901234567890123456789012345678') } })
 }
 
+async function pushRequest(DB, method, body, options = {}) {
+  const request = new Request('https://avelof.test/api/push', {
+    method,
+    headers: { Origin: 'https://avelof.test', ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...options.headers },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  })
+  return onPushRequest({ request, env: {
+    DB,
+    ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters',
+    ENQUIRY_ADMIN_CODE_HASH: await hashText('123456789012345678901234567890123456789012345678'),
+    ENQUIRY_VAPID_PUBLIC_KEY: 'test-public-key',
+    ENQUIRY_VAPID_PRIVATE_KEY: 'test-private-key',
+    ENQUIRY_VAPID_SUBJECT: 'mailto:info@avelof.in',
+  } })
+}
+
 test('customers need the correct private code and receive only their own enquiry', async () => {
   const DB = database()
   try {
@@ -378,7 +397,85 @@ test('only the current admin session can permanently delete an enquiry and its r
   } finally { DB.sqlite.close() }
 })
 
-test('masked status lookup has a separate bounded rate limit', async () => {
+test('push subscriptions are private to the owner and can be enabled or removed per device', async () => {
+  const DB = database()
+  try {
+    assert.equal((await pushRequest(DB, 'GET')).status, 401)
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    const endpoint = 'https://push.example.test/device/one'
+    const subscription = { endpoint, expirationTime: null, keys: { p256dh: 'p'.repeat(65), auth: 'a'.repeat(22) } }
+    const initial = await pushRequest(DB, 'GET', undefined, { headers: { Cookie } })
+    assert.deepEqual(await initial.json(), { available: true, publicKey: 'test-public-key', subscriptionCount: 0 })
+    assert.equal((await pushRequest(DB, 'POST', { action: 'subscribe', subscription })).status, 401)
+    assert.equal((await pushRequest(DB, 'POST', { action: 'subscribe', subscription }, { headers: { Cookie, Origin: 'https://evil.test' } })).status, 403)
+    assert.deepEqual(await (await pushRequest(DB, 'POST', { action: 'subscribe', subscription }, { headers: { Cookie } })).json(), { enabled: true, subscriptionCount: 1 })
+    assert.deepEqual(await (await pushRequest(DB, 'POST', { action: 'subscribe', subscription: { ...subscription, keys: { ...subscription.keys, p256dh: 'q'.repeat(65) } } }, { headers: { Cookie } })).json(), { enabled: true, subscriptionCount: 1 })
+    assert.equal(DB.sqlite.prepare('SELECT p256dh FROM push_subscriptions WHERE endpoint = ?').get(endpoint).p256dh, 'q'.repeat(65))
+    assert.deepEqual(await (await pushRequest(DB, 'DELETE', { action: 'unsubscribe', endpoint }, { headers: { Cookie } })).json(), { enabled: false, subscriptionCount: 0 })
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM push_subscriptions').get().total, 0)
+  } finally { DB.sqlite.close() }
+})
+
+test('new bookings and reviews queue one owner push only after a new insert', async () => {
+  const DB = database()
+  const vapid = { ENQUIRY_VAPID_PUBLIC_KEY: 'test-public-key', ENQUIRY_VAPID_PRIVATE_KEY: 'test-private-key', ENQUIRY_VAPID_SUBJECT: 'mailto:info@avelof.in' }
+  const tasks = []
+  const waitUntil = (task) => tasks.push(task)
+  try {
+    const booking = payload()
+    assert.equal((await send(DB, booking, { env: vapid, waitUntil })).status, 201)
+    assert.equal(tasks.length, 1)
+    await Promise.all(tasks.splice(0))
+    assert.equal((await send(DB, booking, { env: vapid, waitUntil })).status, 200)
+    assert.equal(tasks.length, 0)
+
+    const review = reviewPayload()
+    assert.equal((await reviewRequest(DB, 'POST', review, { env: vapid, waitUntil })).status, 201)
+    assert.equal(tasks.length, 1)
+    await Promise.all(tasks.splice(0))
+    assert.equal((await reviewRequest(DB, 'POST', review, { env: vapid, waitUntil })).status, 200)
+    assert.equal(tasks.length, 0)
+  } finally { DB.sqlite.close() }
+})
+
+test('owner push delivery encrypts the generic alert and removes expired subscriptions', async () => {
+    const DB = database()
+    const vapidKey = createECDH('prime256v1')
+    const subscriptionKey = createECDH('prime256v1')
+    vapidKey.generateKeys()
+    subscriptionKey.generateKeys()
+    const endpoint = 'https://push.example.test/device/expired'
+    DB.sqlite.prepare('INSERT INTO push_subscriptions (endpoint, p256dh, auth) VALUES (?, ?, ?)')
+      .run(endpoint, subscriptionKey.getPublicKey(undefined, 'uncompressed').toString('base64url'), randomBytes(16).toString('base64url'))
+    const env = {
+      DB,
+      ENQUIRY_VAPID_PUBLIC_KEY: vapidKey.getPublicKey(undefined, 'uncompressed').toString('base64url'),
+      ENQUIRY_VAPID_PRIVATE_KEY: vapidKey.getPrivateKey().toString('base64url'),
+      ENQUIRY_VAPID_SUBJECT: 'mailto:info@avelof.in',
+    }
+    const originalFetch = globalThis.fetch
+    let pushRequest
+    globalThis.fetch = async (input, init) => {
+      pushRequest = { endpoint: String(input), headers: new Headers(init.headers), body: init.body }
+      return new Response(null, { status: 410 })
+    }
+    try {
+      const tasks = []
+      queueOwnerPush(env, (task) => tasks.push(task), { title: 'New booking enquiry', body: '1 new booking · AVELOF_DLX_10001', url: '/admin/panel', tag: 'booking-test' })
+      await Promise.all(tasks)
+      assert.equal(pushRequest.endpoint, endpoint)
+      assert.match(pushRequest.headers.get('authorization'), /^vapid t=/)
+      assert.equal(pushRequest.headers.get('content-encoding'), 'aes128gcm')
+      assert.ok(pushRequest.body.byteLength > 0)
+      assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM push_subscriptions').get().total, 0)
+    } finally {
+      globalThis.fetch = originalFetch
+      DB.sqlite.close()
+    }
+  })
+
+  test('masked status lookup has a separate bounded rate limit', async () => {
   const DB = database()
   try {
     const saved = await (await send(DB, payload())).json()
@@ -543,7 +640,12 @@ async function reviewRequest(DB, method, body, options = {}) {
   return onReviewRequest({ request: new Request(`https://avelof.test/api/reviews${options.query ?? ''}`, {
     method, headers: { Origin: 'https://avelof.test', 'Content-Type': 'application/json', ...options.headers },
     ...(body === undefined ? {} : { body: typeof body === 'string' ? body : JSON.stringify(body) }),
-  }), env: { DB, ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters', ENQUIRY_ADMIN_CODE_HASH: await hashText('123456789012345678901234567890123456789012345678') } })
+  }), env: {
+    DB,
+    ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters',
+    ENQUIRY_ADMIN_CODE_HASH: await hashText('123456789012345678901234567890123456789012345678'),
+    ...options.env,
+  }, ...(options.waitUntil ? { waitUntil: options.waitUntil } : {}) })
 }
 
 test('anyone can publish a consented review without booking confirmation; retries do not duplicate it', async () => {

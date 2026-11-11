@@ -176,6 +176,22 @@ deleted by the owner; include optional booking references and exports in the
 business retention/deletion policy. There is no automatic review-retention
 cleanup or email notification.
 
+## Owner Mobile Push
+
+Web Push is opt-in per owner device and requires an authenticated owner session
+to register or remove a subscription. D1 stores the push-service endpoint and
+encryption keys as private subscription records; expired subscriptions are
+removed after the push service returns 404 or 410. VAPID private keys stay in
+Cloudflare Pages secrets and the ignored local `.dev.vars` file. Never commit or
+log them.
+
+Only a newly inserted booking or review queues an alert. Retries do not create
+duplicate push events. Payloads contain a booking reference or review rating,
+event count/type and an internal owner-dashboard path; they never contain names,
+phone numbers, booking details or review text. Push delivery is best-effort and
+runs after the D1 write, so push-service failure does not invalidate a saved
+booking or review. Owners can disable each device from either dashboard section.
+
 ## Verification
 
 Run `npm run build`, `npm run lint` and `npm test`. For the complete enquiry

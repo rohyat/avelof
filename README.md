@@ -116,9 +116,8 @@ it also assigns short IDs to existing records without changing their details.
 - Customers use `/my-enquiries` with their booking ID or ten-digit Indian phone number, without a password, SMS or access code. Optional `91` and `+91` prefixes remain accepted. Phone search returns up to 25 recent requests with service type, status, reference, masked contacts, and a fixed `bookingDetails` block: known catalog selection, start/end labels and dates. Hotels show the selected stay and check-in/check-out; cabs show the selected vehicle and start/end; packages show their name and travel dates; customized packages are labelled explicitly. Unknown historical selections show selection pending, and missing dates show Not provided. The owner explicitly chose to make these selected fields visible to anyone knowing the ID or phone number. Notes, itineraries, addresses, guest counts and all other submitted fields are excluded. Phone masking strips the country code. Partial suffixes and non-Indian numbers are rejected.
 - The customer page and saved-confirmation popup have no Private submitted details section, private access-code field or private-link copy control. The popup retains the booking-ID copy button and a plain View your bookings link. New forms default to a ten-digit phone number and accept optional country prefixes. Complete records remain available in the protected owner dashboard.
 - Booking links carry only the enquiry reference in a fragment, which is cleared before lookup. Older code-bearing links also open only masked summaries in the website; their code is not read or submitted. The legacy ID+code API remains protected for backward compatibility, but the customer website no longer uses it or displays issued codes.
-- `/admin/panel` is the separate owner sign-in URL, currently live at `https://avelof.pages.dev/admin/panel`. Reviews are at `/admin/panel/reviews`. The legacy `/my-enquiries/admin` and `/my-enquiries/admin/reviews` paths redirect to these canonical routes. The requested `https://www.avelof.in/admin/panel` requires separately connecting that domain to this deployment; no DNS or domain changes were authorized in this update. No customer-facing navigation links to admin routes; authentication remains mandatory. The default username is the ten national business-phone digits from `src/config.ts`; prefixed forms remain accepted. Existing passwords, sessions, full records and status editing are unchanged.
 - `/admin/panel` is the separate owner sign-in URL, live at `https://avelof.in/admin/panel`. Reviews are at `/admin/panel/reviews`. The legacy `/my-enquiries/admin` and `/my-enquiries/admin/reviews` paths redirect to these canonical routes. No customer-facing navigation links to admin routes; authentication remains mandatory. The default username is the ten national business-phone digits from `src/config.ts`; prefixed forms remain accepted. Owner deletion requires confirmation and a current version; deleting an enquiry removes its stored row and cascades its reference-number link. Sequence numbers are never reused.
-- Admin sessions use signed HttpOnly, SameSite=Strict cookies, Secure on HTTPS, and expire after 30 minutes. Use Sign out on shared devices. Changing the server-side admin-code hash invalidates existing sessions.
+- Admin sessions use signed HttpOnly, SameSite=Strict cookies, Secure on HTTPS, and expire after 30 minutes. Use Sign out on shared devices. Changing the server-side admin-code hash invalidates existing sessions. Owner mobile alerts are opt-in per installed device; sign in on the phone and choose Enable on this device. iPhone/iPad requires Add to Home Screen first. Alerts contain only a booking reference or review rating/count, never customer phone numbers. Disable each device from either owner section.
 - Expanded admin records include the same Requested booking details summary and the complete accepted submitted fields underneath, including guest counts, meals, vehicle choice, estimates, custom notes and itinerary. `fields_json` is the authoritative saved snapshot; `details` retains the notes text. Public lookup uses a separate strict projection; it never receives the raw full-record field object. Public service names are matched against the catalog so arbitrary text cannot be echoed through selection fields.
 - Older enquiries also have a masked status summary. Their full details remain owner-only if no private code was issued. Staff must verify the customer through an established channel before sharing details.
 
@@ -130,7 +129,7 @@ by Confirmed, Running and Completed. The stored values remain `received`,
 confirms availability; only an authorized owner marks Confirmed. Stale writes fail
 with 409 rather than silently overwriting a newer change. Customer summaries
 refresh every two minutes while the page is visible and also have a refresh
-button; there is no realtime push service. ID lookup allows 60 checks per IP per
+button; booking status changes do not use realtime push. ID lookup allows 60 checks per IP per
 ten minutes; phone lookup, private-code lookup and owner sign-in each use
 separate ten-attempt limits. Migration `0005_phone_lookup.sql` indexes normalized
 phone numbers without changing original submitted fields. There is no unrestricted
@@ -152,6 +151,14 @@ files. Never commit or share them. Re-running setup reuses the same credentials;
 it does not silently rotate existing settings. Keep the access secret backed up
 so retries can recover the same private customer code. Cloudflare Pages receives
 secrets through Wrangler stdin, not command-line arguments or Vite variables.
+
+Generate and upload VAPID keys for owner mobile push using the local setup
+command; keys are stored in ignored `.dev.vars` and uploaded as Pages secrets:
+
+```powershell
+$env:NODE_USE_SYSTEM_CA = '1'
+npm run setup:push-notifications -- --cloudflare
+```
 
 Apply migration `0003_enquiry_access.sql` in production and preview before
 deploying. Restart local Pages development after creating `.dev.vars`. Verify

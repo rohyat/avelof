@@ -12,6 +12,7 @@
     "test:reviews-ui": "node --test tests/review-carousel.test.mjs",
     "setup:access": "node scripts/setup-enquiry-access.mjs",
     "setup:admin-password": "node scripts/set-admin-password.mjs",
+    "setup:push-notifications": "node scripts/setup-push-notifications.mjs",
     "sync:images": "node scripts/sync-catalog-images.mjs",
     "import:reviews": "node scripts/import-owner-reviews.mjs",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
@@ -20,6 +21,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@block65/webcrypto-web-push": "^2.0.0",
     "lucide-react": "^1.70.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
