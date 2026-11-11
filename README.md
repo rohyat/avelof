@@ -290,7 +290,6 @@ reviews. If consent is withdrawn, hide/remove the database row and remove it
 from the approved source before importing again. `npm run import:reviews --
 --check-client` verifies that private source references are not in built assets.
 
-Apply migration `0006_reviews.sql` in local, production and preview databases
 Apply migrations `0006_reviews.sql` through `0009_review_deletion_tombstones.sql`
 in local, production and preview databases before deployment. Migration 0009
 records source-key tombstones when an owner-provided review is deleted, so a
