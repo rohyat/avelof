@@ -18,7 +18,7 @@ export interface Destination {
   attractions: { name: string; detail: string }[]
 }
 
-export interface CatalogBase {
+interface CatalogBase {
   id: string
   name: string
   location: string
@@ -93,7 +93,7 @@ export interface PreparedRequest {
 
 export type BookingStatus = 'received' | 'booked' | 'running' | 'completed'
 
-export interface RequestedBookingDetails {
+interface RequestedBookingDetails {
   type: string
   name: string
   startLabel: string
