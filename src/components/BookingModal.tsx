@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { ArrowRight, Check, CircleCheck, Copy, MessageCircle, X } from 'lucide-react'
+import { ArrowRight, CalendarDays, Check, CircleCheck, Copy, MessageCircle, X } from 'lucide-react'
 import { hotels, rentalCars, tourPackages } from '../data/catalog'
 import { createWhatsAppUrl, enquiryPath, formatEnquiryDetails, prepareRequest, saveEnquiry } from '../services/bookingService'
 import { indianPhoneNumber } from '../services/phoneNumbers'
@@ -83,9 +83,9 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       <label>Phone number<input name="phoneNumber" type="tel" autoComplete="tel" inputMode="tel" required pattern={'[+0-9\\s\\(\\)\\-]{7,25}'} onBlur={(event) => { const phone = indianPhoneNumber(event.currentTarget.value); if (phone) event.currentTarget.value = phone }} title="Enter your 10-digit Indian phone number. The 91 or +91 prefix is optional." placeholder="10-digit phone number" /></label>
     </div>
     {(kind === 'car' || kind === 'package') && <>
-      <div className="form-grid rental-enquiry-dates">
-        <label>Start date<input name={kind === 'package' ? 'arrivalDate' : 'startDate'} type="date" value={checkInDate} readOnly={plannerDates} onChange={(event) => setCheckInDate(event.target.value)} required /></label>
-        <label>End date<input name={kind === 'package' ? 'departureDate' : 'endDate'} type="date" value={checkOutDate} readOnly={plannerDates} min={kind === 'package' ? earliestCheckout : checkInDate || undefined} onChange={(event) => setCheckOutDate(event.target.value)} required /></label>
+      <div className="form-grid trip-dates enquiry-date-fields">
+        <label><span><CalendarDays size={15} /> Start date</span><input name={kind === 'package' ? 'arrivalDate' : 'startDate'} type="date" value={checkInDate} readOnly={plannerDates} onChange={(event) => setCheckInDate(event.target.value)} required /></label>
+        <label><span><CalendarDays size={15} /> End date</span><input name={kind === 'package' ? 'departureDate' : 'endDate'} type="date" value={checkOutDate} readOnly={plannerDates} min={kind === 'package' ? earliestCheckout : checkInDate || undefined} onChange={(event) => setCheckOutDate(event.target.value)} required /></label>
       </div>
       <p className="privacy-note" role="status">{kind === 'package' ? stayDuration ? <strong>{stayDuration}</strong> : checkInDate && checkOutDate ? 'End date must be after the start date.' : null : rentalDays ? <strong>{rentalDays} {rentalDays === 1 ? 'day' : 'days'}</strong> : checkInDate && checkOutDate ? 'End date must be on or after the start date.' : null}</p>
       {plannerDates && <p className="privacy-note">Dates match your custom itinerary. To change them, close this form and update your planner dates.</p>}
@@ -106,9 +106,9 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       {(kind === 'package' || kind === 'contact') && <label className="full-field">Travelling as<select name="travelGroup" defaultValue="Couple"><option>Couple</option><option>Family</option><option>Friends</option><option>Solo traveller</option><option>Group</option></select></label>}
     </fieldset>
     {kind === 'hotel' ? <>
-      <div className="form-grid">
-        <label>Check-in date<input name="checkInDate" type="date" value={checkInDate} onChange={(event) => setCheckInDate(event.target.value)} required /></label>
-        <label>Check-out date<input name="checkOutDate" type="date" value={checkOutDate} min={earliestCheckout} onChange={(event) => setCheckOutDate(event.target.value)} required /></label>
+      <div className="form-grid trip-dates enquiry-date-fields">
+        <label><span><CalendarDays size={15} /> Start date</span><input name="checkInDate" type="date" value={checkInDate} onChange={(event) => setCheckInDate(event.target.value)} required /></label>
+        <label><span><CalendarDays size={15} /> End date</span><input name="checkOutDate" type="date" value={checkOutDate} min={earliestCheckout} onChange={(event) => setCheckOutDate(event.target.value)} required /></label>
       </div>
       <p className="privacy-note" role="status">{stayDuration ? <strong>{stayDuration}</strong> : checkInDate && checkOutDate ? 'Check-out must be after check-in.' : null}</p>
       <HotelRates key={selectedHotel.id} hotel={selectedHotel} onChange={(breakfast, dinner) => setHotelMeals({ breakfast, dinner })} />

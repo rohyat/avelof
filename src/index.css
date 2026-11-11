@@ -558,8 +558,8 @@ body.enquiry-open { overflow: hidden; }
 .enquiry-help-links { display: flex; flex-wrap: wrap; align-items: center; gap: 0 22px; }
 .selected-hotel-field { display: grid; gap: 8px; color: var(--ink); font-size: 13px; }
 .selected-hotel-field strong { min-height: 46px; display: flex; align-items: center; padding: 10px 12px; border: 1px solid #b9cdd1; border-radius: 5px; background: #f3f7f6; font-size: 16px; font-weight: 500; }
-.enquiry-form input[type="date"] { color-scheme: light; }
-.enquiry-form input[type="date"]::-webkit-calendar-picker-indicator { width: 20px; height: 20px; margin-inline-start: 5px; padding: 2px; border-radius: 3px; background-color: #e5efed; cursor: pointer; opacity: 1; }
+.enquiry-form input[type="date"], .trip-dates input[type="date"] { color-scheme: light; }
+.enquiry-form input[type="date"]::-webkit-calendar-picker-indicator, .trip-dates input[type="date"]::-webkit-calendar-picker-indicator { width: 20px; height: 20px; margin-inline-start: 5px; padding: 2px; border-radius: 3px; background-color: #e5efed; cursor: pointer; opacity: 1; }
 .privacy-note { font-size: 12px; color: var(--muted); line-height: 1.65; }
 .confirmation-modal { width: min(520px, 100%); }
 .confirmation-modal > p:not(.eyebrow) { font-size: 14px; }
@@ -875,6 +875,8 @@ body.enquiry-open { overflow: hidden; }
 .planner-heading h3 { margin: 7px 0 0; color: #173d3a; font-family: var(--serif); font-size: 27px; font-weight: 500; }
 .planner-local { display: inline-flex; align-items: center; gap: 6px; color: #43615e; font-size: 11px; white-space: nowrap; }
 .trip-dates { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(105px, .7fr); gap: 13px; padding: 20px 0 19px; border-bottom: 1px solid #dce5e5; }
+.enquiry-date-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 0; border: 0; }
+.booking-modal .enquiry-date-fields input[type="date"] { box-sizing: border-box; height: 43px; min-height: 43px; padding: 0 11px; border: 1px solid #bacdce; border-radius: 4px; background: #fff; }
 .trip-dates label, .planner-field { min-width: 0; display: grid; align-content: start; gap: 8px; color: #294b49; font-size: 12px; font-weight: 600; }
 .trip-dates label > span, .planner-field > span { display: inline-flex; align-items: center; gap: 7px; }
 .trip-dates label > span svg, .planner-field > span svg { color: #a64b3d; }
@@ -885,9 +887,6 @@ body.enquiry-open { overflow: hidden; }
 .trip-dates input[type="date"] { display: block; box-sizing: border-box; max-width: 100%; min-inline-size: 0; overflow: hidden; font-size: 16px; }
 .trip-dates input[type="date"]::-webkit-date-and-time-value { min-width: 0; text-align: left; }
 .trip-dates input[type="date"]::-webkit-datetime-edit { min-width: 0; padding: 0; overflow: hidden; }
-.rental-enquiry-dates { gap: 12px; }
-.rental-enquiry-dates > label { min-width: 0; grid-template-columns: minmax(0, 1fr); }
-.rental-enquiry-dates input[type="date"] { display: block; min-width: 0; min-inline-size: 0; max-width: 100%; overflow: hidden; font-size: 16px; }
 .trip-dates input:disabled { cursor: not-allowed; border-color: #d7e0e1; color: #849496; background: #f1f5f5; }
 .trip-dates input:disabled::-webkit-calendar-picker-indicator { cursor: not-allowed; opacity: .42; }
 .trip-dates input:focus, .planner-field select:focus { border-color: #18594e; outline: 2px solid rgba(24,89,78,.18); outline-offset: 1px; }
