@@ -909,6 +909,7 @@ body.enquiry-open { overflow: hidden; }
 .planner-local { display: inline-flex; align-items: center; gap: 6px; color: #43615e; font-size: 11px; white-space: nowrap; }
 .trip-dates { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(105px, .7fr); gap: 13px; padding: 20px 0 19px; border-bottom: 1px solid #dce5e5; }
 .enquiry-date-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 0; border: 0; }
+.enquiry-form > .enquiry-date-fields { margin-top: 18px; }
 .booking-modal .enquiry-date-fields input[type="date"] { box-sizing: border-box; height: 43px; min-height: 43px; padding: 0 11px; border: 1px solid #bacdce; border-radius: 4px; background: #fff; }
 .trip-dates label, .planner-field { min-width: 0; display: grid; align-content: start; gap: 8px; color: #294b49; font-size: 12px; font-weight: 600; }
 .trip-dates label > span, .planner-field > span { display: inline-flex; align-items: center; gap: 7px; }
