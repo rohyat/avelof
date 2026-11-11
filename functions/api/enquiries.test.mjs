@@ -356,6 +356,28 @@ test('admin status changes persist and are visible to customers; unsigned and st
   } finally { DB.sqlite.close() }
 })
 
+test('only the current admin session can permanently delete an enquiry and its reference allocation', async () => {
+  const DB = database()
+  try {
+    const saved = await (await send(DB, payload())).json()
+    const deletion = { action: 'admin-delete', reference: saved.reference, version: 0 }
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM enquiry_reference_numbers').get().total, 1)
+    assert.equal((await access(DB, deletion)).status, 401)
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    assert.equal((await access(DB, deletion, { headers: { Cookie, Origin: 'https://other.test' } })).status, 403)
+    assert.equal((await access(DB, { ...deletion, version: 1 }, { headers: { Cookie } })).status, 409)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM enquiries').get().total, 1)
+    const response = await access(DB, deletion, { headers: { Cookie } })
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), { deleted: true, reference: saved.reference })
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM enquiries').get().total, 0)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM enquiry_reference_numbers').get().total, 0)
+    assert.equal((await access(DB, { action: 'booking-summary', reference: saved.reference })).status, 404)
+    assert.equal((await access(DB, deletion, { headers: { Cookie } })).status, 409)
+  } finally { DB.sqlite.close() }
+})
+
 test('masked status lookup has a separate bounded rate limit', async () => {
   const DB = database()
   try {
@@ -524,39 +546,44 @@ async function reviewRequest(DB, method, body, options = {}) {
   }), env: { DB, ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters', ENQUIRY_ADMIN_CODE_HASH: await hashText('123456789012345678901234567890123456789012345678') } })
 }
 
-test('anyone can save a review without a booking ID; retries do not duplicate it and pending reviews stay private', async () => {
+test('anyone can publish a consented review without booking confirmation; retries do not duplicate it', async () => {
   const DB = database()
   try {
     const input = reviewPayload()
     const response = await reviewRequest(DB, 'POST', input)
     assert.equal(response.status, 201)
-    assert.deepEqual(await response.json(), { saved: true, id: input.id, status: 'pending' })
+    assert.deepEqual(await response.json(), { saved: true, id: input.id, status: 'published' })
     assert.equal((await reviewRequest(DB, 'POST', input)).status, 200)
     assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM reviews').get().total, 1)
+    const row = DB.sqlite.prepare('SELECT status, published_at FROM reviews WHERE id = ?').get(input.id)
+    assert.equal(row.status, 'published')
+    assert.ok(row.published_at)
     assert.equal((await reviewRequest(DB, 'POST', { ...input, rating: 3 })).status, 409)
     const listing = await reviewRequest(DB, 'GET')
     const data = await listing.json()
-    assert.deepEqual(data.reviews, [])
-    assert.equal(data.total, 0)
-    assert.equal(data.averageRating, null)
+    assert.equal(data.reviews.length, 1)
+    assert.equal(data.reviews[0].reviewText, input.reviewText)
+    assert.equal(data.reviews[0].bookingId, undefined)
+    assert.equal(data.total, 1)
+    assert.equal(data.averageRating, 4)
     assert.equal((await reviewRequest(DB, 'GET', undefined, { query: '?scope=admin' })).status, 401)
     assert.equal((await reviewRequest(DB, 'PATCH', { id: input.id, status: 'published', version: 0 })).status, 401)
+    assert.equal((await reviewRequest(DB, 'DELETE', { id: input.id, version: 0 })).status, 401)
   } finally { DB.sqlite.close() }
 })
 
-test('owner can publish and hide a review without exposing its booking ID or marking it verified', async () => {
+test('owner can hide and restore an immediate review without exposing its booking ID or marking it verified', async () => {
   const DB = database()
   try {
     const input = { ...reviewPayload(), bookingId: 'AVELOF_PRM_12345', rating: 1 }
     await reviewRequest(DB, 'POST', input)
     const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
     const Cookie = login.headers.get('Set-Cookie').split(';')[0]
-    const admin = await reviewRequest(DB, 'GET', undefined, { query: '?scope=admin', headers: { Cookie } })
-    const pending = await admin.json()
-    assert.equal(pending.reviews[0].bookingId, input.bookingId)
-    assert.equal(pending.reviews[0].reviewText, input.reviewText)
-    const published = await reviewRequest(DB, 'PATCH', { id: input.id, status: 'published', version: 0 }, { headers: { Cookie } })
-    assert.equal(published.status, 200)
+    const admin = await reviewRequest(DB, 'GET', undefined, { query: '?scope=admin&status=all', headers: { Cookie } })
+    const listingAdmin = await admin.json()
+    assert.equal(listingAdmin.reviews[0].status, 'published')
+    assert.equal(listingAdmin.reviews[0].bookingId, input.bookingId)
+    assert.equal(listingAdmin.reviews[0].reviewText, input.reviewText)
     const listing = await (await reviewRequest(DB, 'GET')).json()
     assert.equal(listing.total, 1)
     assert.equal(listing.averageRating, 1)
@@ -564,8 +591,31 @@ test('owner can publish and hide a review without exposing its booking ID or mar
     assert.equal(listing.reviews[0].bookingId, undefined)
     assert.equal(listing.reviews[0].payload_hash, undefined)
     assert.equal(listing.reviews[0].verified, undefined)
-    assert.equal((await reviewRequest(DB, 'PATCH', { id: input.id, status: 'rejected', version: 0 }, { headers: { Cookie } })).status, 409)
-    assert.equal((await reviewRequest(DB, 'PATCH', { id: input.id, status: 'rejected', version: 1 }, { headers: { Cookie } })).status, 200)
+    assert.equal((await reviewRequest(DB, 'PATCH', { id: input.id, status: 'rejected', version: 0 }, { headers: { Cookie } })).status, 200)
+    assert.equal((await reviewRequest(DB, 'PATCH', { id: input.id, status: 'pending', version: 0 }, { headers: { Cookie } })).status, 409)
+    assert.equal((await (await reviewRequest(DB, 'GET')).json()).total, 0)
+    assert.equal((await reviewRequest(DB, 'PATCH', { id: input.id, status: 'published', version: 1 }, { headers: { Cookie } })).status, 200)
+    assert.equal((await (await reviewRequest(DB, 'GET')).json()).total, 1)
+  } finally { DB.sqlite.close() }
+})
+
+test('only the current admin session can permanently delete a review', async () => {
+  const DB = database()
+  try {
+    const input = reviewPayload()
+    assert.equal((await reviewRequest(DB, 'POST', input)).status, 201)
+    const deletion = { id: input.id, version: 0 }
+    assert.equal((await reviewRequest(DB, 'DELETE', deletion)).status, 401)
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    assert.equal((await reviewRequest(DB, 'DELETE', deletion, { headers: { Cookie, Origin: 'https://other.test' } })).status, 403)
+    assert.equal((await reviewRequest(DB, 'DELETE', { ...deletion, version: 1 }, { headers: { Cookie } })).status, 409)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM reviews').get().total, 1)
+    const response = await reviewRequest(DB, 'DELETE', deletion, { headers: { Cookie } })
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), { deleted: true, id: input.id })
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM reviews').get().total, 0)
+    assert.equal((await reviewRequest(DB, 'GET')).status, 200)
     assert.equal((await (await reviewRequest(DB, 'GET')).json()).total, 0)
   } finally { DB.sqlite.close() }
 })
@@ -631,6 +681,20 @@ test('owner-approved reviews import into D1 unchanged, remain private where need
     assert.equal(hidden.status, 'rejected')
     assert.equal(hidden.version, 1)
     assert.equal((await (await reviewRequest(DB, 'GET')).json()).total, 9)
+  } finally { DB.sqlite.close() }
+})
+
+test('deleting an owner review leaves a tombstone so a later import cannot restore it', () => {
+  const DB = database()
+  try {
+    const imported = buildOwnerReviewImport()
+    DB.sqlite.exec(imported.sql)
+    DB.sqlite.prepare('DELETE FROM reviews WHERE id = ?').run(imported.ids[0])
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM reviews WHERE id = ?').get(imported.ids[0]).total, 0)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM deleted_owner_review_sources WHERE source_key = ?').get('owner:guest-rating-1').total, 1)
+    DB.sqlite.exec(imported.sql)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM reviews WHERE id = ?').get(imported.ids[0]).total, 0)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM reviews').get().total, 9)
   } finally { DB.sqlite.close() }
 })
 

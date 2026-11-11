@@ -14,6 +14,7 @@ const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('lookup'), reference: z.string().regex(referencePattern), accessCode: z.string().regex(/^[a-f0-9]{64}$/) }).strict(),
   z.object({ action: z.literal('admin-login'), username: z.string().trim().min(7).max(25), code: z.string().min(1).max(256) }).strict(),
   z.object({ action: z.literal('admin-status'), reference: z.string().regex(referencePattern), status: bookingStatus, version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict(),
+  z.object({ action: z.literal('admin-delete'), reference: z.string().regex(referencePattern), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict(),
   z.object({ action: z.literal('logout') }).strict(),
 ])
 const listSchema = z.object({
@@ -131,6 +132,13 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env }) => {
         .bind(action.status, action.reference, action.version).first<EnquiryRow>()
       if (!updated) return privateReply({ error: 'This enquiry changed or is no longer available. Refresh before updating it.' }, 409)
       return privateReply({ enquiry: summary(updated) })
+    }
+    if (action.action === 'admin-delete') {
+      if (!await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
+      const deleted = await env.DB.prepare('DELETE FROM enquiries WHERE public_reference = ? AND booking_status_version = ? RETURNING public_reference')
+        .bind(action.reference, action.version).first<{ public_reference: string }>()
+      if (!deleted) return privateReply({ error: 'This enquiry changed or is no longer available. Refresh before deleting it.' }, 409)
+      return privateReply({ deleted: true, reference: deleted.public_reference })
     }
     const scope = action.action === 'booking-search' ? referencePattern.test(action.identifier.toUpperCase()) ? 'booking-summary' : 'phone-summary' : action.action
     if (!await allowAccessAttempt(request, env.DB, scope, scope === 'booking-summary' ? 60 : 10)) return privateReply({ error: 'Too many attempts. Please try again in ten minutes.' }, 429, { 'Retry-After': '600' })

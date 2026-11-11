@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { ArrowLeft, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, LockKeyhole, LogOut, RefreshCw, Save, Search } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, LockKeyhole, LogOut, RefreshCw, Save, Search, Trash2 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { business } from '../config'
-import { EnquiryAccessError, loadAdminEnquiries, lookupBookingSummaries, signInAdmin, signOutAdmin, updateBookingStatus } from '../services/enquiryAccessService'
+import { deleteAdminEnquiry, EnquiryAccessError, loadAdminEnquiries, lookupBookingSummaries, signInAdmin, signOutAdmin, updateBookingStatus } from '../services/enquiryAccessService'
 import { indianPhoneNumber } from '../services/phoneNumbers'
 import { requestedBooking } from '../services/bookingDetails'
 import type { BookingStatus, BookingSummary, EnquirySummary } from '../types'
@@ -182,6 +182,7 @@ export function AdminEnquiriesPage() {
   const [query, setQuery] = useState('')
   const [filters, setFilters] = useState({ page: 1, status: '', reference: '' })
   const [notice, setNotice] = useState('')
+  const [deletingReference, setDeletingReference] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -227,6 +228,20 @@ export function AdminEnquiriesPage() {
     reload({ ...filters })
   }
 
+  async function removeEnquiry(enquiry: EnquirySummary) {
+    if (busy || deletingReference || !window.confirm(`Permanently delete ${enquiry.reference} and all its stored enquiry details? This cannot be undone.`)) return
+    setDeletingReference(enquiry.reference)
+    setError('')
+    try {
+      await deleteAdminEnquiry(enquiry.reference, enquiry.statusVersion)
+      setNotice(`${enquiry.reference} and its stored details were deleted.`)
+      reload({ ...filters, page: records.length === 1 && filters.page > 1 ? filters.page - 1 : filters.page })
+    } catch (failure) {
+      if (failure instanceof EnquiryAccessError && failure.status === 401) { setSignedIn(false); setRecords([]); setTotal(0) }
+      else setError(errorText(failure))
+    } finally { setDeletingReference(null) }
+  }
+
   return <section className="enquiry-access-page admin-enquiries-page page-width">
     <Link className="text-link" to="/my-enquiries"><ArrowLeft size={16} /> Check bookings</Link>
     <div className="enquiry-access-heading"><LockKeyhole size={28} /><div><p className="eyebrow">AVELOF owner access</p><h1>{signedIn ? 'Enquiry dashboard' : 'Owner sign-in'}</h1></div></div>
@@ -253,6 +268,7 @@ export function AdminEnquiriesPage() {
         <summary><span><strong>{record.reference}</strong><small>{typeLabels[record.kind]}</small></span><span>{record.fields.fullName}<small>{record.fields.phoneNumber}</small></span><time dateTime={record.createdAt}>{receivedDate(record.createdAt)}</time><span className={`enquiry-status status-${record.status}`}>{statusLabels[record.status]}</span><ChevronDown size={18} /></summary>
         <EnquiryDetails enquiry={record} />
         <BookingStatusEditor key={`${record.reference}:${record.statusVersion}`} enquiry={record} onSaved={statusSaved} />
+        <button className="button admin-record-delete" disabled={busy || Boolean(deletingReference)} onClick={() => removeEnquiry(record)}><Trash2 size={16} /> {deletingReference === record.reference ? 'Deleting...' : 'Delete booking record'}</button>
       </details>)}</div>
       {!records.length && !busy && <p className="enquiry-empty" role="status">No enquiries match these filters.</p>}
       <div className="admin-enquiry-pagination"><span>{total ? `${(filters.page - 1) * 25 + 1}-${Math.min(filters.page * 25, total)} of ${total}` : '0 enquiries'}</span><button className="icon-button" title="Previous page" aria-label="Previous page" disabled={busy || filters.page <= 1} onClick={() => reload({ ...filters, page: filters.page - 1 })}><ChevronLeft size={20} /></button><button className="icon-button" title="Next page" aria-label="Next page" disabled={busy || filters.page * 25 >= total} onClick={() => reload({ ...filters, page: filters.page + 1 })}><ChevronRight size={20} /></button></div>

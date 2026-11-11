@@ -106,23 +106,26 @@ const deluxeHotels: Hotel[] = [
   { id: 'the-mallard', name: 'The Mallard', location: 'Srinagar', price: 3500 },
   { id: 'the-cedar-pahalgam', name: 'The Cedar Pahalgam', location: 'Pahalgam', price: 4000 },
   { id: 'hotel-diamond-dreams', name: 'Hotel Diamond Dreams', location: 'Pahalgam', price: 4000 },
+  { id: 'white-house-pahalgam', name: 'White House Pahalgam', location: 'Pahalgam', price: 3500 },
   { id: 'home-2', name: 'Home 2', location: 'Pahalgam', price: 4000 },
 ].map((hotel) => ({
   ...hotel,
   kind: 'hotel',
-  image: hotelPhoto(hotel.id),
-  gallery: [hotelPhoto(hotel.id)],
+  image: hotelPhoto(hotel.id === 'white-house-pahalgam' ? 'hotel-white-water-resort' : hotel.id),
+  gallery: [hotelPhoto(hotel.id === 'white-house-pahalgam' ? 'hotel-white-water-resort' : hotel.id)],
   category: 'Deluxe package',
   packageId: 'deluxe',
   roomOnlyPrice: hotel.price - 1000,
   rateBasis: 'per couple per night',
-  mealPlan: 'Breakfast and dinner included',
-  description: `${hotel.name} in ${hotel.location}, a Deluxe package stay for a couple with breakfast and dinner included.`,
+  mealPlan: hotel.id === 'white-house-pahalgam' ? 'Breakfast and dinner available for ₹500 each' : 'Breakfast and dinner included',
+  description: hotel.id === 'white-house-pahalgam'
+    ? `${hotel.name} in ${hotel.location}, with breakfast and dinner available as optional add-ons.`
+    : `${hotel.name} in ${hotel.location}, a Deluxe package stay for a couple with breakfast and dinner included.`,
   roomTypes: ['Room for a couple'],
-  facilities: ['Breakfast included', 'Dinner included'],
+  facilities: hotel.id === 'white-house-pahalgam' ? ['Breakfast available for ₹500', 'Dinner available for ₹500'] : ['Breakfast included', 'Dinner included'],
   checkIn: 'Confirm with AVELOF',
   checkOut: 'Confirm with AVELOF',
-  highlights: ['Deluxe package', 'Breakfast and dinner included'],
+  highlights: hotel.id === 'white-house-pahalgam' ? ['Pahalgam stay', 'Optional breakfast and dinner'] : ['Deluxe package', 'Breakfast and dinner included'],
 }))
 
 const premiumHotels: Hotel[] = [

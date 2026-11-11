@@ -146,20 +146,21 @@ These browser protections reduce risk; they are not a guarantee against leaks.
 
 ## Reviews
 
-Review submissions are untrusted user-generated content. Anyone may submit, but
-new rows are Pending; only the authenticated owner can publish or hide them.
-Public responses select display name, rating, title/text, experience category
-and publication date only. Booking IDs, payload hashes, consent storage and
-moderation internals are never returned publicly. Display names and review text
-are published by explicit consent, not verified identity. Warn submitters not to
-include contacts, addresses or payment information; moderators must check this
-before publication. Review text is rendered as React text, never raw HTML.
+Review submissions are untrusted user-generated content. Anyone may submit and,
+after explicit publication consent and a successful D1 write, a review is
+published immediately. A booking ID or prior booking confirmation is not
+required. Public responses select display name, rating, title/text, experience
+category and publication date only. Booking IDs, payload hashes and consent
+storage are never returned publicly. Publication is not identity or stay
+verification. Warn submitters not to include contacts, addresses or payment
+information. Review text is rendered as React text, never raw HTML.
 
-The shared admin session protects review lists and version-checked PATCH writes.
-Same-origin checks, strict schema/consent validation, 12 KiB request limits, a
-bot trap and three new submissions/IP/ten minutes provide basic abuse controls.
-Retries with unchanged content use the same UUID. These controls do not replace
-edge bot protection or a moderation policy. Negative ratings are accepted.
+The shared admin session protects review lists and version-checked PATCH/DELETE
+writes. Same-origin checks, strict schema/consent validation, 12 KiB request
+limits, a bot trap and three new submissions/IP/ten minutes provide basic abuse
+controls. Retries with unchanged content use the same UUID. The owner can hide
+or permanently delete reviews in the admin panel; deletion removes the D1 row.
+These controls do not replace edge bot protection. Negative ratings are accepted.
 
 The owner confirmed the ten existing entries are authentic guest reviews and
 approved publication. Imported rows record owner-provided provenance and stable
@@ -170,9 +171,10 @@ do not override later moderation decisions. Original months supplied by the
 owner are stored as YYYY-MM, without invented days. True import/publication
 timestamps remain separate and unchanged. Cards say Guest review, never verified
 guest stays. Future sample content must remain preview-only and outside ratings.
-Hidden and pending reviews still contain personal information in D1; include
-them, optional booking references and exports in the business retention/deletion
-policy. There is no automatic review-retention cleanup or email notification.
+Hidden reviews still contain personal information in D1 until permanently
+deleted by the owner; include optional booking references and exports in the
+business retention/deletion policy. There is no automatic review-retention
+cleanup or email notification.
 
 ## Verification
 

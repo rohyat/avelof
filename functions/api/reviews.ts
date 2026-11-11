@@ -27,6 +27,7 @@ const listSchema = z.object({
   status: z.union([z.literal('all'), reviewStatusSchema]).default('pending'),
 }).strict()
 const moderationSchema = z.object({ id: z.uuidv4(), status: reviewStatusSchema, version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
+const deletionSchema = z.object({ id: z.uuidv4(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
 
 function publicReview(row: ReviewRow) {
   return { id: row.id, reviewerName: row.reviewer_name, experience: row.experience, rating: row.rating, title: row.title, reviewText: row.review_text, publishedAt: row.published_at, reviewMonth: row.review_month }
@@ -52,7 +53,7 @@ async function readBody(request: Request) {
 }
 
 export const onRequest: PagesFunction<AccessEnv> = async ({ request, env }) => {
-  if (!['GET', 'POST', 'PATCH'].includes(request.method)) return privateReply({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST, PATCH' })
+  if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) return privateReply({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST, PATCH, DELETE' })
   if (request.method !== 'GET' && !sameOrigin(request)) return privateReply({ error: 'Origin not allowed.' }, 403)
   if (!env.DB) return privateReply({ error: 'Review storage is unavailable.' }, 503)
   try {
@@ -68,13 +69,20 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env }) => {
       const result = await env.DB.prepare(`SELECT ${columns} FROM reviews ${where} ORDER BY ${admin ? 'created_at DESC' : "COALESCE(review_month, substr(published_at, 1, 7)) DESC, published_at DESC"}, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<ReviewRow>()
       return privateReply({ reviews: result.results.map(admin ? adminReview : publicReview), total: totals?.total ?? 0, averageRating: totals?.averageRating ?? null, page, pageSize: 25 })
     }
-    if (request.method === 'PATCH' && !await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
+    if ((request.method === 'PATCH' || request.method === 'DELETE') && !await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
     if (request.headers.get('Content-Type')?.split(';')[0].trim().toLowerCase() !== 'application/json') return privateReply({ error: 'JSON required.' }, 415)
     if (Number(request.headers.get('Content-Length')) > 12288) return privateReply({ error: 'Review too large.' }, 413)
     const text = await readBody(request)
     if (text === null) return privateReply({ error: 'Review too large.' }, 413)
     let input: unknown
     try { input = JSON.parse(text) } catch { return privateReply({ error: 'Invalid review details.' }, 400) }
+    if (request.method === 'DELETE') {
+      const parsed = deletionSchema.safeParse(input)
+      if (!parsed.success) return privateReply({ error: 'Invalid review deletion.' }, 400)
+      const deleted = await env.DB.prepare('DELETE FROM reviews WHERE id = ? AND version = ? RETURNING id').bind(parsed.data.id, parsed.data.version).first<{ id: string }>()
+      if (!deleted) return privateReply({ error: 'This review changed or is no longer available. Refresh before deleting it.' }, 409)
+      return privateReply({ deleted: true, id: deleted.id })
+    }
     if (request.method === 'PATCH') {
       const parsed = moderationSchema.safeParse(input)
       if (!parsed.success) return privateReply({ error: 'Invalid review update.' }, 400)
@@ -93,7 +101,7 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env }) => {
       ? privateReply({ saved: true, id, status: existing.status })
       : privateReply({ error: 'This submission ID has already been used. Start a new review.' }, 409)
     if (!await allowAccessAttempt(request, env.DB, 'review-submit', 3)) return privateReply({ error: 'Too many reviews. Please try again in ten minutes.' }, 429, { 'Retry-After': '600' })
-    await env.DB.prepare('INSERT INTO reviews (id, reviewer_name, booking_id, experience, rating, title, review_text, publication_consent, payload_hash) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?) ON CONFLICT (id) DO NOTHING')
+    await env.DB.prepare("INSERT INTO reviews (id, reviewer_name, booking_id, experience, rating, title, review_text, publication_consent, payload_hash, status, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 'published', strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ON CONFLICT (id) DO NOTHING")
       .bind(id, reviewerName, bookingId, experience, rating, title, reviewText, payloadHash).run()
     const saved = await env.DB.prepare('SELECT status, payload_hash FROM reviews WHERE id = ?').bind(id).first<ReviewRow>()
     if (!saved || saved.payload_hash !== payloadHash) return privateReply({ error: 'Review could not be saved with this ID.' }, 409)

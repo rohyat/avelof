@@ -1,6 +1,5 @@
-import { Children, useEffect, useRef, useState } from 'react'
+import { Children, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
-import { Pause, Play } from 'lucide-react'
 
 export default function ReviewCarousel({ children }: { children: ReactNode }) {
   const railRef = useRef<HTMLDivElement>(null)
@@ -21,6 +20,12 @@ export default function ReviewCarousel({ children }: { children: ReactNode }) {
     size.addEventListener('change', updateSize)
     motion.addEventListener('change', updateMotion)
     return () => { size.removeEventListener('change', updateSize); motion.removeEventListener('change', updateMotion) }
+  }, [])
+
+  useLayoutEffect(() => {
+    const stop = () => setPaused(true)
+    window.addEventListener('avelof:pause-review-carousel', stop)
+    return () => window.removeEventListener('avelof:pause-review-carousel', stop)
   }, [])
 
   useEffect(() => {
@@ -53,7 +58,7 @@ export default function ReviewCarousel({ children }: { children: ReactNode }) {
       const next = current >= lastIndex ? 0 : current + 1
       const target = rail.children[next]
       if (target instanceof HTMLElement) rail.scrollTo({ left: target.offsetLeft, behavior: 'smooth' })
-    }, 6000)
+    }, 1000)
     return () => window.clearInterval(timer)
   }, [compact, reducedMotion, paused, hovered, lastIndex])
 
@@ -76,16 +81,15 @@ export default function ReviewCarousel({ children }: { children: ReactNode }) {
   }
 
   function stopForInteraction(target: EventTarget | null) {
-    if (!(target instanceof Element) || !target.closest('.review-autoplay-toggle')) setPaused(true)
+    if (target instanceof Element) setPaused(true)
   }
 
   return <div className="review-carousel" role="region" aria-label="Guest reviews" aria-roledescription={compact ? 'carousel' : undefined}
     onPointerEnter={(event) => { if (event.pointerType === 'mouse') setHovered(true) }} onPointerLeave={() => setHovered(false)}
     onPointerDownCapture={(event) => stopForInteraction(event.target)} onFocusCapture={(event) => stopForInteraction(event.target)}>
     <div className="review-grid review-carousel-rail" ref={railRef} tabIndex={compact && slides.length > 1 ? 0 : undefined} onKeyDown={handleKey} aria-label={compact ? 'Review slides' : undefined}>{slides}</div>
-    {slides.length > 1 && <div className="offer-controls review-carousel-controls">
+    {slides.length > 1 && <div className="review-carousel-controls">
       <div className="review-carousel-dots" role="group" aria-label="Choose a review">{Array.from({ length: lastIndex + 1 }, (_, index) => <button key={index} type="button" className={`offer-dot${index === activeIndex ? ' is-active' : ''}`} title={`Review ${index + 1}`} aria-label={`Show review ${index + 1}`} aria-current={index === activeIndex ? 'true' : undefined} onClick={() => showReview(index)} />)}</div>
-      <button className="review-autoplay-toggle" type="button" disabled={reducedMotion} aria-label={reducedMotion ? 'Automatic switching disabled by motion preference' : paused ? 'Resume automatic review switching' : 'Pause automatic review switching'} title={reducedMotion ? 'Automatic switching disabled by motion preference' : paused ? 'Resume automatic review switching' : 'Pause automatic review switching'} onClick={() => setPaused((current) => !current)}>{paused || reducedMotion ? <Play size={16} /> : <Pause size={16} />}</button>
     </div>}
   </div>
 }

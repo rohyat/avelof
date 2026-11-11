@@ -49,7 +49,7 @@ function CatalogCard({ item: initialItem, kind }: { item: CatalogItem; kind: Cat
   const underDevelopment = item.kind === 'package' && item.underDevelopment
   return (
     <article className={`catalog-card${underDevelopment ? ' is-under-development' : ''}${item.kind === 'car' ? ' vehicle-card' : ''}`}>
-      {underDevelopment ? <div className="catalog-image"><img src={item.image} alt={`${item.name}, ${item.location}`} loading="lazy" /><span className="image-tag">Under development</span></div> : <Link to={detailUrl} className="catalog-image"><img src={item.image} alt={`${item.name}, ${item.location}`} loading="lazy" /><span className="image-tag">{item.category}</span><span className="image-arrow"><ArrowUpRight size={17} /></span></Link>}
+      {underDevelopment ? <div className="catalog-image"><img src={item.image} alt={`${item.name}, ${item.location}`} loading="lazy" /><span className="image-tag">Under development</span></div> : <Link to={detailUrl} className="catalog-image"><img src={item.image} alt={item.kind === 'hotel' ? 'Illustrative bedroom photo' : `${item.name}, ${item.location}`} loading="lazy" /><span className="image-tag">{item.category}</span><span className="image-arrow"><ArrowUpRight size={17} /></span></Link>}
       <div className="catalog-content"><div className="catalog-meta"><span><MapPin size={13} /> {item.location.split('·')[0]}</span>{item.kind === 'package' && <span>{item.duration}</span>}</div>
         {item.kind === 'car' && <VehiclePhotoCaption vehicle={item} />}
         {item.kind === 'hotel' && <p className="privacy-note">Illustrative bedroom photo</p>}
@@ -75,7 +75,7 @@ export function HomePage() {
     <section className="home-hero">
       <div className="hero-image" role="img" aria-label="Mountain lake landscape, illustrative travel photography" />
       <div className="hero-shade" />
-      <div className="hero-content page-width"><h1>Kashmir,<br /><em>closer to you.</em></h1><p>Discover Kashmir through local insight and journeys shaped around you.</p><div className="hero-actions"><a className="button button-ivory" href="#custom-trip">Customize your trip <ArrowRight size={16} /></a><Link className="button button-ghost" to="/tour-packages">Explore packages <ArrowRight size={16} /></Link><Link className="button button-ghost" to="/car-rentals">Book your car <ArrowRight size={16} /></Link></div></div>
+      <div className="hero-content page-width"><h1>Kashmir,<br /><em>closer to you.</em></h1><p>Discover Kashmir through local insight and journeys shaped around you.</p><div className="hero-actions"><a className="button button-ivory" href="#custom-trip">Customize your trip <ArrowRight size={16} /></a><Link className="button button-ghost" to="/tour-packages">Explore packages <ArrowRight size={16} /></Link><Link className="button button-ghost" to="/car-rentals">Book your car <ArrowRight size={16} /></Link><Link className="button button-ghost" to="/hotels">Book a hotel <ArrowRight size={16} /></Link><Link className="button button-ghost" to="/my-enquiries">Check your bookings <ArrowRight size={16} /></Link></div></div>
       <div className="hero-caption"><span>A sense of adventure</span><span>Illustrative travel photography</span></div>
       <a className="hero-scroll" href="#custom-trip"><span>Scroll to discover</span><ArrowDown size={16} /></a>
     </section>

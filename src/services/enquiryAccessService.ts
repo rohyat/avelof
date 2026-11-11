@@ -55,3 +55,7 @@ export async function lookupBookingSummaries(identifier: string, signal?: AbortS
 export async function updateBookingStatus(reference: string, status: BookingStatus, version: number): Promise<EnquirySummary> {
   return z.object({ enquiry }).parse(await requestAccess('', { action: 'admin-status', reference, status, version })).enquiry
 }
+
+export async function deleteAdminEnquiry(reference: string, version: number) {
+  return z.object({ deleted: z.literal(true), reference: z.string() }).parse(await requestAccess('', { action: 'admin-delete', reference, version }))
+}

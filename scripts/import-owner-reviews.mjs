@@ -35,7 +35,7 @@ export function buildOwnerReviewImport() {
       const reviewMonth = ownerGuestReviewMonths[review.id]
       if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(reviewMonth ?? '')) throw new Error('Invalid owner-provided review month.')
       const values = [id, reviewerName, bookingId, experience, rating, title, reviewText, payloadHash, sourceKey, reviewMonth].map(quote)
-      return `INSERT INTO reviews (id, reviewer_name, booking_id, experience, rating, title, review_text, publication_consent, payload_hash, submission_source, source_key, review_month, status, published_at) VALUES (${values.slice(0, 7).join(', ')}, 1, ${values[7]}, 'owner_provided', ${values[8]}, ${values[9]}, 'published', strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ON CONFLICT (source_key) DO NOTHING;`
+      return `INSERT INTO reviews (id, reviewer_name, booking_id, experience, rating, title, review_text, publication_consent, payload_hash, submission_source, source_key, review_month, status, published_at) SELECT ${values.slice(0, 7).join(', ')}, 1, ${values[7]}, 'owner_provided', ${values[8]}, ${values[9]}, 'published', strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE NOT EXISTS (SELECT 1 FROM deleted_owner_review_sources WHERE source_key = ${values[8]}) ON CONFLICT (source_key) DO NOTHING;`
     })
     return { sql: `${statements.join('\n')}\n`, ids, count: statements.length }
   } finally { database.close() }

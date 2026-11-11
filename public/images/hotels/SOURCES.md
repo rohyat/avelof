@@ -5,9 +5,11 @@ Wood finishes and panelled headboards provide visual references only; the images
 do not establish a Kashmir location, HDMR material specification or actual hotel
 facilities. Existing package categories and rates are unchanged.
 
-Each hotel uses a distinct, locally hosted bedroom image. Deluxe selections favour
-comfortable rooms and warm timber details; Premium selections favour richer
-finishes, decorative cabinetry and contemporary headboard panels.
+The existing hotel collection uses distinct, locally hosted bedroom images.
+Deluxe selections favour comfortable rooms and warm timber details; Premium
+selections favour richer finishes, decorative cabinetry and contemporary
+headboard panels. White House Pahalgam reuses the locally hosted illustrative
+Hotel White Water Resort image; it is not a photograph of White House Pahalgam.
 
 Pexels photos are used under the [Pexels License](https://www.pexels.com/license/).
 Unsplash photos are used under the [Unsplash License](https://unsplash.com/license).
@@ -20,6 +22,7 @@ Unsplash photos are used under the [Unsplash License](https://unsplash.com/licen
 | the-mallard.jpg | Deluxe | [Pexels 90317](https://www.pexels.com/photo/90317/) |
 | the-cedar-pahalgam.jpg | Deluxe | [Unsplash image](https://images.unsplash.com/photo-1505693314120-0d443867891c) |
 | hotel-diamond-dreams.jpg | Deluxe | [Pexels 1743229](https://www.pexels.com/photo/1743229/) |
+| White House Pahalgam | Deluxe | Reuses hotel-white-water-resort.jpg; illustrative only |
 | home-2.jpg | Deluxe | [Unsplash image](https://images.unsplash.com/photo-1595576508898-0ad5c879a061) |
 | hotel-crown-prince.jpg | Premium | [Pexels 164595](https://www.pexels.com/photo/164595/) |
 | luxury-heritage-hotel.jpg | Premium | [Pexels 262048](https://www.pexels.com/photo/262048/) |

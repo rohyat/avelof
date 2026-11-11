@@ -42,3 +42,7 @@ export async function loadAdminReviews(page: number, status: ReviewStatus | 'all
 export async function moderateReview(id: string, status: ReviewStatus, version: number) {
   return z.object({ review: adminReviewSchema }).parse(await requestReviews('', 'PATCH', { id, status, version })).review
 }
+
+export async function deleteReview(id: string, version: number) {
+  return z.object({ deleted: z.literal(true), id: z.uuidv4() }).parse(await requestReviews('', 'DELETE', { id, version }))
+}

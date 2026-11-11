@@ -113,7 +113,7 @@ export default function SiteLayout() {
       '/car-rentals': { title: 'Kashmir Car Rentals | AVELOF', description: 'Find comfortable vehicles and local drivers for airport transfers, day trips and Kashmir journeys.' },
       '/hotels': { title: 'Kashmir Hotels & Stays | AVELOF', description: 'Discover houseboats, boutique hotels, family stays and mountain retreats across Kashmir.' },
       '/destinations': { title: 'Kashmir Places & Visit Planner | AVELOF', description: 'Compare Srinagar driving distances, discover Kashmir attractions and select destinations for a personalised visit enquiry.' },
-      '/reviews': { title: 'Guest Reviews | AVELOF', description: 'Read published guest submissions and share your Kashmir experience for moderation.' },
+      '/reviews': { title: 'Guest Reviews | AVELOF', description: 'Read guest reviews and share your Kashmir experience for publication after consent.' },
       '/about': { title: 'About & Contact AVELOF | Kashmir Travel', description: 'Meet AVELOF, your local Kashmir travel team. Call, email or prepare a trip enquiry with us.' },
       '/contact': { title: 'Contact AVELOF | Plan a Kashmir Trip', description: 'Call, email or WhatsApp AVELOF to start planning your Kashmir journey.' },
       '/my-enquiries': { title: 'Check Your Bookings | AVELOF', description: 'View your private AVELOF booking enquiry summary.' },
@@ -135,7 +135,7 @@ export default function SiteLayout() {
       <OfferBanner />
       <header className="site-header">
         <Link className="brand" to="/" aria-label="AVELOF home" onClick={closeMenu}><span className="brand-mark">A</span><span>AVELOF<small>JOURNEYS BEYOND IMAGINATION</small></span></Link>
-        <button className="icon-button menu-toggle" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X /> : <Menu />}</button>
+        <button className="icon-button menu-toggle" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => { const next = !menuOpen; setMenuOpen(next); if (next) window.dispatchEvent(new Event('avelof:pause-review-carousel')) }}>{menuOpen ? <X /> : <Menu />}</button>
         <nav className={menuOpen ? 'main-nav is-open' : 'main-nav'} aria-label="Main navigation">
           {navItems.map(([label, href]) => <NavLink key={href} to={href} onClick={closeMenu}>{label}</NavLink>)}
         </nav>

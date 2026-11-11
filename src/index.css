@@ -110,7 +110,8 @@ h1 em, h2 em { color: inherit; font-weight: 500; }
 .hero-content h1 { max-width: 760px; margin: 0 0 21px; color: #fffaf0; font-family: var(--serif); font-size: 88px; font-weight: 600; line-height: 1.04; text-shadow: 0 3px 22px rgba(8,24,21,.42); }
 .hero-content h1 em { color: #ffc2ae; font-weight: 600; }
 .hero-content > p { max-width: 470px; margin: 0; color: #fff; font-size: 14px; line-height: 1.85; text-shadow: 0 1px 12px rgba(8,24,21,.8); }
-.hero-actions { display: flex; flex-wrap: wrap; gap: 11px; margin-top: 30px; }
+.hero-actions { display: grid; grid-template-columns: 1.15fr repeat(4, minmax(0, 1fr)); gap: 11px; max-width: 1080px; margin-top: 30px; }
+.hero-actions .button { width: 100%; min-width: 0; gap: 7px; padding-inline: 10px; white-space: nowrap; }
 .hero-actions .button-ivory { color: var(--forest-deep); background: #f7e7dc; border-color: rgba(255,255,255,.55); box-shadow: 0 5px 16px rgba(10,30,24,.16); }
 .hero-actions .button-ivory:hover { background: #fff3e9; }
 .hero-caption { position: absolute; z-index: 1; right: max(36px, calc((100% - 1200px) / 2)); bottom: 28px; display: grid; gap: 4px; color: rgba(255,255,255,.82); font-size: 9px; letter-spacing: .7px; text-align: right; }
@@ -373,6 +374,8 @@ body.enquiry-open { overflow: hidden; }
 .review-card blockquote { flex: 1; margin: 0 0 19px; color: #3d5148; font-family: var(--serif); font-size: 19px; line-height: 1.52; }
 .review-card-footer { display: grid; gap: 6px; padding-top: 13px; border-top: 1px solid #e7e8e1; color: #586a60; font-size: 10px; line-height: 1.5; }
 .review-card-footer small { color: #586a60; font-size: 10px; font-weight: 600; overflow-wrap: anywhere; }
+.admin-record-delete { margin-top: 18px; border-color: #c58f83; color: #843f36; }
+.admin-review-actions .admin-record-delete { margin-top: 0; }
 .review-invite { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-top: 48px; padding-top: 25px; border-top: 1px solid var(--line); }
 .review-invite h2 { margin: 0; color: var(--ink); font-size: 29px; }
 .review-invite.review-invite-top { margin-top: 0; margin-bottom: 28px; padding-top: 0; border-top: 0; }
@@ -382,10 +385,9 @@ body.enquiry-open { overflow: hidden; }
   .review-grid.review-carousel-rail { position: relative; grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: calc((100% - (var(--review-columns) - 1) * 18px) / var(--review-columns)); align-items: start; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-inline: contain; }
   .review-carousel-rail::-webkit-scrollbar { display: none; }
   .review-carousel-rail > .review-card { scroll-snap-align: start; }
-  .review-carousel .review-carousel-controls { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
-  .review-carousel-dots { min-width: 0; max-width: calc(100% - 40px); display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+  .review-carousel .review-carousel-controls { display: flex; justify-content: center; margin-top: 14px; }
+  .review-carousel-dots { min-width: 0; max-width: 100%; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
   .review-carousel-controls .offer-dot { width: 24px; height: 28px; }
-  .review-carousel-controls .review-autoplay-toggle { flex: 0 0 28px; width: 28px; height: 28px; }
 }
 .review-submission { margin-top: 35px; padding-top: 30px; border-top: 1px solid var(--line); }
 .review-submission > div:first-child { margin-bottom: 22px; }
@@ -553,6 +555,11 @@ body.enquiry-open { overflow: hidden; }
 .enquiry-honeypot { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .enquiry-error { margin: 16px 0 0; color: #a52e28; font-size: 14px; line-height: 1.5; }
 .enquiry-help { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; }
+.enquiry-help-links { display: flex; flex-wrap: wrap; align-items: center; gap: 0 22px; }
+.selected-hotel-field { display: grid; gap: 8px; color: var(--ink); font-size: 13px; }
+.selected-hotel-field strong { min-height: 46px; display: flex; align-items: center; padding: 10px 12px; border: 1px solid #b9cdd1; border-radius: 5px; background: #f3f7f6; font-size: 16px; font-weight: 500; }
+.enquiry-form input[type="date"] { color-scheme: light; }
+.enquiry-form input[type="date"]::-webkit-calendar-picker-indicator { width: 20px; height: 20px; margin-inline-start: 5px; padding: 2px; border-radius: 3px; background-color: #e5efed; cursor: pointer; opacity: 1; }
 .privacy-note { font-size: 12px; color: var(--muted); line-height: 1.65; }
 .confirmation-modal { width: min(520px, 100%); }
 .confirmation-modal > p:not(.eyebrow) { font-size: 14px; }
@@ -690,6 +697,8 @@ body.enquiry-open { overflow: hidden; }
   .main-nav .nav-book { align-self: flex-start; margin: 14px 0 0; padding-inline: 13px; }
   .home-hero { min-height: 490px; height: min(600px, calc(100svh - 205px)); }
   .hero-content h1 { font-size: 68px; }
+  .hero-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 520px; }
+  .hero-actions .button:first-child { grid-column: 1 / -1; }
   .section { padding-block: 78px; }
   .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .split-promo { gap: 7%; }
@@ -734,8 +743,9 @@ body.enquiry-open { overflow: hidden; }
   .hero-content .eyebrow { max-width: 240px; font-size: 8px; }
   .hero-content h1 { margin-bottom: 17px; font-size: 52px; line-height: 1.1; }
   .hero-content > p { max-width: 350px; font-size: 12px; }
-  .hero-actions { gap: 8px; margin-top: 23px; }
-  .hero-actions .button { min-height: 43px; padding-inline: 12px; font-size: 9px; }
+  .hero-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 520px; margin-top: 23px; }
+  .hero-actions .button:first-child { grid-column: 1 / -1; }
+  .hero-actions .button { min-height: 43px; padding-inline: 12px; font-size: 9px; line-height: 1.2; white-space: normal; }
   .hero-actions { max-width: 360px; }
   .hero-caption { right: 18px; bottom: 20px; font-size: 7px; }
   .hero-scroll { bottom: 21px; left: 18px; font-size: 7px; }

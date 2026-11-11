@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, RefreshCw, Star } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, RefreshCw, Star, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import ReviewCarousel from '../components/ReviewCarousel'
-import { loadAdminReviews, loadPublicReviews, moderateReview, ReviewError, saveReview } from '../services/reviewService'
+import { deleteReview as deleteReviewRequest, loadAdminReviews, loadPublicReviews, moderateReview, ReviewError, saveReview } from '../services/reviewService'
 import { reviewSubmissionSchema } from '../services/reviewSchema'
 import type { AdminReview, PublicReview, ReviewStatus } from '../services/reviewSchema'
 
@@ -23,7 +23,7 @@ function reviewMonthLabel(value: string) {
 }
 
 function ReviewCard({ review }: { review: PublicReview }) {
-  return <article className="review-card">
+  return <article id={`guest-review-${review.id}`} className="review-card">
     <div className="review-card-head"><strong>{review.reviewerName}</strong><span className="review-source-label">Guest review</span></div>
     <Stars rating={review.rating} />
     {review.title && <h3 className="review-card-title">{review.title}</h3>}
@@ -44,10 +44,21 @@ export default function ReviewsPage() {
   const [loadError, setLoadError] = useState('')
   const inFlight = useRef(false)
   const pending = useRef<{ fingerprint: string; id: string } | null>(null)
+  const newlyPublishedReviewId = useRef<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
-    loadPublicReviews(page, controller.signal).then(setListing).catch((error: unknown) => {
+    loadPublicReviews(page, controller.signal).then((nextListing) => {
+      setListing(nextListing)
+      const newReviewId = newlyPublishedReviewId.current
+      if (newReviewId && nextListing.reviews.some((review) => review.id === newReviewId)) {
+        newlyPublishedReviewId.current = null
+        requestAnimationFrame(() => document.getElementById(`guest-review-${newReviewId}`)?.scrollIntoView({
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+          block: 'center',
+        }))
+      }
+    }).catch((error: unknown) => {
       if (!controller.signal.aborted) { setListing(null); setLoadError(reviewError(error)) }
     }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
@@ -77,7 +88,14 @@ export default function ReviewsPage() {
     inFlight.current = true
     setSubmitting(true)
     setSubmitError('')
-    try { setSaved((await saveReview(parsed.data)).status) }
+    try {
+      const receipt = await saveReview(parsed.data)
+      setSaved(receipt.status)
+      if (receipt.status === 'published') {
+        newlyPublishedReviewId.current = receipt.id
+        refresh(1)
+      }
+    }
     catch (error) { setSubmitError(reviewError(error)) }
     finally { inFlight.current = false; setSubmitting(false) }
   }
@@ -94,8 +112,8 @@ export default function ReviewsPage() {
       {!loading && !loadError && listing?.total === 0 && <p className="review-empty" role="status">No published reviews yet.</p>}
       {listing && listing.total > 25 && <div className="admin-enquiry-pagination"><span>Page {page} of {Math.ceil(listing.total / 25)}</span><button className="icon-button" title="Previous reviews" aria-label="Previous reviews" disabled={loading || page <= 1} onClick={() => refresh(page - 1)}><ChevronLeft size={20} /></button><button className="icon-button" title="Next reviews" aria-label="Next reviews" disabled={loading || page * 25 >= listing.total} onClick={() => refresh(page + 1)}><ChevronRight size={20} /></button></div>}
       <section className="review-submission" id="share-review" aria-labelledby="review-form-title">
-        <div><p className="eyebrow">All perspectives welcome</p><h2 id="review-form-title">Tell us about your experience.</h2><p>No booking ID is required. Reviews are saved for moderation before publication. Do not include phone numbers, addresses or payment information.</p></div>
-        {saved ? <div className="review-ready" role="status"><h3>Thank you. Your review has been saved.</h3><p>{saved === 'published' ? 'Your review is published.' : saved === 'pending' ? 'Your review is awaiting approval and is not public yet.' : 'Your submission has been reviewed and is not currently published.'}</p><button className="text-link" type="button" onClick={() => { setSaved(null); setRating(''); pending.current = null }}>Write another review <ArrowRight size={16} /></button></div> : <form className="review-submission-form" onSubmit={submit} aria-busy={submitting}>
+        <div><p className="eyebrow">All perspectives welcome</p><h2 id="review-form-title">Tell us about your experience.</h2><p>No booking ID or prior booking confirmation is required. Reviews appear after submission. Do not include phone numbers, addresses or payment information.</p></div>
+        {saved ? <div className="review-ready" role="status"><h3>Thank you. Your review has been saved.</h3><p>{saved === 'published' ? 'Your review is published and now appears in Guest reviews.' : saved === 'pending' ? 'Your review is not currently public. Please contact AVELOF for help.' : 'Your submission is not currently published.'}</p><button className="text-link" type="button" onClick={() => { setSaved(null); setRating(''); pending.current = null }}>Write another review <ArrowRight size={16} /></button></div> : <form className="review-submission-form" onSubmit={submit} aria-busy={submitting}>
           <label>Display name<input name="reviewerName" autoComplete="nickname" maxLength={80} required placeholder="Name to publish" /></label>
           <label>Booking ID (optional, private)<input name="bookingId" autoComplete="off" maxLength={80} placeholder="Optional booking reference" /></label>
           <label>Experience<select name="experience" defaultValue="General experience">{experienceOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
@@ -103,7 +121,7 @@ export default function ReviewsPage() {
           <fieldset className="review-rating"><legend>Your rating</legend><div className="review-star-options">{Array.from({ length: 5 }, (_, index) => { const value = String(index + 1); return <label className={Number(rating) >= Number(value) ? 'is-selected' : ''} key={value}><input aria-label={`${value} star${value === '1' ? '' : 's'}`} type="radio" name="rating" value={value} checked={rating === value} onChange={(event) => setRating(event.target.value)} required /><Star aria-hidden="true" /></label> })}</div></fieldset>
           <label className="review-text-field">Your review<textarea name="reviewText" rows={5} minLength={20} maxLength={1600} required placeholder="Share your honest experience." /></label>
           <label className="enquiry-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
-          <label className="review-consent"><input type="checkbox" name="publicationConsent" required /><span>I confirm this is my own experience and consent to publication of my display name, rating and review after moderation. My booking ID will remain private.</span></label>
+          <label className="review-consent"><input type="checkbox" name="publicationConsent" required /><span>I confirm this is my own experience and consent to immediate publication of my display name, rating and review. My booking ID will remain private.</span></label>
           {submitError && <p className="enquiry-error review-text-field" role="alert">{submitError}</p>}
           <button className="button button-dark" type="submit" disabled={submitting}>{submitting ? 'Saving review...' : 'Submit review'} <ArrowRight size={16} /></button>
         </form>}
@@ -114,7 +132,7 @@ export default function ReviewsPage() {
 
 export function AdminReviewsPage() {
   const [listing, setListing] = useState<Awaited<ReturnType<typeof loadAdminReviews>> | null>(null)
-  const [filters, setFilters] = useState<{ page: number; status: ReviewStatus | 'all'; refresh: number }>({ page: 1, status: 'pending', refresh: 0 })
+  const [filters, setFilters] = useState<{ page: number; status: ReviewStatus | 'all'; refresh: number }>({ page: 1, status: 'all', refresh: 0 })
   const [loading, setLoading] = useState(true)
   const [signedOut, setSignedOut] = useState(false)
   const [error, setError] = useState('')
@@ -147,6 +165,20 @@ export function AdminReviewsPage() {
     finally { setSavingId(null) }
   }
 
+  async function removeReview(review: AdminReview) {
+    if (savingId || !window.confirm(`Permanently delete this review by ${review.reviewerName}? This cannot be undone.`)) return
+    setSavingId(review.id)
+    setError('')
+    try {
+      await deleteReviewRequest(review.id, review.version)
+      setNotice('Review permanently deleted.')
+      refresh(listing?.reviews.length === 1 && filters.page > 1 ? filters.page - 1 : filters.page)
+    } catch (failure) {
+      if (failure instanceof ReviewError && failure.status === 401) { setSignedOut(true); setListing(null) }
+      else setError(reviewError(failure))
+    } finally { setSavingId(null) }
+  }
+
   return <section className="enquiry-access-page admin-reviews-page page-width">
     <Link className="text-link" to="/admin/panel"><ArrowLeft size={16} /> Owner dashboard</Link>
     <div className="enquiry-access-heading"><Star size={28} /><div><p className="eyebrow">AVELOF owner access</p><h1>Review moderation</h1></div></div>
@@ -163,7 +195,7 @@ export function AdminReviewsPage() {
         {review.reviewMonth && <p className="privacy-note">Original review month: {reviewMonthLabel(review.reviewMonth)}</p>}
         {review.title && <h2>{review.title}</h2>}<p className="admin-review-text">{review.reviewText}</p>
         <p className="privacy-note">Private booking ID: {review.bookingId || 'Not provided'}. Source: {review.submissionSource === 'owner_provided' ? 'Owner-provided guest review' : 'Website guest submission'}. Not independently verified.</p>
-        <div className="admin-review-actions">{review.status !== 'published' && <button className="button button-dark" disabled={Boolean(savingId) || loading} onClick={() => moderate(review, 'published')}><Check size={16} /> {savingId === review.id ? 'Saving...' : 'Publish review'}</button>}{review.status !== 'rejected' && <button className="button confirmation-close" disabled={Boolean(savingId) || loading} onClick={() => moderate(review, 'rejected')}>Hide review</button>}{review.status !== 'pending' && <button className="text-link" disabled={Boolean(savingId) || loading} onClick={() => moderate(review, 'pending')}>Return to pending</button>}</div>
+        <div className="admin-review-actions">{review.status !== 'published' && <button className="button button-dark" disabled={Boolean(savingId) || loading} onClick={() => moderate(review, 'published')}><Check size={16} /> {savingId === review.id ? 'Saving...' : 'Publish review'}</button>}{review.status !== 'rejected' && <button className="button confirmation-close" disabled={Boolean(savingId) || loading} onClick={() => moderate(review, 'rejected')}>Hide review</button>}{review.status !== 'pending' && <button className="text-link" disabled={Boolean(savingId) || loading} onClick={() => moderate(review, 'pending')}>Return to pending</button>}<button className="button admin-record-delete" disabled={Boolean(savingId) || loading} onClick={() => removeReview(review)}><Trash2 size={16} /> {savingId === review.id ? 'Deleting...' : 'Delete review'}</button></div>
       </article>)}</div>
       {!loading && !error && !listing?.reviews.length && <p className="review-empty">No reviews in this view.</p>}
       {listing && <div className="admin-enquiry-pagination"><span>Page {filters.page} · {listing.total} {listing.total === 1 ? 'review' : 'reviews'}</span><button className="icon-button" title="Previous reviews" aria-label="Previous reviews" disabled={loading || Boolean(savingId) || filters.page <= 1} onClick={() => refresh(filters.page - 1)}><ChevronLeft size={20} /></button><button className="icon-button" title="Next reviews" aria-label="Next reviews" disabled={loading || Boolean(savingId) || filters.page * 25 >= listing.total} onClick={() => refresh(filters.page + 1)}><ChevronRight size={20} /></button></div>}

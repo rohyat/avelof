@@ -64,7 +64,58 @@ test('review carousel preserves layout and supports accessible automatic and man
       } finally { await page.close() }
     })
 
-    await context.test('autoplay pauses, resumes, and stops after dot or keyboard interaction', async () => {
+    await context.test('submitted review publishes and scrolls into the public feed', async () => {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+      let submitted
+      await page.route('**/api/reviews*', async (route) => {
+        if (route.request().method() === 'POST') {
+          submitted = route.request().postDataJSON()
+          return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ saved: true, id: submitted.id, status: 'published' }) })
+        }
+        const published = submitted ? [{ id: submitted.id, reviewerName: submitted.reviewerName, experience: submitted.experience, rating: submitted.rating, title: submitted.title, reviewText: submitted.reviewText, publishedAt: '2026-11-11T12:00:00.000Z', reviewMonth: null }, ...reviews] : reviews
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ reviews: published, total: published.length, averageRating: 5, page: 1, pageSize: 25 }) })
+      })
+      try {
+        await page.goto(`${origin}/reviews`)
+        await page.locator('.review-card').nth(9).waitFor()
+        await page.getByRole('link', { name: 'Write a review' }).click()
+        await page.locator('input[name="reviewerName"]').fill('Fresh Guest')
+        await page.locator('input[name="title"]').fill('A lovely journey')
+        await page.locator('input[name="rating"][value="5"]').check({ force: true })
+        await page.locator('textarea[name="reviewText"]').fill('The local team made our journey easy and welcoming.')
+        await page.locator('input[name="publicationConsent"]').check()
+        await page.getByRole('button', { name: 'Submit review' }).click()
+        await page.getByRole('heading', { name: 'Thank you. Your review has been saved.' }).waitFor()
+        const card = page.locator(`#guest-review-${submitted.id}`)
+        await card.waitFor()
+        assert.ok((await card.innerText()).includes('Fresh Guest'))
+        assert.ok((await card.boundingBox()).y < 500)
+      } finally { await page.close() }
+    })
+
+    await context.test('tablet home actions stay aligned and readable', async () => {
+      const page = await browser.newPage({ viewport: { width: 768, height: 1024 } })
+      try {
+        await page.goto(origin)
+        await page.locator('.hero-actions .button').last().waitFor()
+        for (const width of [820, 768, 744, 390, 320]) {
+          await page.setViewportSize({ width, height: 900 })
+          const layout = await page.locator('.hero-actions').evaluate((actions) => {
+            const buttons = [...actions.querySelectorAll('.button')]
+            const first = buttons[0].getBoundingClientRect()
+            const secondaryRows = buttons.slice(1).map((button) => Math.round(button.getBoundingClientRect().y))
+            return { count: buttons.length, overflow: document.documentElement.scrollWidth > innerWidth, firstSpansRow: Math.abs(first.width - actions.clientWidth) < 1, secondaryRows, clippedText: buttons.some((button) => button.scrollWidth > button.clientWidth) }
+          })
+          assert.equal(layout.count, 5)
+          assert.equal(layout.overflow, false, `Page overflow at ${width}px`)
+          assert.equal(layout.firstSpansRow, true, `Primary CTA should span the row at ${width}px`)
+          assert.equal(layout.clippedText, false, `CTA text should fit at ${width}px`)
+          assert.equal(new Set(layout.secondaryRows).size, 2, `Secondary actions should align in two rows at ${width}px`)
+        }
+      } finally { await page.close() }
+    })
+
+    await context.test('one-second autoplay pauses on manual dot or keyboard interaction', async () => {
       const page = await openReviews(browser)
       try {
         await page.clock.install()
@@ -72,22 +123,14 @@ test('review carousel preserves layout and supports accessible automatic and man
         await page.goto(`${origin}/reviews`)
         await page.locator('.review-card').nth(9).waitFor()
         const rail = page.locator('.review-carousel-rail')
+        assert.equal(await page.locator('.review-autoplay-toggle').count(), 0)
         await page.clock.runFor(50)
-        await page.clock.fastForward(6500)
+        await page.clock.fastForward(1100)
         assert.ok(await rail.evaluate((element) => element.scrollLeft > 0))
-        await page.getByRole('button', { name: 'Pause automatic review switching', exact: true }).evaluate((button) => button.click())
-        await page.clock.runFor(30)
-        const pausedPosition = await rail.evaluate((element) => element.scrollLeft)
-        await page.clock.fastForward(20000)
-        assert.equal(await rail.evaluate((element) => element.scrollLeft), pausedPosition)
-        await page.getByRole('button', { name: 'Resume automatic review switching', exact: true }).evaluate((button) => button.click())
-        await page.clock.runFor(30)
-        await page.clock.fastForward(6500)
-        assert.ok(await rail.evaluate((element) => element.scrollLeft) > pausedPosition)
         await page.getByRole('button', { name: 'Show review 4', exact: true }).evaluate((button) => button.click())
         await page.clock.runFor(30)
         const chosenPosition = await rail.evaluate((element) => element.scrollLeft)
-        await page.clock.fastForward(20000)
+        await page.clock.fastForward(3000)
         assert.equal(await rail.evaluate((element) => element.scrollLeft), chosenPosition)
         await rail.focus()
         await rail.press('Home')
@@ -97,7 +140,7 @@ test('review carousel preserves layout and supports accessible automatic and man
       } finally { await page.close() }
     })
 
-    await context.test('touch interaction stops autoplay and the play control can resume it', async () => {
+    await context.test('touch interaction stops autoplay without a resume control', async () => {
       const page = await openReviews(browser, { hasTouch: true })
       try {
         await page.clock.install()
@@ -109,17 +152,26 @@ test('review carousel preserves layout and supports accessible automatic and man
         const bounds = await rail.boundingBox()
         await page.touchscreen.tap(bounds.x + 30, bounds.y + 30)
         await page.clock.runFor(30)
-        const resume = page.getByRole('button', { name: 'Resume automatic review switching', exact: true })
-        await resume.waitFor()
+        assert.equal(await page.locator('.review-autoplay-toggle').count(), 0)
         const stoppedPosition = await rail.evaluate((element) => element.scrollLeft)
-        await page.clock.fastForward(15000)
+        await page.clock.fastForward(3000)
         assert.equal(await rail.evaluate((element) => element.scrollLeft), stoppedPosition)
-        await resume.evaluate((button) => button.scrollIntoView({ block: 'center', behavior: 'instant' }))
-        const buttonBounds = await resume.boundingBox()
-        await page.touchscreen.tap(buttonBounds.x + buttonBounds.width / 2, buttonBounds.y + buttonBounds.height / 2)
+      } finally { await page.close() }
+    })
+
+    await context.test('opening the mobile menu stops review autoplay', async () => {
+      const page = await openReviews(browser)
+      try {
+        await page.clock.install()
+        await instantTestScroll(page)
+        await page.goto(`${origin}/reviews`)
+        await page.locator('.review-card').nth(9).waitFor()
+        const rail = page.locator('.review-carousel-rail')
+        await page.getByRole('button', { name: 'Open menu', exact: true }).click()
         await page.clock.runFor(30)
-        await page.clock.fastForward(6500)
-        assert.ok(await rail.evaluate((element) => element.scrollLeft) > stoppedPosition)
+        const stoppedPosition = await rail.evaluate((element) => element.scrollLeft)
+        await page.clock.fastForward(3000)
+        assert.equal(await rail.evaluate((element) => element.scrollLeft), stoppedPosition)
       } finally { await page.close() }
     })
 
@@ -133,7 +185,7 @@ test('review carousel preserves layout and supports accessible automatic and man
         await page.clock.fastForward(20000)
         const rail = page.locator('.review-carousel-rail')
         assert.equal(await rail.evaluate((element) => element.scrollLeft), 0)
-        assert.equal(await page.getByRole('button', { name: 'Automatic switching disabled by motion preference' }).isDisabled(), true)
+        assert.equal(await page.locator('.review-autoplay-toggle').count(), 0)
         await page.getByRole('button', { name: 'Show review 2', exact: true }).evaluate((button) => button.click())
         assert.ok(await rail.evaluate((element) => element.scrollLeft > 0))
       } finally { await page.close() }

@@ -38,13 +38,20 @@ images. Filenames are unversioned, so no immutable browser cache is forced.
 
 ### Connected live deployment
 
-The live website is **https://avelof.pages.dev**. The Pages project is `avelof`,
-with production branch `main`. Production uses `avelof-enquiries`; preview uses
-the separate `avelof-enquiries-preview` database. Every enquiry form uses the
-server-side `DB` binding in `wrangler.jsonc`. No custom domain was attached.
+The live website is **https://avelof.in**; `www.avelof.in` redirects to the
+apex domain. Both custom domains are attached to the `avelof` Pages project.
+Production uses `avelof-enquiries`; preview uses the separate
+`avelof-enquiries-preview` database. Every enquiry form uses the server-side
+`DB` binding in `wrangler.jsonc`.
 
-This project uses direct uploads, not automatic Git deployments. To publish
-future changes, sign in with Wrangler and run from the project root:
+Cloudflare Workers Builds is connected to this GitHub repository and deploys
+commits pushed to `main`. Its build command is `npm run build`; its deploy
+command is `npx wrangler pages deploy dist --project-name avelof --branch main`.
+Commit and push source changes first, then confirm the Cloudflare build reports
+deployment success before checking the live domains.
+
+For a manual operator deployment, sign in with Wrangler and run from the project
+root:
 
 ```powershell
 npm run build
@@ -52,9 +59,10 @@ npm run deploy
 ```
 
 `npm run deploy` deploys the built `dist` assets and the root `functions/`
-directory to the existing `avelof` Pages project on the production branch.
-It does not build first or apply database migrations automatically. Apply any
-pending production/preview migrations before publishing API changes.
+directory to the existing `avelof` Pages project on the production branch. It
+does not build first or apply database migrations automatically. Prefer the
+GitHub commit/build flow for normal releases. Apply pending production/preview
+migrations before publishing API changes.
 
 If a Cloudflare build log shows `Executing user deploy command: npx wrangler
 deploy`, the pipeline is using the Workers deployment command against this Pages
@@ -63,13 +71,10 @@ build command `npm run build` and repository root directory. The credential used
 by that pipeline must have access to the existing Pages project; a Workers-only
 deployment token may not. Do not paste credentials into chat or source control.
 
-For a Pages Git-integrated project instead, configure build command `npm run
-build` and build output directory `dist`; Pages performs deployment itself, so no
-custom Workers deploy step is needed. This existing project uses direct uploads;
-creating a separate Git-integrated Pages project is a distinct setup decision.
-Do not add a Worker `main` or use `wrangler deploy --assets=dist` to silence the
-error: static-only Workers assets would not deploy the Pages Functions handling
-enquiries, reviews and admin access. `/admin/panel` and its APIs must stay together.
+This pipeline runs under Workers Builds but deploys to Pages with the Pages
+command above. Do not replace it with `wrangler deploy --assets=dist`: static-only
+Workers assets would omit the Pages Functions handling enquiries, reviews and
+admin access. `/admin/panel` and its APIs must stay together.
 
 On this Windows machine, a certificate trust issue required
 `$env:NODE_USE_SYSTEM_CA = '1'` in the terminal before Wrangler network commands.
@@ -112,6 +117,7 @@ it also assigns short IDs to existing records without changing their details.
 - The customer page and saved-confirmation popup have no Private submitted details section, private access-code field or private-link copy control. The popup retains the booking-ID copy button and a plain View your bookings link. New forms default to a ten-digit phone number and accept optional country prefixes. Complete records remain available in the protected owner dashboard.
 - Booking links carry only the enquiry reference in a fragment, which is cleared before lookup. Older code-bearing links also open only masked summaries in the website; their code is not read or submitted. The legacy ID+code API remains protected for backward compatibility, but the customer website no longer uses it or displays issued codes.
 - `/admin/panel` is the separate owner sign-in URL, currently live at `https://avelof.pages.dev/admin/panel`. Reviews are at `/admin/panel/reviews`. The legacy `/my-enquiries/admin` and `/my-enquiries/admin/reviews` paths redirect to these canonical routes. The requested `https://www.avelof.in/admin/panel` requires separately connecting that domain to this deployment; no DNS or domain changes were authorized in this update. No customer-facing navigation links to admin routes; authentication remains mandatory. The default username is the ten national business-phone digits from `src/config.ts`; prefixed forms remain accepted. Existing passwords, sessions, full records and status editing are unchanged.
+- `/admin/panel` is the separate owner sign-in URL, live at `https://avelof.in/admin/panel`. Reviews are at `/admin/panel/reviews`. The legacy `/my-enquiries/admin` and `/my-enquiries/admin/reviews` paths redirect to these canonical routes. No customer-facing navigation links to admin routes; authentication remains mandatory. The default username is the ten national business-phone digits from `src/config.ts`; prefixed forms remain accepted. Owner deletion requires confirmation and a current version; deleting an enquiry removes its stored row and cascades its reference-number link. Sequence numbers are never reused.
 - Admin sessions use signed HttpOnly, SameSite=Strict cookies, Secure on HTTPS, and expire after 30 minutes. Use Sign out on shared devices. Changing the server-side admin-code hash invalidates existing sessions.
 - Expanded admin records include the same Requested booking details summary and the complete accepted submitted fields underneath, including guest counts, meals, vehicle choice, estimates, custom notes and itinerary. `fields_json` is the authoritative saved snapshot; `details` retains the notes text. Public lookup uses a separate strict projection; it never receives the raw full-record field object. Public service names are matched against the catalog so arbitrary text cannot be echoed through selection fields.
 - Older enquiries also have a masked status summary. Their full details remain owner-only if no private code was issued. Staff must verify the customer through an established channel before sharing details.
@@ -230,27 +236,26 @@ current free limits; Pages Functions also consume Workers usage allowances.
 
 ## Database Reviews
 
-Anyone can submit a review at `/reviews`; a booking ID is optional and private.
-`POST /api/reviews` saves display name, experience category, 1-5 rating, optional
-title, review text and publication consent to D1. A saved confirmation appears
-only after storage succeeds. Failed attempts retain the form; unchanged retries
-reuse the submission UUID rather than creating duplicate reviews. New reviews
-start Pending and do not appear in the public feed until the owner publishes them.
+Anyone can submit a review at `/reviews`; no booking ID or prior booking
+confirmation is required. `POST /api/reviews` saves display name, experience
+category, 1-5 rating, optional title, review text and publication consent to D1.
+After consent and a successful save, a guest review is published immediately and
+the public feed refreshes. Failed attempts retain the form; unchanged retries
+reuse the submission UUID rather than creating duplicate reviews. Publication
+does not verify a guest's identity or stay.
 
 Sign in at `/admin/panel`, then open the Reviews section, or visit
-`/admin/panel/reviews` with an active owner session. Filter Awaiting
-approval/Published/Hidden, then Publish review, Hide review or Return to pending.
-Moderation requires the existing signed admin cookie and version-checked updates;
-no new admin password or public admin link is introduced. Hiding does not delete
-the stored review. Review consent permits publishing the display name and review,
-not the optional booking ID. Do not approve content containing private details.
+`/admin/panel/reviews` with an active owner session. The owner can hide or restore
+reviews and permanently delete them. Changes require the existing signed admin
+cookie and version checks. Review consent permits publishing the display name and
+review, not the optional booking ID. Remove reviews containing private details.
 
 The public feed and average rating include only published database reviews.
 Published cards are labelled Guest review, not independently verified stays.
 The owner confirmed the ten existing entries are genuine guest reviews and
 approved their import and publication. They now use the same D1 feed as other
-published reviews; the separate preview display is removed. New submissions
-still start Pending. Negative and mixed reviews use the same validation rules.
+published reviews; the separate preview display is removed. Negative and mixed
+reviews use the same validation rules.
 
 ### Owner-Approved Existing Reviews
 
@@ -286,7 +291,10 @@ from the approved source before importing again. `npm run import:reviews --
 --check-client` verifies that private source references are not in built assets.
 
 Apply migration `0006_reviews.sql` in local, production and preview databases
-before deployment. The API caps bodies at 12 KiB, uses strict field/consent
+Apply migrations `0006_reviews.sql` through `0009_review_deletion_tombstones.sql`
+in local, production and preview databases before deployment. Migration 0009
+records source-key tombstones when an owner-provided review is deleted, so a
+future import cannot restore it. The API caps bodies at 12 KiB, uses strict field/consent
 validation, same-origin writes, a bot trap and a separate limit of three new
 reviews/IP/ten minutes. Configure Cloudflare edge protection for distributed spam.
 Both public and private lists paginate at 25 items and are non-cacheable.
@@ -298,8 +306,8 @@ npm run setup:access -- --verify-reviews http://localhost:8792
 npm run setup:access -- --verify-reviews https://avelof.pages.dev
 ```
 
-This verifies Pending -> Published -> Hidden using a local operator-signed
-session, so it also works after a chosen password is configured. It does not
+This verifies Published -> Hidden using a local operator-signed session, so it
+also works after a chosen password is configured. It does not
 change or read that password. Use `--review-id <printed-test-id>` to retry the
 same synthetic test after an interruption. Remove only the printed test UUID
 after verification. Published synthetic content is explicitly marked as a test.
@@ -308,10 +316,10 @@ after verification. Published synthetic content is explicitly marked as a test.
 
 At 900px and below, guest review cards use a horizontal scroll-snap carousel
 with the existing responsive card widths, padding and typography. Reviews
-advance every six seconds and loop. Offer-style dots select a position; the
-pause/play icon stops or resumes automatic switching. Touch, dot selection or
-keyboard focus stops switching until resumed. Mouse hover pauses temporarily,
-hidden tabs do not advance, and reduced-motion preferences disable autoplay.
+advance one at a time every second and loop. Offer-style dots select a position.
+Touch, dot selection or keyboard interaction stops autoplay; there is no
+pause/play button. Mouse hover pauses temporarily, hidden tabs do not advance,
+and reduced-motion preferences disable autoplay.
 Desktop reviews keep their existing grid. The Write a review invitation appears
 above Guest reviews and still links to the submission form below.
 
@@ -319,7 +327,8 @@ Run `npm run test:reviews-ui` against the local app (default localhost:8792),
 or set `AVELOF_REVIEW_TEST_URL` to another local UI server. The focused Node/
 Playwright checks use the installed Edge browser on Windows and mock the review
 feed, so no database records or credentials are changed. They cover card sizing,
-invitation order, autoplay, stop/resume, touch, keyboard and reduced motion.
+tablet CTA alignment, invitation order, autoplay timing, manual stop, touch,
+keyboard and reduced motion.
 Screenshots are saved under the ignored `.wrangler/tmp/review-carousel-checks/`.
 
 ## Destination guide and visit planner
