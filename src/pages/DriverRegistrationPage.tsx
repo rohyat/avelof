@@ -6,7 +6,7 @@ import NumberStepper from '../components/NumberStepper'
 import PartnerPhotos from '../components/PartnerPhotos'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import { business } from '../config'
-import { driverDistricts, driverVehicleOptions, normalizeDriverVehicleNumber } from '../data/driverRegistration'
+import { driverDistricts, driverVehicleNumberPattern, driverVehicleOptions, normalizeDriverVehicleNumber } from '../data/driverRegistration'
 import { hotelStatusLabels } from '../data/hotelRegistration'
 import { driverReceiptSchema, driverSubmissionSchema, ownerDriverSchema } from '../services/driverSchema'
 import type { AdminDriver } from '../services/driverSchema'
@@ -20,6 +20,7 @@ export default function DriverRegistrationPage() {
   const [processing, setProcessing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [vehicleNumberError, setVehicleNumberError] = useState('')
   const [receipt, setReceipt] = useState<z.infer<typeof driverReceiptSchema> | null>(null)
   const pending = useRef({ id: crypto.randomUUID(), fingerprint: '' })
   const photoVersion = useRef(0)
@@ -56,7 +57,7 @@ export default function DriverRegistrationPage() {
         <NumberStepper label="Age (minimum 18)" name="age" min={18} max={100} />
         <label>Phone number<input name="phone" type="tel" required maxLength={30} autoComplete="tel" /><small>One driver registration per Indian phone number; only a masked number is shown publicly.</small></label>
         <label>Driving licence number<input name="licenceNumber" maxLength={40} minLength={5} required /></label>
-        <label>Vehicle registration number<input name="vehicleNumber" maxLength={13} minLength={10} required pattern="JK[0-9]{2}[A-Za-z]{1,2}-[0-9]{4}" placeholder="JK13B-1444 or JK01AB-1485" title="Use JK13B-1444 or JK01AB-1485 format." onBlur={(event) => { event.currentTarget.value = normalizeDriverVehicleNumber(event.currentTarget.value) }} /></label>
+        <label>Vehicle registration number<input name="vehicleNumber" maxLength={13} minLength={10} required pattern="JK[0-9]{2}[A-Za-z]{1,2}-[0-9]{4}" placeholder="JK13B-1444 or JK01AB-1485" title="Use JK13B-1444 or JK01AB-1485 format." aria-invalid={Boolean(vehicleNumberError)} aria-describedby={vehicleNumberError ? 'vehicle-number-error' : undefined} onChange={(event) => { const normalized = normalizeDriverVehicleNumber(event.currentTarget.value); event.currentTarget.value = normalized; setVehicleNumberError(normalized && !driverVehicleNumberPattern.test(normalized) ? 'Use format JK13B-1444 or JK01AB-1485.' : '') }} onBlur={(event) => { const normalized = normalizeDriverVehicleNumber(event.currentTarget.value); event.currentTarget.value = normalized; setVehicleNumberError(normalized && !driverVehicleNumberPattern.test(normalized) ? 'Use format JK13B-1444 or JK01AB-1485.' : '') }} />{vehicleNumberError && <small id="vehicle-number-error" className="enquiry-error" role="alert">{vehicleNumberError}</small>}</label>
         <label>Vehicle<select name="vehicleId" required>{driverVehicleOptions.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.label}</option>)}</select></label>
         <label>District<select name="location">{driverDistricts.map((district) => <option key={district}>{district}</option>)}</select></label>
         <NumberStepper label="Passenger seats (excluding driver)" name="seats" min={1} max={60} />

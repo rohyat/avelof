@@ -53,6 +53,13 @@ test('partner onboarding and approved listings work separately from customer nav
         assert.equal(await page.getByLabel('Taxes').count(), 0)
         assert.equal(await page.getByLabel('Luggage capacity').count(), 0)
         assert.equal(await page.getByText('Trips offered (select at least one)').count(), 0)
+        const vehicleNumber = page.getByRole('textbox', { name: 'Vehicle registration number' })
+        await vehicleNumber.fill('JK01AB1234')
+        await page.getByRole('alert').filter({ hasText: 'Use format JK13B-1444 or JK01AB-1485.' }).waitFor()
+        assert.equal(await vehicleNumber.getAttribute('aria-invalid'), 'true')
+        await vehicleNumber.fill('JK01AB-1485')
+        assert.equal(await page.getByRole('alert').filter({ hasText: 'Use format JK13B-1444 or JK01AB-1485.' }).count(), 0)
+        assert.equal(await vehicleNumber.getAttribute('aria-invalid'), 'false')
         const fields = {
           'Full legal name': driver.fullName,
           'Age (minimum 18)': '30', 'Phone number': driver.phone,
