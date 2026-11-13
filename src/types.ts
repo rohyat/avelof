@@ -66,6 +66,8 @@ export interface RentalCar extends CatalogBase {
 export interface Hotel extends CatalogBase {
   kind: 'hotel'
   registeredHotelId?: string
+  hotelAverageRating?: number | null
+  hotelReviewCount?: number
   taxDetails?: string
   totalRooms?: number
   roomOnlyPrice?: number

@@ -7,7 +7,7 @@ function reviewMonthLabel(value: string) {
 
 export default function ReviewCard({ review }: { review: PublicReview }) {
   return <article id={`guest-review-${review.id}`} className="review-card">
-    <div className="review-card-head"><div className="review-card-identity"><strong>{review.reviewerName}</strong>{review.bookingId && <span className="review-booking-id">Booking ID: {review.bookingId}</span>}{review.driverId && <span className="review-booking-id">Driver ID: {review.driverId}</span>}</div><span className="review-source-label">Guest review</span></div>
+    <div className="review-card-head"><div className="review-card-identity"><strong>{review.reviewerName || 'Anonymous guest'}</strong>{review.bookingId && <span className="review-booking-id">Booking ID: {review.bookingId}</span>}{review.driverId && <span className="review-booking-id">Driver ID: {review.driverId}</span>}{review.hotelId && <span className="review-booking-id">Hotel ID: {review.hotelId}</span>}</div><span className="review-source-label">Guest review</span></div>
     <ReviewStars rating={review.rating} />
     {review.title && <h3 className="review-card-title">{review.title}</h3>}
     {review.reviewText && <blockquote>{review.reviewText}</blockquote>}

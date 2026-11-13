@@ -22,6 +22,7 @@ export default function App() {
         <Route path="drivers" element={<DriversPage />} />
         <Route path="drivers/:driverId/reviews" element={<DriverReviewsPage />} />
         <Route path="hotels" element={<CollectionPage />} />
+        <Route path="hotels/:hotelId/reviews" element={<DriverReviewsPage />} />
         <Route path="hotels/:slug" element={<DetailPage />} />
         <Route path="register-hotel" element={<HotelRegistrationPage />} />
         <Route path="hotel-status" element={<HotelStatusPage />} />

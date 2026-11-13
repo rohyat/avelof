@@ -10,6 +10,7 @@ const listSchema = z.object({
   scope: z.enum(['public', 'admin']).default('public'),
   page: z.coerce.number().int().min(1).max(10000).default(1),
   id: z.uuidv4().toLowerCase().optional(),
+  hotelId: z.string().regex(/^AVELOF_HTL_[A-F0-9]{32}$/).optional(),
   status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all'),
 }).strict()
 
@@ -25,13 +26,14 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     if (request.method === 'GET') {
       const parsed = listSchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
       if (!parsed.success) return privateReply({ error: 'Invalid hotel filters.' }, 400)
-      const { scope, page, id, status } = parsed.data
+      const { scope, page, id, hotelId, status } = parsed.data
       const admin = scope === 'admin'
       if (admin && !await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
-      const where = admin ? "WHERE (? = 'all' OR status = ?) AND (? IS NULL OR id = ?)" : "WHERE status = 'approved' AND (? IS NULL OR id = ?)"
-      const values = admin ? [status, status, id ?? null, id ?? null] : [id ?? null, id ?? null]
+      const where = admin ? "WHERE (? = 'all' OR status = ?) AND (? IS NULL OR id = ?) AND (? IS NULL OR hotel_id = ?)" : "WHERE status = 'approved' AND (? IS NULL OR id = ?) AND (? IS NULL OR hotel_id = ?)"
+      const values = admin ? [status, status, id ?? null, id ?? null, hotelId ?? null, hotelId ?? null] : [id ?? null, id ?? null, hotelId ?? null, hotelId ?? null]
       const total = await DB.prepare(`SELECT count(*) AS total FROM hotel_registrations ${where}`).bind(...values).first<{ total: number }>()
-      const rows = await DB.prepare(`SELECT ${hotelColumns} FROM hotel_registrations ${where} ORDER BY created_at DESC, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<HotelRow>()
+      const listingColumns = admin ? hotelColumns : `${hotelColumns}, (SELECT avg(rating) FROM reviews WHERE reviews.hotel_id = hotel_registrations.hotel_id AND reviews.status = 'published') AS average_rating, (SELECT count(*) FROM reviews WHERE reviews.hotel_id = hotel_registrations.hotel_id AND reviews.status = 'published') AS review_count`
+      const rows = await DB.prepare(`SELECT ${listingColumns} FROM hotel_registrations ${where} ORDER BY created_at DESC, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<HotelRow>()
       return privateReply({ hotels: rows.results.map(admin ? adminHotel : publicHotel), total: total?.total ?? 0, page, pageSize: 25 })
     }
     if (request.method === 'PATCH') {

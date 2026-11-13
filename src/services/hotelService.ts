@@ -69,6 +69,7 @@ export async function loadPublicHotels(signal?: AbortSignal, id?: string) {
 export function toCatalogHotel(hotel: PublicHotel): Hotel {
   return {
     kind: 'hotel', id: hotel.id, registeredHotelId: hotel.hotelId,
+    hotelAverageRating: hotel.averageRating, hotelReviewCount: hotel.reviewCount,
     name: hotel.name, location: hotel.location, category: hotel.category, price: hotel.price,
     image: hotel.photos[0], gallery: hotel.photos,
     description: hotel.description, rateBasis: 'per room per night for 2 adults',
@@ -77,6 +78,10 @@ export function toCatalogHotel(hotel: PublicHotel): Hotel {
     roomTypes: hotel.roomTypes, facilities: [hotel.heating, ...hotel.amenities],
     checkIn: hotel.checkIn, checkOut: hotel.checkOut, highlights: hotel.highlights,
   }
+}
+export async function loadPublicHotelByDisplayId(hotelId: string, signal?: AbortSignal) {
+  const listing = publicList.parse(await requestHotel(`/api/hotels?${new URLSearchParams({ hotelId })}`, 'GET', undefined, signal))
+  return listing.hotels[0] ?? null
 }
 export function useRegisteredHotels(enabled: boolean, id?: string) {
   const key = enabled ? id ?? 'all' : ''

@@ -183,11 +183,13 @@ procedures. No automatic retention cleanup or phone OTP service is included.
 Review submissions are untrusted user-generated content. Anyone may submit and,
 after explicit publication consent and a successful D1 write, a review is
 published immediately. A booking ID or prior booking confirmation is not
-required. Public responses select display name, booking ID, rating, title/text,
-experience category, optional driver ID and review/publication date. Driver
-ratings are accepted only for an approved public driver ID and are included in
-that driver's public aggregate. A driver rating may contain stars without a
-comment. Full stored booking IDs are
+required for the general review form. Approved driver and registered-hotel
+review pages allow an anonymous stars-only rating. Adding a title or comment
+requires both a public display name and booking ID; the API enforces the same
+conditional rule. Public responses select display name, booking ID, rating,
+title/text, experience category, optional driver/hotel ID and review/publication
+date. Scoped ratings are accepted only for an approved public partner ID and are
+included in that partner's public aggregate. Full stored booking IDs are
 displayed below names on published reviews, including existing imported entries.
 The form's publication consent explicitly includes an optional booking ID.
 Payload hashes, consent storage and customer enquiry records are never returned

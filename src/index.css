@@ -383,6 +383,9 @@ body.enquiry-open { overflow: hidden; }
 .hotel-identifier, .hotel-receipt dd { overflow-wrap: anywhere; }
 .hotel-receipt dd { margin: 6px 0 20px; font-family: monospace; }
 .hotel-card-highlights { margin: 0 0 18px; padding-left: 18px; color: #586a60; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.hotel-card-rating { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-block: 4px 14px; color: var(--muted); font-size: 12px; }
+.hotel-card-rating .review-stars { margin: 0; }
+.hotel-card-rating a { display: inline-flex; align-items: center; gap: 5px; color: var(--forest); font-weight: 700; }
 .hotel-owner-status { margin-top: 24px; }
 .partner-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 24px; margin-block: 28px; }
 .number-stepper { display: flex; align-items: center; border: 1px solid #b9cdd1; border-radius: 4px; overflow: hidden; min-width: 0; background: #fff; }

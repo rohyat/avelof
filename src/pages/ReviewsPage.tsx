@@ -156,7 +156,7 @@ export function AdminReviewsPage() {
   }
 
   async function removeReview(review: AdminReview) {
-    if (savingId || !window.confirm(`Permanently delete this review by ${review.reviewerName}? This cannot be undone.`)) return
+    if (savingId || !window.confirm(`Permanently delete this review by ${review.reviewerName || 'Anonymous guest'}? This cannot be undone.`)) return
     setSavingId(review.id)
     setError('')
     try {
@@ -180,12 +180,12 @@ export function AdminReviewsPage() {
       {loading && <p role="status">Loading reviews...</p>}
       {error && <p className="enquiry-error" role="alert">{error}</p>}
       <div className="admin-review-list">{listing?.reviews.map((review) => <article className="admin-review-record" key={review.id}>
-        <div className="admin-review-heading"><strong>{review.reviewerName}</strong><span className="enquiry-status">{moderationLabels[review.status]}</span></div>
+        <div className="admin-review-heading"><strong>{review.reviewerName || 'Anonymous guest'}</strong><span className="enquiry-status">{moderationLabels[review.status]}</span></div>
         <ReviewStars rating={review.rating} />
         <p className="privacy-note">{review.experience} · {new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium' }).format(new Date(review.createdAt))}</p>
         {review.reviewMonth && <p className="privacy-note">Original review month: {reviewMonthLabel(review.reviewMonth)}</p>}
         {review.title && <h2>{review.title}</h2>}<p className="admin-review-text">{review.reviewText}</p>
-        <p className="privacy-note">Booking ID (shown with published reviews): {review.bookingId || 'Not provided'}. Source: {review.submissionSource === 'owner_provided' ? 'Owner-provided guest review' : 'Website guest submission'}. Not independently verified.</p>
+        <p className="privacy-note">Booking ID (shown with published reviews): {review.bookingId || 'Not provided'}. {review.driverId ? `Driver ID: ${review.driverId}. ` : review.hotelId ? `Hotel ID: ${review.hotelId}. ` : ''}Source: {review.submissionSource === 'owner_provided' ? 'Owner-provided guest review' : 'Website guest submission'}. Not independently verified.</p>
         <div className="admin-review-actions">{review.status !== 'published' && <button className="button button-dark" disabled={Boolean(savingId) || loading} onClick={() => moderate(review, 'published')}><Check size={16} /> {savingId === review.id ? 'Saving...' : 'Publish review'}</button>}{review.status !== 'rejected' && <button className="button confirmation-close" disabled={Boolean(savingId) || loading} onClick={() => moderate(review, 'rejected')}>Hide review</button>}{review.status !== 'pending' && <button className="text-link" disabled={Boolean(savingId) || loading} onClick={() => moderate(review, 'pending')}>Return to pending</button>}<button className="button admin-record-delete" disabled={Boolean(savingId) || loading} onClick={() => removeReview(review)}><Trash2 size={16} /> {savingId === review.id ? 'Deleting...' : 'Delete review'}</button></div>
       </article>)}</div>
       {!loading && !error && !listing?.reviews.length && <p className="review-empty">No reviews in this view.</p>}

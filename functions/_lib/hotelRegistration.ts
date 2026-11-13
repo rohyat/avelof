@@ -10,6 +10,7 @@ export interface HotelRow {
   details_json: string; photo_keys_json: string; submitted_price: number; price: number;
   status: 'pending' | 'approved' | 'rejected'; version: number; owner_note: string;
   payload_hash: string; created_at: string; updated_at: string;
+  average_rating?: number | null; review_count?: number;
 }
 export const hotelColumns = 'id, hotel_id, phone, contact_name, details_json, photo_keys_json, submitted_price, price, status, version, owner_note, payload_hash, created_at, updated_at'
 export const photoKeys = (row: Pick<HotelRow, 'photo_keys_json'>) => z.array(z.string().regex(/^hotels\/[a-f0-9-]{36}\/[a-f0-9-]{36}\/[0-4]\.jpg$/)).min(1).max(hotelPhotoCount).parse(JSON.parse(row.photo_keys_json))
@@ -17,6 +18,7 @@ export function publicHotel(row: HotelRow) {
   return {
     ...hotelDetailsSchema.parse(JSON.parse(row.details_json)), id: row.id, hotelId: row.hotel_id, price: row.price,
     photos: photoKeys(row).map((_, index) => `/api/hotel-images/${row.id}/${index}`),
+    averageRating: row.average_rating ?? null, reviewCount: row.review_count ?? 0,
   }
 }
 export function adminHotel(row: HotelRow) {

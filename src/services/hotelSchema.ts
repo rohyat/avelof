@@ -27,6 +27,7 @@ export const hotelSubmissionSchema = hotelDetailsSchema.extend({
 export const publicHotelSchema = hotelDetailsSchema.extend({
   id: z.uuidv4().toLowerCase(), hotelId: z.string().regex(/^AVELOF_HTL_[A-F0-9]{32}$/),
   photos: z.array(z.string().regex(/^\/api\/hotel-images\/[a-f0-9-]{36}\/[0-4]$/)).min(1).max(hotelPhotoCount),
+  averageRating: z.number().min(1).max(5).nullable().default(null), reviewCount: z.number().int().min(0).default(0),
 })
 export const adminHotelSchema = publicHotelSchema.extend({
   contactName: z.string(), phone: z.string(), submittedPrice: hotelPriceSchema,

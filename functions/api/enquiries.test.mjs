@@ -1098,23 +1098,60 @@ test('published driver ratings are linked by public driver ID and included in dr
     DB.sqlite.prepare("UPDATE driver_registrations SET status = 'approved' WHERE id = ?").run(driver.id)
     const rating = {
       ...reviewPayload(),
+      reviewerName: '',
+      bookingId: '',
       experience: 'Driver experience',
       driverId: receipt.driverId,
       rating: 5,
       title: '',
       reviewText: '',
     }
+    assert.equal((await reviewRequest(DB, 'POST', { ...rating, id: crypto.randomUUID(), reviewText: 'A helpful driver.' })).status, 400)
+    assert.equal((await reviewRequest(DB, 'POST', { ...rating, id: crypto.randomUUID(), reviewerName: 'Guest', reviewText: 'A helpful driver.' })).status, 400)
     assert.equal((await reviewRequest(DB, 'POST', rating)).status, 201)
     const filtered = await (await reviewRequest(DB, 'GET', undefined, { query: `?driverId=${receipt.driverId}` })).json()
     assert.equal(filtered.total, 1)
     assert.equal(filtered.averageRating, 5)
     assert.equal(filtered.reviews[0].driverId, receipt.driverId)
+    assert.equal(filtered.reviews[0].reviewerName, '')
+    assert.equal(filtered.reviews[0].bookingId, '')
     assert.equal(filtered.reviews[0].reviewText, '')
     const listing = await (await driverRequest(DB, bucket, 'GET')).json()
     assert.equal(listing.drivers[0].driverId, receipt.driverId)
     assert.equal(listing.drivers[0].averageRating, 5)
     assert.equal(listing.drivers[0].reviewCount, 1)
     const unavailable = { ...rating, id: crypto.randomUUID(), driverId: 'AVELOF_DRV_00000000000000000000000000000000' }
+    assert.equal((await reviewRequest(DB, 'POST', unavailable)).status, 404)
+  } finally { DB.sqlite.close() }
+})
+
+test('anonymous hotel stars and written hotel feedback rules use the approved hotel ID', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    const hotel = hotelPayload()
+    const receipt = await (await hotelRequest(DB, bucket, 'POST', hotel)).json()
+    DB.sqlite.prepare("UPDATE hotel_registrations SET status = 'approved' WHERE id = ?").run(hotel.id)
+    const rating = {
+      ...reviewPayload(),
+      reviewerName: '',
+      bookingId: '',
+      experience: 'Hotel stay',
+      hotelId: receipt.hotelId,
+      rating: 4,
+      title: '',
+      reviewText: '',
+    }
+    assert.equal((await reviewRequest(DB, 'POST', rating)).status, 201)
+    const filtered = await (await reviewRequest(DB, 'GET', undefined, { query: `?hotelId=${receipt.hotelId}` })).json()
+    assert.equal(filtered.total, 1)
+    assert.equal(filtered.averageRating, 4)
+    assert.equal(filtered.reviews[0].hotelId, receipt.hotelId)
+    assert.equal(filtered.reviews[0].reviewerName, '')
+    const listing = await (await hotelRequest(DB, bucket, 'GET', undefined)).json()
+    assert.equal(listing.hotels[0].hotelId, receipt.hotelId)
+    assert.equal(listing.hotels[0].averageRating, 4)
+    assert.equal(listing.hotels[0].reviewCount, 1)
+    const unavailable = { ...rating, id: crypto.randomUUID(), hotelId: 'AVELOF_HTL_00000000000000000000000000000000' }
     assert.equal((await reviewRequest(DB, 'POST', unavailable)).status, 404)
   } finally { DB.sqlite.close() }
 })
