@@ -6,8 +6,8 @@ import NumberStepper from '../components/NumberStepper'
 import PartnerPhotos from '../components/PartnerPhotos'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import { business } from '../config'
-import { driverVehicleOptions } from '../data/driverRegistration'
-import { hotelStatusLabels, registrationLocations } from '../data/hotelRegistration'
+import { driverDistricts, driverVehicleOptions, normalizeDriverVehicleNumber } from '../data/driverRegistration'
+import { hotelStatusLabels } from '../data/hotelRegistration'
 import { driverReceiptSchema, driverSubmissionSchema, ownerDriverSchema } from '../services/driverSchema'
 import type { AdminDriver } from '../services/driverSchema'
 import { HotelError, hotelErrorText } from '../services/hotelService'
@@ -52,13 +52,13 @@ export default function DriverRegistrationPage() {
     <p><Link to="/driver-status">Already registered? Check driver status</Link></p>
     {receipt ? <section className="review-ready" role="status"><h2>Your driver registration has been saved.</h2><p>{hotelStatusLabels[receipt.status]}. Not a confirmed listing or booking.</p><dl className="hotel-receipt"><dt>Driver ID</dt><dd>{receipt.driverId}</dd><dt>Private access code</dt><dd>{receipt.accessCode}</dd></dl><p>Save both values now. Do not share your private code. Contact <a href={`mailto:${business.email}`}>{business.email}</a> if you lose it.</p><Link to="/driver-status" className="button button-dark">Check driver status</Link></section> : <form className="review-submission-form" onSubmit={submit}>
       <fieldset className="hotel-form-fields" disabled={busy}>
-        <label>Full legal name (shown publicly after approval)<input name="fullName" maxLength={100} required autoComplete="name" /></label>
-        <NumberStepper label="Age (private)" name="age" min={18} max={100} />
-        <label>Phone number (masked publicly)<input name="phone" type="tel" required maxLength={30} autoComplete="tel" /><small>One driver registration per Indian phone number; only a masked number is shown publicly.</small></label>
-        <label>Driving licence number (shown masked)<input name="licenceNumber" maxLength={40} minLength={5} required /></label>
-        <label>Vehicle registration number (shown publicly)<input name="vehicleNumber" maxLength={30} minLength={5} required /></label>
+        <label>Full legal name<input name="fullName" maxLength={100} required autoComplete="name" /></label>
+        <NumberStepper label="Age (minimum 18)" name="age" min={18} max={100} />
+        <label>Phone number<input name="phone" type="tel" required maxLength={30} autoComplete="tel" /><small>One driver registration per Indian phone number; only a masked number is shown publicly.</small></label>
+        <label>Driving licence number<input name="licenceNumber" maxLength={40} minLength={5} required /></label>
+        <label>Vehicle registration number<input name="vehicleNumber" maxLength={13} minLength={10} required pattern="JK[0-9]{2}[A-Za-z]{1,2}-[0-9]{4}" placeholder="JK13B-1444 or JK01AB-1485" title="Use JK13B-1444 or JK01AB-1485 format." onBlur={(event) => { event.currentTarget.value = normalizeDriverVehicleNumber(event.currentTarget.value) }} /></label>
         <label>Vehicle<select name="vehicleId" required>{driverVehicleOptions.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.label}</option>)}</select></label>
-        <label>Base location<select name="location">{registrationLocations.map((place) => <option key={place}>{place}</option>)}</select></label>
+        <label>District<select name="location">{driverDistricts.map((district) => <option key={district}>{district}</option>)}</select></label>
         <NumberStepper label="Passenger seats (excluding driver)" name="seats" min={1} max={60} />
         <NumberStepper label="Proposed daily rate (INR)" name="price" min={1} step={100} currency />
         <PartnerPhotos onChange={(next, loading) => { photoVersion.current++; setPhotos(next); setProcessing(loading) }} />
@@ -89,12 +89,13 @@ export function DriverStatusPage() {
     {driver && <section className="admin-review-record hotel-owner-status"><h2>{driver.fullName}</h2><p>{driver.vehicleName} · {driver.location} · {driver.seats} seats</p><p className="hotel-identifier">{driver.driverId}</p><p role="status">{hotelStatusLabels[driver.status]}</p><p>Submitted daily rate: INR {driver.submittedPrice}; reviewed rate: INR {driver.price}.</p>{driver.ownerNote && <p>AVELOF note: {driver.ownerNote}</p>}{driver.status === 'approved' ? <Link to="/drivers">View driver listing</Link> : <p>Not publicly listed. Contact AVELOF for changes.</p>}</section>}
   </section>
 }
-function DriverRecord({ driver, disabled, save }: { driver: AdminDriver; disabled: boolean; save: (driver: AdminDriver, status: HotelStatus, price: number, note: string) => Promise<void> }) {
+function DriverRecord({ driver, disabled, save }: { driver: AdminDriver; disabled: boolean; save: (driver: AdminDriver, status: HotelStatus, price: number, note: string, vehicleNumber: string) => Promise<void> }) {
   const [status, setStatus] = useState<HotelStatus>(driver.status)
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const fields = new FormData(event.currentTarget); await save(driver, status, Number(fields.get('price')), String(fields.get('ownerNote'))) }
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const fields = new FormData(event.currentTarget); await save(driver, status, Number(fields.get('price')), String(fields.get('ownerNote')), String(fields.get('vehicleNumber'))) }
   return <article className="admin-review-record"><h2>{driver.fullName} · {driver.vehicleName}</h2><p className="hotel-identifier">{driver.driverId} · {hotelStatusLabels[driver.status]}</p><p>Private: age {driver.age}, phone {driver.phone}, licence {driver.licenceNumber}, vehicle registration {driver.vehicleNumber}</p><p>Public listing: {driver.fullName} · {driver.maskedPhone} · {driver.location} · {driver.seats} passenger seats</p><p>Submitted daily rate: INR {driver.submittedPrice}</p><div className="hotel-photo-grid"><a href={driver.photo} target="_blank" rel="noreferrer"><img src={driver.photo} alt={`Portrait of ${driver.fullName}`} /></a></div>
     <form onSubmit={submit} className="review-submission-form"><fieldset className="hotel-form-fields" disabled={disabled}>
       <NumberStepper label="Reviewed daily rate (INR)" name="price" min={1} step={100} defaultValue={driver.price} currency />
+      <label>Vehicle registration number<input name="vehicleNumber" required defaultValue={driver.vehicleNumber} pattern="JK[0-9]{2}[A-Za-z]{1,2}-[0-9]{4}" placeholder="JK13B-1444 or JK01AB-1485" title="Use JK13B-1444 or JK01AB-1485 format." onBlur={(event) => { event.currentTarget.value = normalizeDriverVehicleNumber(event.currentTarget.value) }} /></label>
       <label>Driver listing status<select value={status} onChange={(event) => setStatus(hotelStatusSchema.parse(event.target.value))}><option value="pending">Awaiting approval</option><option value="approved">Approve and publish</option><option value="rejected">Reject / hide</option></select></label>
       <label className="review-text-field">Note to driver<textarea name="ownerNote" maxLength={1000} defaultValue={driver.ownerNote} /></label><button className="button button-dark">Save driver price and status</button>
     </fieldset></form>
@@ -115,10 +116,10 @@ export function AdminDriversPage() {
     loadAdminDrivers(filters.page, filters.status, controller.signal).then((data) => { setListing(data); setSignedOut(false) }).catch((failure: unknown) => { if (!controller.signal.aborted) { setListing(null); if (failure instanceof HotelError && failure.status === 401) setSignedOut(true); else setError(hotelErrorText(failure)) } }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
   }, [filters])
-  async function save(driver: AdminDriver, status: HotelStatus, price: number, note: string) {
+  async function save(driver: AdminDriver, status: HotelStatus, price: number, note: string, vehicleNumber: string) {
     if (inFlight.current) return
     inFlight.current = true; setSaving(true); setError('')
-    try { await moderateDriver(driver.id, driver.version, status, price, note); setNotice('Driver price and status saved.'); refresh() }
+    try { await moderateDriver(driver.id, driver.version, status, price, note, vehicleNumber); setNotice('Driver price, vehicle registration and status saved.'); refresh() }
     catch (failure) { if (failure instanceof HotelError && failure.status === 401) { setSignedOut(true); setListing(null) } else setError(hotelErrorText(failure)) }
     finally { setSaving(false); inFlight.current = false }
   }

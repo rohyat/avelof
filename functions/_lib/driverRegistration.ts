@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { driverDetailsSchema, driverPrivateSchema } from '../../src/services/driverSchema.ts'
+import { driverDetailsSchema, driverPrivateSchema, driverVehicleNumberSchema } from '../../src/services/driverSchema.ts'
 import { driverVehicleOptions } from '../../src/data/driverRegistration.ts'
 import { rentalCars } from '../../src/data/catalog.ts'
 import { customerAccessCode } from './enquiryAccess.ts'
@@ -27,8 +27,9 @@ export function publicDriver(row: DriverRow) {
   const vehicle = driverVehicleOptions.find(({ id }) => id === details.vehicleId)
   const catalogVehicle = rentalCars.find(({ id }) => id === details.vehicleId)
   if (!vehicle || !catalogVehicle) throw new Error('Registered driver vehicle is unavailable in the catalog.')
+  const publicVehicleNumber = driverVehicleNumberSchema.safeParse(privateDetails.vehicleNumber)
   return { ...details, id: row.id, driverId: row.driver_id, vehicleName: vehicle.label, maskedPhone: maskedDriverPhone(row.phone),
-    ...(row.directory_credentials_consent ? { vehicleNumber: privateDetails.vehicleNumber, maskedLicenceNumber: maskedDriverLicence(privateDetails.licenceNumber) } : {}),
+    ...(row.directory_credentials_consent ? { maskedLicenceNumber: maskedDriverLicence(privateDetails.licenceNumber), ...(publicVehicleNumber.success ? { vehicleNumber: publicVehicleNumber.data } : {}) } : {}),
     price: row.price, photo: `/api/driver-images/${row.id}/0`, averageRating: row.average_rating ?? null, reviewCount: row.review_count ?? 0 }
 }
 export function adminDriver(row: DriverRow) {

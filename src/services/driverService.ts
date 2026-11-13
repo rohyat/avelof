@@ -23,8 +23,8 @@ export async function lookupDriver(identifier: string, accessCode: string) {
 export async function loadAdminDrivers(page: number, status: HotelStatus | 'all', signal?: AbortSignal) {
   return adminList.parse(await requestHotel(`/api/drivers?${new URLSearchParams({ scope: 'admin', page: String(page), status })}`, 'GET', undefined, signal))
 }
-export async function moderateDriver(id: string, version: number, status: HotelStatus, price: number, ownerNote: string) {
-  return z.object({ driver: adminDriverSchema }).parse(await requestHotel('/api/drivers', 'PATCH', { id, version, status, price, ownerNote })).driver
+export async function moderateDriver(id: string, version: number, status: HotelStatus, price: number, ownerNote: string, vehicleNumber: string) {
+  return z.object({ driver: adminDriverSchema }).parse(await requestHotel('/api/drivers', 'PATCH', { id, version, status, price, ownerNote, vehicleNumber })).driver
 }
 export async function loadPublicDrivers(signal?: AbortSignal, id?: string) {
   const drivers: PublicDriver[] = []

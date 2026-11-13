@@ -8,7 +8,7 @@ const driverId = 'AVELOF-DRV-10001'
 const accessCode = 'b'.repeat(64)
 const driver = {
   id, driverId, fullName: 'Public Driver Name', maskedPhone: '987*****10', vehicleId: 'innova-crysta', age: 30,
-  phone: '9876543210', licenceNumber: 'JK01 123456789', vehicleNumber: 'JK01 AB1234',
+  phone: '9876543210', licenceNumber: 'JK01 123456789', vehicleNumber: 'JK01AB-1234',
   vehicleName: 'Toyota Innova Crysta', location: 'Srinagar', seats: 6,
   price: 3200, submittedPrice: 3500, status: 'pending', version: 0,
   ownerNote: '', createdAt: '2026-11-13T10:00:00Z', photo: `/api/driver-images/${id}/0`,
@@ -47,13 +47,16 @@ test('partner onboarding and approved listings work separately from customer nav
       try {
         await page.goto(`${origin}/register-driver`)
         assert.equal(await page.getByLabel('Driver portrait (one photo required)').getAttribute('multiple'), null)
+        assert.equal(await page.getByRole('button', { name: 'Decrease Age (minimum 18)' }).count(), 1)
+        assert.equal(await page.getByRole('combobox', { name: 'District' }).locator('option').count(), 22)
+        assert.equal(await page.getByRole('textbox', { name: 'Vehicle registration number' }).getAttribute('placeholder'), 'JK13B-1444 or JK01AB-1485')
         assert.equal(await page.getByLabel('Taxes').count(), 0)
         assert.equal(await page.getByLabel('Luggage capacity').count(), 0)
         assert.equal(await page.getByText('Trips offered (select at least one)').count(), 0)
         const fields = {
-          'Full legal name (shown publicly after approval)': driver.fullName,
-          'Age (private)': '30', 'Phone number (masked publicly)': driver.phone,
-          'Driving licence number (shown masked)': driver.licenceNumber, 'Vehicle registration number (shown publicly)': driver.vehicleNumber,
+          'Full legal name': driver.fullName,
+          'Age (minimum 18)': '30', 'Phone number': driver.phone,
+          'Driving licence number': driver.licenceNumber, 'Vehicle registration number': driver.vehicleNumber,
           'Passenger seats (excluding driver)': '6',
           'Proposed daily rate (INR)': '3500',
         }
@@ -102,8 +105,8 @@ test('partner onboarding and approved listings work separately from customer nav
         await page.getByLabel('Driver listing status').selectOption('approved')
         await page.getByLabel('Note to driver').fill('Reviewed and approved.')
         await page.getByRole('button', { name: 'Save driver price and status' }).click()
-        await page.getByRole('status').filter({ hasText: 'Driver price and status saved.' }).waitFor()
-        assert.deepEqual(update, { id, version: 0, status: 'approved', price: 2900.25, ownerNote: 'Reviewed and approved.' })
+        await page.getByRole('status').filter({ hasText: 'Driver price, vehicle registration and status saved.' }).waitFor()
+        assert.deepEqual(update, { id, version: 0, status: 'approved', price: 2900.25, ownerNote: 'Reviewed and approved.', vehicleNumber: driver.vehicleNumber })
         await page.goto(`${origin}/driver-status`)
         await page.getByLabel('Driver ID or phone number').fill(driver.phone)
         await page.getByLabel('Private access code').fill(accessCode)

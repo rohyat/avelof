@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { driverSubmissionSchema } from '../../src/services/driverSchema.ts'
+import { driverSubmissionSchema, driverVehicleNumberSchema } from '../../src/services/driverSchema.ts'
 import { hotelLookupSchema, hotelModerationSchema } from '../../src/services/hotelSchema.ts'
 import { hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
 import { indianPhoneNumber } from '../../src/services/phoneNumbers.ts'
@@ -11,7 +11,7 @@ import type { HotelEnv } from '../_lib/hotelRegistration.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 
 const listSchema = z.object({ scope: z.enum(['public', 'admin']).default('public'), page: z.coerce.number().int().min(1).max(10000).default(1), id: z.uuidv4().optional(), driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/).optional(), status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all') }).strict()
-const moderationSchema = hotelModerationSchema.omit({ breakfastPrice: true, dinnerPrice: true })
+const moderationSchema = hotelModerationSchema.omit({ breakfastPrice: true, dinnerPrice: true }).extend({ vehicleNumber: driverVehicleNumberSchema })
 const legacyDriverId = (id: string) => `AVELOF_DRV_${id.replaceAll('-', '').toUpperCase()}`
 
 async function assignDriverId(DB: D1Database, row: DriverRow) {
@@ -64,9 +64,9 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       try { input = JSON.parse(new TextDecoder().decode(bytes)) } catch { return privateReply({ error: 'Invalid driver request.' }, 400) }
       if (request.method === 'PATCH') {
         const parsed = moderationSchema.safeParse(input)
-        if (!parsed.success) return privateReply({ error: 'Check driver price and status.' }, 400)
-        const { id, version, status, price, ownerNote } = parsed.data
-        const row = await DB.prepare(`UPDATE driver_registrations SET status = ?, price = ?, owner_note = ?, version = version + 1 WHERE id = ? AND version = ? RETURNING ${driverColumns}`).bind(status, price, ownerNote, id, version).first<DriverRow>()
+        if (!parsed.success) return privateReply({ error: 'Check driver price, vehicle registration and status.' }, 400)
+        const { id, version, status, price, ownerNote, vehicleNumber } = parsed.data
+        const row = await DB.prepare(`UPDATE driver_registrations SET status = ?, price = ?, owner_note = ?, private_json = json_set(private_json, '$.vehicleNumber', ?), version = version + 1 WHERE id = ? AND version = ? RETURNING ${driverColumns}`).bind(status, price, ownerNote, vehicleNumber, id, version).first<DriverRow>()
         return row ? privateReply({ driver: adminDriver(row) }) : privateReply({ error: 'This driver changed. Refresh before updating.' }, 409)
       }
       if (!accessConfigured(env)) return privateReply({ error: 'Private driver access is unavailable.' }, 503)

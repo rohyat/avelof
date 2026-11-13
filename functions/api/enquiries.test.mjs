@@ -105,7 +105,7 @@ async function hotelRequest(DB, bucket, method, data, options = {}) {
 function driverPayload() {
   return {
     id: crypto.randomUUID(), fullName: 'Test Public Driver',
-    age: 30, phone: '+91 9876543210', licenceNumber: 'JK01 123456789', vehicleNumber: 'JK01 AB1234',
+    age: 30, phone: '+91 9876543210', licenceNumber: 'JK01 123456789', vehicleNumber: 'JK01AB-1234',
     vehicleId: 'innova-crysta', location: 'Srinagar', seats: 6,
     price: 3200, publicationConsent: true, website: '',
   }
@@ -175,7 +175,7 @@ test('driver approval edits rates, excludes private data and hides photos on rej
     const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
     const Cookie = login.headers.get('Set-Cookie').split(';')[0]
     const adminHash = await hashText('123456789012345678901234567890123456789012345678')
-    const edit = { id: input.id, version: 0, status: 'approved', price: 2900.25, ownerNote: 'Approved after manual review.' }
+    const edit = { id: input.id, version: 0, status: 'approved', price: 2900.25, ownerNote: 'Approved after manual review.', vehicleNumber: input.vehicleNumber }
     const photo = (index = '0', headers = {}) => onDriverImageRequest({ request: new Request(`https://avelof.test/api/driver-images/${input.id}/${index}`, { headers }), params: { id: input.id, index }, env: { DB, ENQUIRY_ACCESS_SECRET: secret, ENQUIRY_ADMIN_CODE_HASH: adminHash } })
     assert.equal((await photo()).status, 404)
     assert.equal((await photo('0', { Cookie })).status, 200)
@@ -207,7 +207,7 @@ test('D1 numeric BLOB arrays are restored to exact JPEG response bytes', () => {
 test('driver validation and failed uploads never return success or leave unreferenced photos', async () => {
   const DB = database(), bucket = hotelBucket()
   try {
-    for (const [index, invalid] of [{ age: 17 }, { seats: 2.5 }, { price: -1 }, { vehicleId: 'Invalid' }].entries()) {
+    for (const [index, invalid] of [{ age: 17 }, { seats: 2.5 }, { price: -1 }, { vehicleId: 'Invalid' }, { location: 'Gulmarg' }, { vehicleNumber: 'JK01AB1234' }, { vehicleNumber: 'DL01AB-1234' }].entries()) {
       assert.equal((await driverRequest(DB, bucket, 'POST', { ...driverPayload(), ...invalid }, { headers: { 'CF-Connecting-IP': `192.0.2.${index + 1}` } })).status, 400)
     }
     assert.equal((await driverRequest(DB, bucket, 'POST', driverPayload(), { photos: [testHotelJpeg, testHotelJpeg], headers: { 'CF-Connecting-IP': '192.0.2.10' } })).status, 400)
