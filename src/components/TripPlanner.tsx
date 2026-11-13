@@ -437,7 +437,7 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
                   <OfferPrice price={displayed.price} />
                   <span>₹{displayed.price.toLocaleString('en-IN')} per day</span>
                 </label>
-                {isTraveller && <fieldset className="vehicle-seat-options planner-vehicle-size"><legend>Seating capacity</legend>{rentalCars.filter((car) => car.category === 'Tempo Traveller').map((car) => <label key={car.id}><input type="radio" name={`${sectionId}-traveller-size`} checked={selectedVehicle.id === car.id} onChange={() => setVehicleId(car.id)} />{car.seats}-seater</label>)}</fieldset>}
+                {isTraveller && <label className="planner-vehicle-size">Seats<select aria-label="Traveller seating capacity" value={selectedVehicle.category === 'Tempo Traveller' ? selectedVehicle.id : vehicle.id} onChange={(event) => setVehicleId(event.target.value)}>{rentalCars.filter((car) => car.category === 'Tempo Traveller').map((car) => <option key={car.id} value={car.id}>{car.seats}-seater</option>)}</select></label>}
               </div>
             })}</div>
           </fieldset>

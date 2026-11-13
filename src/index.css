@@ -175,7 +175,8 @@ body.enquiry-open { overflow: hidden; }
 .planner-vehicle-choice img { width: 100%; aspect-ratio: 2.76; object-fit: contain; }
 .planner-vehicle-choice strong { font-size: 12px; line-height: 1.5; }
 .planner-vehicle-choice span { color: var(--muted); font-size: 12px; }
-.planner-vehicle-size { margin-top: 8px; font-size: 12px; }
+.planner-vehicle-size { display: grid; gap: 5px; margin-top: 8px; font-size: 12px; }
+.planner-vehicle-size select { min-width: 0; width: 100%; padding: 7px; border: 1px solid var(--line); background: #fff; }
 .planner-vehicle-total { display: grid; gap: 6px; padding-block: 16px; border-bottom: 1px solid var(--line); color: var(--forest); }
 .planner-vehicle-total strong { font-size: 16px; }
 .planner-vehicle-total span { font-size: 12px; line-height: 1.5; }
