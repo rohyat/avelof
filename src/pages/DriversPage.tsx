@@ -35,6 +35,9 @@ export default function DriversPage() {
           <Link className="button button-dark" to={`/drivers/${encodeURIComponent(driver.registeredDriverId!)}/reviews`}>View reviews <ArrowRight size={16} /></Link>
         </div>
       </article>)}</div>
+      <div className="driver-directory-register">
+        <Link className="button button-outline" to="/register-driver">Register as a Driver <ArrowRight size={16} /></Link>
+      </div>
     </section>
   </>
 }
