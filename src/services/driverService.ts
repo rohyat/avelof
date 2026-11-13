@@ -37,20 +37,13 @@ export async function loadPublicDrivers(signal?: AbortSignal, id?: string) {
 function catalogDriver(driver: PublicDriver): RentalCar {
   const vehicle = rentalCars.find(({ id }) => id === driver.vehicleId)
   if (!vehicle) throw new Error('Registered driver vehicle is missing from the vehicle catalog.')
-  return { kind: 'car', id: driver.id, registeredDriverId: driver.driverId, catalogVehicleId: driver.vehicleId, driverDisplayName: driver.fullName,
+  return { kind: 'car', id: driver.id, registeredDriverId: driver.driverId, driverDisplayName: driver.fullName,
     driverPhoto: driver.photo, maskedPhone: driver.maskedPhone, name: driver.vehicleName, category: driver.vehicleName,
     driverAverageRating: driver.averageRating, driverReviewCount: driver.reviewCount,
     location: driver.location, seats: driver.seats, price: driver.price,
     image: vehicle.image, gallery: vehicle.gallery,
     description: `${driver.fullName} · ${driver.location}`,
     luggage: 'Confirm with AVELOF', ac: true, tripTypes: [], conditions: [] }
-}
-export function carsWithDriverAvailability(drivers: RentalCar[]) {
-  const counts = new Map<string, number>()
-  for (const driver of drivers) {
-    if (driver.catalogVehicleId) counts.set(driver.catalogVehicleId, (counts.get(driver.catalogVehicleId) ?? 0) + 1)
-  }
-  return rentalCars.map((car) => ({ ...car, approvedDriverCount: counts.get(car.id) ?? 0 }))
 }
 export async function loadPublicDriverByDisplayId(driverId: string, signal?: AbortSignal) {
   const listing = publicList.parse(await requestHotel(`/api/drivers?${new URLSearchParams({ driverId })}`, 'GET', undefined, signal))

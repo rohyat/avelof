@@ -117,7 +117,6 @@ test('partner onboarding and approved listings work separately from customer nav
       const page = await browser.newPage()
       const { age, phone, licenceNumber, vehicleNumber, submittedPrice, status, version, ownerNote, createdAt, ...publicDriver } = driver
       void age; void phone; void licenceNumber; void vehicleNumber; void submittedPrice; void status; void version; void ownerNote; void createdAt
-      const secondPublicDriver = { ...publicDriver, id: '00000000-0000-4000-8000-000000000003', driverId: 'AVELOF-DRV-10002', fullName: 'Second Public Driver', maskedPhone: '912*****89', photo: '/api/driver-images/00000000-0000-4000-8000-000000000003/0' }
       const hotel = {
         id, hotelId: `AVELOF_HTL_${id.replaceAll('-', '').toUpperCase()}`, name: 'Meal Partner Hotel',
         location: 'Gulmarg', category: 'Premium', description: 'A comfortable mountain hotel with optional breakfast and dinner.',
@@ -125,7 +124,7 @@ test('partner onboarding and approved listings work separately from customer nav
         heating: 'Centralised heating', amenities: ['Wi-Fi'], highlights: ['Mountain views'], roomTypes: ['Double room'],
         totalRooms: 10, checkIn: '14:00', checkOut: '11:00', photos: [`/api/hotel-images/${id}/0`],
       }
-      await page.route('**/api/drivers*', (route) => route.fulfill({ json: listing([publicDriver, secondPublicDriver]) }))
+      await page.route('**/api/drivers*', (route) => route.fulfill({ json: listing([publicDriver]) }))
       await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [hotel], total: 1, page: 1, pageSize: 25 } }))
       const submittedReviews = []
       await page.route('**/api/reviews*', (route) => {
@@ -167,8 +166,7 @@ test('partner onboarding and approved listings work separately from customer nav
         await page.goto(`${origin}/car-rentals`)
         const car = page.locator('.catalog-card').filter({ hasText: driver.vehicleName })
         await car.waitFor()
-        await car.getByText('2 approved drivers registered').waitFor()
-        assert.ok((await car.locator('.vehicle-driver-count').textContent()).includes('2 approved drivers registered'))
+        assert.equal(await page.locator('.vehicle-driver-count').count(), 0)
         assert.equal((await car.innerText()).includes(driver.fullName), false)
         assert.equal((await car.innerText()).includes(driver.phone), false)
         assert.equal((await car.innerText()).includes(driver.maskedPhone), false)

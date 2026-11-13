@@ -13,7 +13,7 @@ import VehiclePhotoCaption from '../components/VehiclePhotoCaption'
 import ReviewStars from '../components/ReviewStars'
 import { clearSavedTripPlan } from '../services/tripPlanStorage'
 import { hotelSelectionValue, useRegisteredHotels } from '../services/hotelService'
-import { carsWithDriverAvailability, driverSelectionValue, useRegisteredDrivers } from '../services/driverService'
+import { driverSelectionValue, useRegisteredDrivers } from '../services/driverService'
 import type { CatalogItem, CatalogKind, Hotel, PreparedRequest, RentalCar, TourPackage } from '../types'
 import type { SiteContext } from '../components/SiteLayout'
 
@@ -41,11 +41,11 @@ function SectionHeading({ eyebrow, title, copy, link, to }: { eyebrow: string; t
   return <div className="section-heading"><div><Eyebrow>{eyebrow}</Eyebrow><h2>{title}</h2>{copy && <p>{copy}</p>}</div>{link && to && <Link className="text-link" to={to}>{link}<ArrowRight size={16} /></Link>}</div>
 }
 
-function CatalogCard({ item: initialItem, kind, carOptions = rentalCars }: { item: CatalogItem; kind: CatalogKind; carOptions?: RentalCar[] }) {
+function CatalogCard({ item: initialItem, kind }: { item: CatalogItem; kind: CatalogKind }) {
   const openBooking = useBooking()
   const [searchParams] = useSearchParams()
   const minimumSeats = Number(searchParams.get('seats')) || 0
-  const seatingOptions = initialItem.kind === 'car' && !initialItem.registeredDriverId && initialItem.category === 'Tempo Traveller' ? carOptions.filter((car) => car.category === 'Tempo Traveller' && car.seats >= minimumSeats) : []
+  const seatingOptions = initialItem.kind === 'car' && !initialItem.registeredDriverId && initialItem.category === 'Tempo Traveller' ? rentalCars.filter((car) => car.category === 'Tempo Traveller' && car.seats >= minimumSeats) : []
   const [selectedVehicleId, setSelectedVehicleId] = useState(initialItem.id)
   const item: CatalogItem = seatingOptions.length > 0 ? seatingOptions.find((car) => car.id === selectedVehicleId) ?? seatingOptions[0] : initialItem
   const detailUrl = `${routeFor[kind]}/${item.id}`
@@ -55,7 +55,6 @@ function CatalogCard({ item: initialItem, kind, carOptions = rentalCars }: { ite
       {underDevelopment ? <div className="catalog-image"><img src={item.image} alt={`${item.name}, ${item.location}`} loading="lazy" /><span className="image-tag">Under development</span></div> : <Link to={detailUrl} className="catalog-image"><img src={item.image} alt={item.kind === 'hotel' && !item.registeredHotelId ? 'Illustrative bedroom photo' : `${item.name}, ${item.location}`} loading="lazy" /><span className="image-tag">{item.category}</span><span className="image-arrow"><ArrowUpRight size={17} /></span></Link>}
       <div className="catalog-content"><div className="catalog-meta"><span><MapPin size={13} /> {item.location.split('·')[0]}</span>{item.kind === 'package' && <span>{item.duration}</span>}</div>
         {item.kind === 'car' && <VehiclePhotoCaption vehicle={item} />}
-        {item.kind === 'car' && !item.registeredDriverId && Boolean(item.approvedDriverCount) && <p className="vehicle-driver-count"><Users size={15} /><strong>{item.approvedDriverCount}</strong> approved {item.approvedDriverCount === 1 ? 'driver' : 'drivers'} registered</p>}
         {item.kind === 'car' && item.registeredDriverId && <p className="privacy-note">Driver: {item.driverDisplayName} · {item.maskedPhone}</p>}
         {item.kind === 'hotel' && <p className="privacy-note">{item.registeredHotelId ? 'Hotel-provided photo' : 'Illustrative bedroom photo'}</p>}
         {underDevelopment ? <div className="catalog-title"><h3>{item.name}</h3></div> : <Link to={detailUrl} className="catalog-title"><h3>{seatingOptions.length ? 'Tempo Traveller' : item.name}</h3></Link>}<p className="card-copy">{underDevelopment ? 'We’re working on this package. Please explore Deluxe or Premium for now.' : item.description}</p>
@@ -118,8 +117,6 @@ export function CollectionPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const kind = kindFromPath(location.pathname)
   const registered = useRegisteredHotels(kind === 'hotel')
-  const drivers = useRegisteredDrivers(kind === 'car')
-  const catalogCars = carsWithDriverAvailability(drivers.cars)
   const navigationState = location.state as { tripReturn?: { sectionId?: string; returnPath?: string } } | null
   const tripReturn = kind === 'hotel'
     && (navigationState?.tripReturn?.sectionId === 'custom-trip' || navigationState?.tripReturn?.sectionId === 'package-planner')
@@ -141,7 +138,7 @@ export function CollectionPage() {
     previousPath.current = location.pathname
   }, [location.pathname])
   const [tripFields, setTripFields] = useState<Record<string, string> | null>(null)
-  const items = kind === 'car' ? catalogCars.filter((car) => car.category !== 'Tempo Traveller' || car.id === 'tempo-traveller') : kind === 'hotel' ? [...hotels, ...registered.hotels] : allItems[kind]
+  const items = kind === 'car' ? rentalCars.filter((car) => car.category !== 'Tempo Traveller' || car.id === 'tempo-traveller') : kind === 'hotel' ? [...hotels, ...registered.hotels] : allItems[kind]
   const hotelLocations = [...new Set(items.map((item) => item.location))]
   const category = searchParams.get('category') ?? 'All'
   const maxPrice = searchParams.get('price') ?? 'all'
@@ -169,7 +166,6 @@ export function CollectionPage() {
   return <>
     <section className="page-hero"><div className="page-width"><div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>{headings[kind].label}</span></div><Eyebrow>{headings[kind].label}</Eyebrow><h1>{headings[kind].title}</h1><p>{headings[kind].copy}</p>{kind === 'car' && <Link className="button button-outline" to="/drivers">Meet our drivers <ArrowRight size={16} /></Link>}{kind === 'hotel' && tripReturn && <button className="button button-outline trip-return-button" type="button" onClick={() => navigate(-1)}><ArrowLeft size={16} /> Back to your trip</button>}</div></section>
     <section className="catalog-page page-width">
-      {kind === 'car' && <>{drivers.loading && <p role="status">Loading driver availability...</p>}{drivers.error && <p role="alert" className="enquiry-error">{drivers.error} <button className="text-link" onClick={drivers.reload}>Retry driver availability</button></p>}</>}
       {kind === 'hotel' && <>{registered.loading && <p role="status">Loading registered hotels...</p>}{registered.error && <p className="enquiry-error" role="alert">{registered.error} <button className="text-link" onClick={registered.reload}>Retry loading hotels</button></p>}</>}
       {kind === 'hotel' && <div className="filters-bar">
         <div className="filter-guidance"><strong>Need help choosing?</strong><p>Our local team can help you find the right fit.</p></div>
@@ -178,7 +174,7 @@ export function CollectionPage() {
         <label><span>Price</span><select value={maxPrice} onChange={(event) => updateFilter('price', event.target.value, 'all')}><option value="all">Any price</option><option value="25000">Under ₹25,000</option><option value="35000">Under ₹35,000</option><option value="50000">Under ₹50,000</option></select></label>
         <span className="result-count">{filtered.length} {filtered.length === 1 ? 'option' : 'options'}</span>
       </div>}
-      {filtered.length ? <div className="catalog-grid">{filtered.map((item) => <CatalogCard key={item.id} item={item} kind={kind} carOptions={catalogCars} />)}</div> : <div className="empty-state"><Compass size={28} /><h2>No matches just yet</h2><p>Try another category or clear a filter to see more of Kashmir.</p><button className="button button-outline" onClick={() => setSearchParams({}, { replace: true })}>Clear filters</button></div>}
+      {filtered.length ? <div className="catalog-grid">{filtered.map((item) => <CatalogCard key={item.id} item={item} kind={kind} />)}</div> : <div className="empty-state"><Compass size={28} /><h2>No matches just yet</h2><p>Try another category or clear a filter to see more of Kashmir.</p><button className="button button-outline" onClick={() => setSearchParams({}, { replace: true })}>Clear filters</button></div>}
     </section>
     {kind === 'package' && <TripPlanner onContinue={setTripFields} sectionId="package-planner" />}
     <section className="catalog-note page-width"><div><Eyebrow>Need help?</Eyebrow><h2>Looking for something?</h2><p>Have a question about availability, pricing, or choosing the right option? Contact our team and we’ll help.</p></div><Link className="button button-dark" to="/contact">Contact us <ArrowUpRight size={16} /></Link></section>
