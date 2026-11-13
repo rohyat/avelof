@@ -54,7 +54,7 @@ export default function DestinationsPage() {
         {filtered.length ? <div className="place-list">{filtered.map((place) => <article className="place-entry" key={place.id}>
           <div className="place-travel-facts"><span><MapPin size={16} /><strong>{place.distance}</strong> from Srinagar</span><span><Clock size={16} /><strong>{place.travelTime}</strong> one way</span></div>
           <div className="place-entry-main">
-            <figure><DestinationPhotos places={place.includedPlaces} />{place.includedPlaces.some((included) => !included.photoCredit) && <figcaption>Uncredited images are illustrative travel photography</figcaption>}</figure>
+            <figure><DestinationPhotos places={place.includedPlaces} />{place.includedPlaces.some((included) => !included.photoCredit && !included.photoIsUserProvided && !included.additionalPhotos?.length) && <figcaption>Uncredited images are illustrative travel photography</figcaption>}</figure>
             <div className="place-entry-copy"><p className="eyebrow">{place.count}</p><h2>{place.name}</h2><p>{place.detail}</p><dl><div><dt>Time to spend</dt><dd>{place.suggestedVisit}</dd></div><div><dt>Best season</dt><dd>{place.season}</dd></div></dl>
               <label className="place-select"><input type="checkbox" checked={selectedIds.includes(place.id)} onChange={() => togglePlace(place.id)} /><span>Add {place.name} to my visit</span></label>
             </div>

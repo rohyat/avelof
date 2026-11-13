@@ -249,6 +249,101 @@ current free limits; Pages Functions also consume Workers usage allowances.
 
 ## Frontend architecture
 
+## Hotel Registration
+
+`/register-hotel` accepts one property per normalised Indian phone number, with
+1-5 required photos, a curated location dropdown, AVELOF category (Deluxe: 2-star,
+Premium: 3-star, Luxury: 4-5-star), heating, amenities, check-in/out times, room
+counts for Standard, Deluxe, Premium, Family and Suite types, and selectable
+public highlight points. Each room type starts at one; set unoffered types to
+zero. The total room count is calculated from the selected quantities. Hotel
+descriptions are generated from the chosen category and location.
+These categories are not official star certifications.
+
+New registrations quote INR per room per night for two adults, room only.
+The room-only price defaults to INR 2,000. Breakfast and dinner are optional add-ons for both adults, initially INR 500
+each and editable with plus/minus buttons or direct numeric entry. Taxes are
+stated separately. The same D1 binding as enquiries stores hotel details; R2 stores
+private JPEG photos. The browser resizes JPEG/PNG/WebP uploads (up to 5 MB each)
+to 1920 px and at most 1 MB per photo, removing original metadata. JPEG encoding
+starts at 92% quality, reducing only as needed to fit the size limit. At most
+5 MB of photo data is stored per hotel. The server enforces
+JPEG format, dimensions, count and a bounded multipart body.
+
+Only a successful database write returns a hotel ID and private access code.
+Unchanged retries reuse the ID and do not duplicate rows or alerts.
+`/hotel-status` requires that code plus the hotel ID or registered phone; codes
+are sent in a POST body and are never stored in URLs or browser storage.
+Phone numbers and contact names are not exposed in public hotel responses.
+
+`/admin/panel/hotels` uses the existing signed owner session. Review photos and
+rights, edit the rate, approve, reject or return to pending, and add an owner
+note. Version checks prevent overwriting another edit. Only approved rows and
+their photos appear publicly. Existing catalog stays remain unchanged; approved
+registrations join the hotel catalog, detail pages, enquiry selector and planner.
+New registered rates expose optional meals in hotel cards, details, enquiries
+and the planner, with no invented discount comparison. Older registrations
+retain their original fixed meal plan.
+New submissions queue the existing generic owner push notification once; enable
+owner notifications in the dashboard and configure VAPID as described below.
+
+Before deployment, enable R2 and create the private buckets and D1 table:
+
+```powershell
+npx wrangler r2 bucket create avelof-hotel-photos
+npx wrangler r2 bucket create avelof-hotel-photos-preview
+npm run db:migrate:local
+npm run db:migrate
+npx wrangler d1 migrations apply DB --remote --env preview
+```
+
+`wrangler.jsonc` binds production and preview buckets separately as
+`HOTEL_PHOTOS`. Do not enable public bucket access. `ENQUIRY_ACCESS_SECRET` and
+the existing admin secrets must be configured in both environments. Local
+Wrangler development uses local R2 storage. Run `npm test` for API coverage and
+`npm run test:hotels-ui` against a local server on port 8792 (or set
+`AVELOF_HOTEL_TEST_URL`). Tests use synthetic data and never submit to production.
+The Vite-only `npm run dev` server does not run Pages Functions and cannot save
+partner registrations. Use `npm run build` followed by `npm run dev:cloudflare`
+and open the Wrangler Pages preview URL to test registration locally.
+
+Failed uploads are cleaned up without deleting database-referenced images.
+D1 and R2 are not one transaction: crashes can leave unreferenced objects.
+Audit object keys against `photo_keys_json` before deleting orphaned uploads.
+Rejected properties and photos remain private until administratively removed;
+include these records in retention/deletion procedures. A lost access code
+requires contacting AVELOF; do not expose lookup by phone alone.
+
+## Partner portal and drivers
+
+The footer's `/partners` link separates hotel and driver onboarding from
+customer navigation. Check Bookings and the existing menu remain unchanged.
+Registration is public but rate-limited and approval-only; it is not an
+invitation-only portal.
+
+`/register-driver` collects a driver's full legal name, age (18+), Indian phone
+number, licence number and vehicle registration number. Only the name, masked
+phone number, one driver portrait, vehicle selected from the current rental
+catalog, base location, passenger seats and reviewed daily INR rate are public
+after consent and owner approval. Age, full phone, licence and vehicle
+registration remain private. Vehicle model photos, taxes, luggage, trip types,
+descriptions and fare-condition fields are not collected. The portrait uses the
+same image resizing limits and private `HOTEL_PHOTOS` R2 binding, under a
+separate `drivers/` prefix. Migration
+`0012_driver_registrations.sql` creates the D1 table; apply it in production and
+preview before deployment. No extra photo bucket is required.
+
+A successful save returns a unique driver ID and private access code.
+`/driver-status` requires the ID or phone plus that code. Owners review private
+records and portraits at `/admin/panel/drivers`, edit rates and approve/reject.
+Licence, eligibility, permits, insurance and portrait ownership need manual
+review; the form does not automatically verify them. Approved names and
+portraits appear in `/drivers`; the existing generic vehicle photos are used for
+vehicle listings. Approved vehicles also appear in car rentals, detail pages,
+enquiry selectors and the trip planner. Owner push notifications use the
+existing notification setup. Run `npm run test:partners-ui` against the same
+local preview server as hotel UI tests.
+
 ## Database Reviews
 
 Anyone can submit a review at `/reviews`; no booking ID or prior booking

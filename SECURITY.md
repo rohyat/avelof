@@ -144,6 +144,40 @@ For confirmed bookings, payments or multi-user staff tools, add appropriate
 authorization, verification and audited access rather than exposing D1 tables.
 These browser protections reduce risk; they are not a guarantee against leaks.
 
+## Hotel registrations
+
+Hotel details share the existing server-side D1 binding. Original phone numbers
+are normalised to a unique Indian national number; phone/contact names stay
+private. Status lookup requires both a hotel ID or phone and a deterministic
+HMAC access code scoped separately from customer enquiry codes. It is rate
+limited, same-origin and POST-only; responses are private/no-store. Access codes
+are shown only on a successful matching submission receipt, never publicly or
+in URL/query parameters. The browser does not persist them.
+
+Photos live in private production/preview R2 buckets. A same-origin image
+function checks approval or the signed admin session before reading each object,
+and uses image/jpeg, nosniff and no-store so rejecting a hotel prevents new public
+reads. The client strips original metadata by canvas re-encoding; the server
+checks JPEG framing, size and bounded dimensions. Treat all submitted text and
+images as untrusted: check ownership, guest privacy and property accuracy before
+approval. Do not claim independent star certification or photo verification.
+The CSP allows blob image URLs only for local photo previews, not remote hosts.
+
+Registration requires publication consent and 1-5 photos, each at most 1 MB and
+1920 px in either dimension. Submission and lookup
+rate limits, bounded request bodies, strict dropdown schemas and a honeypot
+provide basic abuse controls, not a substitute for edge bot protection. Unique
+IDs, phone constraints and content hashes handle retries and concurrent inserts.
+Admin price/status edits require signed sessions, same-origin requests and
+version checks. Notifications contain no private owner details.
+
+D1 and R2 writes are not atomic. Failed requests remove only unreferenced
+uploads; if a database result is uncertain, preserve objects rather than risk
+deleting saved photos. Monitor logged cleanup failures and periodically reconcile
+R2 keys against database references. Rejection removes public access but does
+not delete private data; include hotel contact details and photos in retention
+procedures. No automatic retention cleanup or phone OTP service is included.
+
 ## Reviews
 
 Review submissions are untrusted user-generated content. Anyone may submit and,
@@ -205,9 +239,24 @@ AI usage charges are generated. Responses are catalog guidance, not live
 availability, weather, road status, or a booking confirmation. The UI warns
 visitors not to enter personal, payment or booking information.
 
+## Driver registrations
+
+Driver records use server-side D1 and the existing private R2 photo binding.
+After explicit consent and approval, the driver's full legal name, masked phone,
+portrait and reviewed vehicle listing are public. Age, full phone, licence and
+vehicle registration stay owner-only. A driver-scoped HMAC code plus ID or phone
+is required for private POST status lookup. Admin reads/updates and pending
+portrait access require the existing owner session; public portrait responses
+are no-store. Unique phones, bounded single-image uploads, rate limits,
+idempotent saves and versioned moderation follow hotel registration protections.
+Neither identity nor licence validity is automatically verified. Confirm
+identity, portrait ownership and consent before publication. Include driver
+records and their R2 objects in the same retention and orphan-upload audit
+procedures as hotels.
+
 ## Verification
 
-Run `npm run build`, `npm run lint`, `npm test` and `npm run test:trip-chat`. For
+Run `npm run build`, `npm run lint`, and `npm test`. For
 the complete enquiry flow, apply local migrations and use `npm run dev:cloudflare`;
 Vite preview alone has no enquiry API. Check response headers, CSP console
 violations, successful saves, error/retry behavior, optional WhatsApp help and

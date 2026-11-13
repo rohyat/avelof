@@ -1,7 +1,7 @@
 import type { Destination, Hotel, RentalCar, TourPackage, OwnerProvidedGuestReview } from '../types'
 import { vehiclePhotos } from './vehiclePhotos.ts'
 import { hotelPhoto } from './hotelPhotos.ts'
-import { catalogPhotos as photos } from './previewPhotos.ts'
+import { catalogPhotos as photos, providedDestinationPhotos as suppliedPhotos } from './previewPhotos.ts'
 
 const packageCatalog: TourPackage[] = [
   {
@@ -180,7 +180,8 @@ export const ownerProvidedGuestReviews: OwnerProvidedGuestReview[] = [
 
 export const destinations: Destination[] = [
   {
-    id: 'srinagar', name: 'Srinagar', aliases: [], image: photos.lake, count: 'Lake & heritage',
+    id: 'srinagar', name: 'Srinagar', aliases: [], image: suppliedPhotos.dalLake, photoIsUserProvided: true,
+    additionalPhotos: [{ image: suppliedPhotos.tulipGarden, alt: 'Tulip Garden in Srinagar' }, { image: suppliedPhotos.hazratbal, alt: 'Hazratbal Dargah in Srinagar' }], count: 'Lake & heritage',
     distance: '0 km (city base)', travelTime: '15-60 min within the city', maxDriveHours: 1,
     detail: 'Lake mornings, Mughal gardens and old-city lanes make Srinagar a relaxed starting point for the valley.',
     suggestedVisit: '1-2 days', season: 'Year-round; gardens at their best in spring and summer',
@@ -188,7 +189,7 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Dal Lake', detail: 'Shikara rides and lake-side walks; boat charges are separate.' }, { name: 'Mughal gardens', detail: 'Nishat Bagh, Shalimar Bagh and Chashme Shahi.' }, { name: 'Pari Mahal', detail: 'Terraced gardens with views over the lake.' }, { name: 'Old city & Hazratbal', detail: 'Heritage lanes and the lake-side shrine; respect local dress and visiting rules.' }, { name: 'Tulip Garden', detail: 'A seasonal spring visit, subject to official opening dates.' }],
   },
   {
-    id: 'gulmarg', name: 'Gulmarg', aliases: [], image: photos.mountain, count: 'Mountain escape',
+    id: 'gulmarg', name: 'Gulmarg', aliases: [], image: suppliedPhotos.gulmarg, photoIsUserProvided: true, count: 'Mountain escape',
     distance: '50-55 km', travelTime: '1.5-2.5 hours', maxDriveHours: 2.5,
     detail: 'Wide meadows and high mountain scenery, with snow activities in winter and walking trails in warmer months.',
     suggestedVisit: 'Full day or 1-2 nights', season: 'Spring-autumn for meadows; winter for snow',
@@ -196,7 +197,7 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Gulmarg Gondola', detail: 'Kongdori and the higher Apharwat section, when operating.' }, { name: 'Gulmarg meadow', detail: 'Gentle walks around the meadow and golf-course area.' }, { name: 'Drung Waterfall', detail: 'A nearby stop via Tangmarg; winter paths can be icy.' }],
   },
   {
-    id: 'pahalgam', name: 'Pahalgam', aliases: [], image: photos.meadow, count: 'River country',
+    id: 'pahalgam', name: 'Pahalgam', aliases: [], image: suppliedPhotos.pahalgam, photoIsUserProvided: true, count: 'River country',
     distance: '90-100 km', travelTime: '2.5-3.5 hours', maxDriveHours: 3.5,
     detail: 'Pine-fringed paths and the Lidder River reward a slower stay, with several valleys to explore from town.',
     suggestedVisit: '1-2 nights; a day trip is possible but long', season: 'Spring-autumn; winter access depends on snow',
@@ -204,7 +205,8 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Aru Valley', detail: 'Mountain village and meadow scenery beyond the town.' }, { name: 'Betaab Valley', detail: 'River-side scenery with a separate entry fee.' }, { name: 'Chandanwari', detail: 'A higher valley road, subject to seasonal access.' }, { name: 'Baisaran', detail: 'A walking or pony excursion; not a standard car stop.' }, { name: 'Lidder River', detail: 'Riverside walks around Pahalgam.' }],
   },
   {
-    id: 'sonamarg', name: 'Sonamarg', aliases: ['Sonmarg'], image: photos.snow, count: 'Alpine day out',
+    id: 'sonamarg', name: 'Sonamarg', aliases: ['Sonmarg'], image: suppliedPhotos.sonamarg, photoIsUserProvided: true,
+    additionalPhotos: [{ image: suppliedPhotos.greatLakesTrek, alt: 'Kashmir Great Lakes Trek' }], count: 'Alpine day out',
     distance: '80-85 km', travelTime: '2-3 hours', maxDriveHours: 3,
     detail: 'An alpine valley beside the Sind River, with meadow views and access to higher mountain excursions.',
     suggestedVisit: 'Full day or 1 night', season: 'Late spring-autumn; winter operations vary',
@@ -212,7 +214,7 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Thajiwas area', detail: 'Walking or pony excursions towards glacier scenery, depending on conditions.' }, { name: 'Sind River', detail: 'Scenic stops along the valley; avoid entering fast-flowing water.' }, { name: 'Sonamarg meadow', detail: 'Open views and short walks near the town.' }, { name: 'Zoji La', detail: 'An optional onward mountain-pass excursion, not included in the Srinagar estimate; seasonal restrictions apply.' }],
   },
   {
-    id: 'doodhpathri', name: 'Doodhpathri', aliases: ['Dudhpatri', 'Doodhpatri'], image: photos.valley, count: 'Quiet meadow',
+    id: 'doodhpathri', name: 'Doodhpathri', aliases: ['Dudhpatri', 'Doodhpatri'], image: suppliedPhotos.doodhpathri, photoIsUserProvided: true, count: 'Quiet meadow',
     distance: '40-45 km', travelTime: '1.5-2 hours', maxDriveHours: 2,
     detail: 'Rolling grassland and forested slopes, well suited to an unhurried picnic and short meadow walks.',
     suggestedVisit: 'Half to full day', season: 'Late spring-autumn',
@@ -220,7 +222,7 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Doodhpathri meadow', detail: 'Open grassland for gentle walks and a picnic.' }, { name: 'Shaliganga River', detail: 'A walk down to river scenery; wear shoes with grip.' }, { name: 'Tangnar', detail: 'Forest and meadow stops on the approach road.' }],
   },
   {
-    id: 'yusmarg', name: 'Yusmarg', aliases: ['USMRG', 'Yousmarg', 'Yusmarg'], image: photos.meadow, count: 'Meadow & forest',
+    id: 'yusmarg', name: 'Yusmarg', aliases: ['USMRG', 'Yousmarg', 'Yusmarg'], image: suppliedPhotos.yusmarg, photoIsUserProvided: true, count: 'Meadow & forest',
     distance: '45-50 km', travelTime: '1.5-2.5 hours', maxDriveHours: 2.5,
     detail: 'A quieter meadow escape with forest walks and longer trails for guests who want time outdoors.',
     suggestedVisit: 'Full day', season: 'Late spring-autumn',
@@ -245,7 +247,7 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Aharbal Waterfall viewpoints', detail: 'Marked viewpoints around the waterfall gorge.' }, { name: 'Veshu River scenery', detail: 'Forest-side walks on designated paths.' }, { name: 'Kungwattan meadow', detail: 'A separate trekking excursion requiring more time and a guide.' }],
   },
   {
-    id: 'gurez', name: 'Gurez Valley', aliases: ['Dawar'], image: photos.mountain, count: 'Farther afield',
+    id: 'gurez', name: 'Gurez Valley', aliases: ['Dawar'], image: suppliedPhotos.gurez, photoIsUserProvided: true, count: 'Farther afield',
     distance: '125-140 km', travelTime: '5-7 hours', maxDriveHours: 7,
     detail: 'A remote valley beyond Razdan Pass, known for the Kishanganga River and mountain village life.',
     suggestedVisit: '2-3 nights; not a casual day trip', season: 'Usually late spring-autumn, subject to pass opening',
@@ -278,4 +280,3 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Lower Dachigam', detail: 'Permitted nature walks or visits as arranged by park authorities.' }, { name: 'Harwan Garden', detail: 'A nearby garden stop outside the national park.' }],
   },
 ]
-

@@ -106,25 +106,88 @@ test('review carousel preserves layout and supports accessible automatic and man
       } finally { await page.close() }
     })
 
-    await context.test('tablet home actions stay aligned and readable', async () => {
+    await context.test('home shortcut tiles stay clear and readable across screen sizes', async () => {
       const page = await browser.newPage({ viewport: { width: 768, height: 1024 } })
       try {
         await page.goto(origin)
-        await page.locator('.hero-actions .button').last().waitFor()
-        for (const width of [820, 768, 744, 390, 320]) {
-          await page.setViewportSize({ width, height: 900 })
-          const layout = await page.locator('.hero-actions').evaluate((actions) => {
-            const buttons = [...actions.querySelectorAll('.button')]
-            const first = buttons[0].getBoundingClientRect()
-            const secondaryRows = buttons.slice(1).map((button) => Math.round(button.getBoundingClientRect().y))
-            return { count: buttons.length, overflow: document.documentElement.scrollWidth > innerWidth, firstSpansRow: Math.abs(first.width - actions.clientWidth) < 1, secondaryRows, clippedText: buttons.some((button) => button.scrollWidth > button.clientWidth) }
-          })
-          assert.equal(layout.count, 5)
-          assert.equal(layout.overflow, false, `Page overflow at ${width}px`)
-          assert.equal(layout.firstSpansRow, true, `Primary CTA should span the row at ${width}px`)
-          assert.equal(layout.clippedText, false, `CTA text should fit at ${width}px`)
-          assert.equal(new Set(layout.secondaryRows).size, 2, `Secondary actions should align in two rows at ${width}px`)
+        const tiles = page.locator('.home-shortcut-link')
+        const shortcuts = page.getByRole('navigation', { name: 'Explore AVELOF' })
+        await tiles.last().waitFor()
+        assert.deepEqual(await tiles.allTextContents(), ['Plan a trip', 'Packages', 'Cabs', 'Hotels', 'Places', 'Bookings', 'Reviews', 'Contact', 'Partner'])
+        assert.equal(await page.getByRole('button', { name: 'Ask AVELOF' }).count(), 0)
+        assert.ok(await page.getByRole('heading', { name: 'Experience Kashmir Beyond Expectations.' }).isVisible())
+        assert.ok(await page.getByText("Where Kashmir's natural beauty meets warm hospitality, memorable stays and genuine local care.", { exact: true }).isVisible())
+        assert.equal(await page.locator('.home-hero .home-shortcut-link').count(), 0)
+        const homeHero = page.locator('.home-hero')
+        assert.equal(await homeHero.getAttribute('aria-label'), null)
+        assert.match(await homeHero.evaluate((hero) => getComputedStyle(hero).backgroundImage), /homepage-background\.jpg/)
+        assert.equal(await homeHero.locator('img').count(), 0)
+        await page.clock.install()
+        await page.goto(`${origin}/destinations`)
+        const destinationPhotos = [
+          ['Srinagar', 'dal-lake-srinagar.jpg'],
+          ['Gulmarg', 'gulmarg-user.jpg'],
+          ['Pahalgam', 'pahalgam-user.jpg'],
+          ['Sonamarg', 'sonamarg-user.jpg'],
+          ['Yusmarg', 'yusmarg-user.jpg'],
+          ['Doodhpathri', 'doodhpathri-user.jpg'],
+          ['Gurez Valley', 'gurez-valley-user.jpg'],
+        ]
+        for (const [place, filename] of destinationPhotos) {
+          const entry = page.locator('.place-entry').filter({ has: page.getByRole('heading', { name: place, exact: true }) }).first()
+          const image = entry.locator(`img[src$="${filename}"]`)
+          await image.scrollIntoViewIfNeeded()
+          await image.evaluate((img) => img.decode())
+          assert.ok(await image.evaluate((img) => img.naturalWidth > 0), `${filename} should load for ${place}`)
+          assert.equal(await entry.locator('.destination-photo-frame img').count(), 1, `${place} should show only one image at a time`)
         }
+        const srinagar = page.locator('.place-entry').filter({ has: page.getByRole('heading', { name: 'Srinagar', exact: true }) })
+        assert.equal(await srinagar.locator('.destination-photo-frame').getAttribute('data-photo-count'), '3')
+        await page.clock.fastForward(1500)
+        await srinagar.locator('img[src$="tulip-garden-user.jpg"]').waitFor()
+        await page.clock.fastForward(1500)
+        await srinagar.locator('img[src$="hazratbal-user.jpg"]').waitFor()
+        const sonamarg = page.locator('.place-entry').filter({ has: page.getByRole('heading', { name: 'Sonamarg', exact: true }) })
+        assert.equal(await sonamarg.locator('.destination-photo-frame').getAttribute('data-photo-count'), '2')
+        await page.clock.fastForward(1500)
+        await sonamarg.locator('img[src$="kashmir-great-lakes-trek-user.jpg"]').waitFor()
+        await page.goto(origin)
+        await page.getByText('Why choose AVELOF?', { exact: true }).waitFor()
+        assert.ok(await page.getByRole('heading', { name: /Your Kashmir holiday/ }).isVisible())
+        assert.ok(await page.getByText('Rooted in Kashmir', { exact: true }).isVisible())
+        assert.ok(await page.getByText('Stays for your plans', { exact: true }).isVisible())
+        assert.ok(await page.getByText('Comfortable local transport', { exact: true }).isVisible())
+        assert.ok(await page.getByText('Personal travel assistance', { exact: true }).isVisible())
+        assert.equal(await page.getByText(/professionally licensed|registered with J&K Tourism/i).count(), 0)
+        assert.ok(await page.locator('.home-shortcuts').evaluate((shortcuts) => shortcuts.compareDocumentPosition(document.querySelector('.reasons-section')) & Node.DOCUMENT_POSITION_FOLLOWING))
+        assert.equal(await shortcuts.getByRole('link', { name: 'Plan a trip', exact: true }).getAttribute('href'), '#custom-trip')
+        assert.equal(await shortcuts.getByRole('link', { name: 'Packages', exact: true }).getAttribute('href'), '/tour-packages')
+        assert.equal(await shortcuts.getByRole('link', { name: 'Cabs', exact: true }).getAttribute('href'), '/car-rentals')
+        assert.equal(await shortcuts.getByRole('link', { name: 'Hotels', exact: true }).getAttribute('href'), '/hotels')
+        assert.equal(await shortcuts.getByRole('link', { name: 'Places', exact: true }).getAttribute('href'), '/destinations')
+        assert.equal(await shortcuts.getByRole('link', { name: 'Bookings', exact: true }).getAttribute('href'), '/my-enquiries')
+        assert.equal(await shortcuts.getByRole('link', { name: 'Reviews', exact: true }).getAttribute('href'), '/reviews')
+        assert.equal(await shortcuts.getByRole('link', { name: 'Contact', exact: true }).getAttribute('href'), '/contact')
+        assert.equal(await shortcuts.getByRole('link', { name: 'Partner', exact: true }).getAttribute('href'), '/partners')
+        for (const width of [1440, 1060, 900, 821, 820, 768, 744, 390, 320]) {
+          await page.setViewportSize({ width, height: 900 })
+          const layout = await page.locator('.home-shortcut-grid').evaluate((grid) => {
+            const tiles = [...grid.querySelectorAll('.home-shortcut-link')]
+            const rows = new Set(tiles.map((tile) => Math.round(tile.getBoundingClientRect().y)))
+            return { count: tiles.length, overflow: document.documentElement.scrollWidth > innerWidth, rowCount: rows.size, clippedText: tiles.some((tile) => tile.scrollWidth > tile.clientWidth) }
+          })
+          assert.equal(layout.count, 9)
+          assert.equal(layout.overflow, false, `Page overflow at ${width}px`)
+          assert.equal(layout.clippedText, false, `Tile labels should fit at ${width}px`)
+          assert.equal(layout.rowCount, 3, `Tiles should form three balanced rows at ${width}px`)
+        }
+        await page.goto(`${origin}/about`)
+        await page.getByRole('heading', { name: 'Experience Kashmir Beyond Expectations.' }).waitFor()
+        await page.getByRole('heading', { name: 'Your complete Kashmir travel companion.' }).waitFor()
+        await page.getByText('Our promise', { exact: true }).waitFor()
+        assert.ok((await page.locator('.about-promise').innerText()).includes('Your Stay. Your Journey. Your Kashmir Experience.'))
+        assert.equal(await page.getByText(/professionally licensed local drivers/i).count(), 0)
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       } finally { await page.close() }
     })
 

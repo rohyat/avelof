@@ -13,3 +13,17 @@ export const previewPhotos = {
   snow: { place: 'sonamarg', image: catalogPhotos.snow, source: 'https://images.unsplash.com/photo-1517299321609-52687d1bc55a' },
   meadow: { place: 'pahalgam', image: catalogPhotos.meadow, source: 'https://images.unsplash.com/photo-1472396961693-142e6e269027' },
 }
+
+export const providedDestinationPhotos = {
+  homeHero: '/images/destinations/homepage-background.jpg',
+  dalLake: '/images/destinations/dal-lake-srinagar.jpg',
+  pahalgam: '/images/destinations/pahalgam-user.jpg',
+  gulmarg: '/images/destinations/gulmarg-user.jpg',
+  gurez: '/images/destinations/gurez-valley-user.jpg',
+  sonamarg: '/images/destinations/sonamarg-user.jpg',
+  yusmarg: '/images/destinations/yusmarg-user.jpg',
+  doodhpathri: '/images/destinations/doodhpathri-user.jpg',
+  tulipGarden: '/images/destinations/tulip-garden-user.jpg',
+  hazratbal: '/images/destinations/hazratbal-user.jpg',
+  greatLakesTrek: '/images/destinations/kashmir-great-lakes-trek-user.jpg',
+}

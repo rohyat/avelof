@@ -1,0 +1,19 @@
+import { isAdmin, privateReply } from '../../../_lib/enquiryAccess.ts'
+import { driverPhotoKeys } from '../../../_lib/driverRegistration.ts'
+import type { DriverRow } from '../../../_lib/driverRegistration.ts'
+import type { HotelEnv } from '../../../_lib/hotelRegistration.ts'
+export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, params }) => {
+  if (!['GET', 'HEAD'].includes(request.method)) return privateReply({ error: 'Method not allowed.' }, 405)
+  const { id, index } = params
+  if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/.test(id) || typeof index !== 'string' || !/^[0-4]$/.test(index)) return privateReply({ error: 'Photo not found.' }, 404)
+  if (!env.DB || !env.HOTEL_PHOTOS) return privateReply({ error: 'Driver portraits are unavailable.' }, 503)
+  try {
+    const row = await env.DB.prepare('SELECT status, photo_keys_json FROM driver_registrations WHERE id = ?').bind(id).first<Pick<DriverRow, 'status' | 'photo_keys_json'>>()
+    if (!row || row.status !== 'approved' && !await isAdmin(request, env)) return privateReply({ error: 'Photo not found.' }, 404)
+    const key = driverPhotoKeys(row)[Number(index)]
+    if (!key) return privateReply({ error: 'Photo not found.' }, 404)
+    const photo = await env.HOTEL_PHOTOS.get(key)
+    if (!photo) { console.error('Driver portrait missing', { id, index }); return privateReply({ error: 'Driver portrait is unavailable.' }, 503) }
+    return new Response(request.method === 'HEAD' ? null : photo.body, { headers: { 'Content-Type': 'image/jpeg', 'Content-Length': String(photo.size), 'Cache-Control': 'private, no-store', 'Vary': 'Cookie', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'" } })
+  } catch (error) { console.error('Driver portrait request failed', error); return privateReply({ error: 'Driver portrait is temporarily unavailable.' }, 503) }
+}
