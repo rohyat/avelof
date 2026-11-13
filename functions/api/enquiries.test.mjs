@@ -141,22 +141,26 @@ test('driver registration is private, idempotent and unique by phone, with prote
     assert.equal((await driverRequest(DB, bucket, 'POST', { identifier: receipt.driverId, accessCode: '0'.repeat(64) }, { lookup: true })).status, 404)
   } finally { DB.sqlite.close() }
 })
-test('driver ID migration renumbers existing drivers and linked reviews while retaining the legacy access reference', () => {
+test('driver migrations retain legacy access, linked reviews and recorded directory credential consent', () => {
   const sqlite = new DatabaseSync(':memory:')
   try {
     sqlite.exec('PRAGMA foreign_keys = ON')
     const migrations = new URL('../../migrations/', import.meta.url)
     for (const migration of readdirSync(migrations).filter((name) => name.endsWith('.sql') && name < '0016').sort()) sqlite.exec(readFileSync(new URL(migration, migrations), 'utf8'))
-    const id = crypto.randomUUID()
+    const id = 'f902d940-40df-40b9-bfac-0deec4d05ddd'
     const legacyId = `AVELOF_DRV_${id.replaceAll('-', '').toUpperCase()}`
     sqlite.prepare("INSERT INTO driver_registrations (id, driver_id, phone, private_json, details_json, photo_keys_json, submitted_price, price, publication_consent, payload_hash) VALUES (?, ?, '9876543210', '{}', '{}', '[]', 1000, 1000, 1, 'hash')")
       .run(id, legacyId)
     sqlite.prepare("INSERT INTO reviews (id, reviewer_name, booking_id, experience, rating, title, review_text, driver_id, publication_consent, payload_hash, status, published_at) VALUES (?, '', '', 'Driver experience', 5, '', '', ?, 1, 'review-hash', 'published', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))")
       .run(crypto.randomUUID(), legacyId)
     sqlite.exec(readFileSync(new URL('0016_driver_reference_ids.sql', migrations), 'utf8'))
+    sqlite.exec(readFileSync(new URL('0017_driver_directory_credentials.sql', migrations), 'utf8'))
     assert.equal(sqlite.prepare('SELECT driver_id FROM driver_registrations WHERE id = ?').get(id).driver_id, 'AVELOF-DRV-10001')
     assert.equal(sqlite.prepare('SELECT driver_id FROM reviews').get().driver_id, 'AVELOF-DRV-10001')
     assert.equal(sqlite.prepare('SELECT legacy_driver_id FROM driver_reference_numbers WHERE registration_id = ?').get(id).legacy_driver_id, legacyId)
+    const consent = sqlite.prepare('SELECT directory_credentials_consent, directory_credentials_consented_at FROM driver_registrations WHERE id = ?').get(id)
+    assert.equal(consent.directory_credentials_consent, 1)
+    assert.ok(consent.directory_credentials_consented_at)
   } finally { sqlite.close() }
 })
 test('driver approval edits rates, excludes private data and hides photos on rejection', async () => {
@@ -180,8 +184,10 @@ test('driver approval edits rates, excludes private data and hides photos on rej
     assert.equal(driver.price, 2900.25)
     assert.equal(driver.fullName, input.fullName)
     assert.equal(driver.maskedPhone, '987*****10')
+    assert.equal(driver.maskedLicenceNumber, 'JK0********89')
+    assert.equal(driver.vehicleNumber, input.vehicleNumber)
     assert.equal(driver.vehicleName, 'Toyota Innova Crysta')
-    for (const key of ['age', 'phone', 'licenceNumber', 'vehicleNumber', 'private_json', 'ownerNote', 'payload_hash']) assert.equal(driver[key], undefined)
+    for (const key of ['age', 'phone', 'licenceNumber', 'private_json', 'ownerNote', 'payload_hash']) assert.equal(driver[key], undefined)
     assert.equal(driver.photo, `/api/driver-images/${input.id}/0`)
     assert.equal((await photo()).headers.get('Cache-Control'), 'private, no-store')
     assert.equal((await photo('1')).status, 404)

@@ -53,7 +53,7 @@ test('partner onboarding and approved listings work separately from customer nav
         const fields = {
           'Full legal name (shown publicly after approval)': driver.fullName,
           'Age (private)': '30', 'Phone number (masked publicly)': driver.phone,
-          'Driving licence number (private)': driver.licenceNumber, 'Vehicle registration number (private)': driver.vehicleNumber,
+          'Driving licence number (shown masked)': driver.licenceNumber, 'Vehicle registration number (shown publicly)': driver.vehicleNumber,
           'Passenger seats (excluding driver)': '6',
           'Proposed daily rate (INR)': '3500',
         }
@@ -115,8 +115,9 @@ test('partner onboarding and approved listings work separately from customer nav
     })
     await context.test('approved vehicle and optional hotel meals reach booking selectors without private driver data', async () => {
       const page = await browser.newPage()
-      const { age, phone, licenceNumber, vehicleNumber, submittedPrice, status, version, ownerNote, createdAt, ...publicDriver } = driver
-      void age; void phone; void licenceNumber; void vehicleNumber; void submittedPrice; void status; void version; void ownerNote; void createdAt
+      const { age, phone, licenceNumber, submittedPrice, status, version, ownerNote, createdAt, ...publicDriverBase } = driver
+      const publicDriver = { ...publicDriverBase, maskedLicenceNumber: 'JK0********89' }
+      void age; void phone; void licenceNumber; void submittedPrice; void status; void version; void ownerNote; void createdAt
       const hotel = {
         id, hotelId: `AVELOF_HTL_${id.replaceAll('-', '').toUpperCase()}`, name: 'Meal Partner Hotel',
         location: 'Gulmarg', category: 'Premium', description: 'A comfortable mountain hotel with optional breakfast and dinner.',
@@ -142,6 +143,10 @@ test('partner onboarding and approved listings work separately from customer nav
         await directoryCard.waitFor()
         assert.ok((await directoryCard.innerText()).includes(driver.maskedPhone))
         assert.ok((await directoryCard.innerText()).includes(driverId))
+        assert.ok((await directoryCard.innerText()).includes(`Vehicle registration: ${driver.vehicleNumber}`))
+        assert.ok((await directoryCard.innerText()).includes('Driving licence: JK0********89'))
+        assert.equal((await directoryCard.innerText()).includes(driver.licenceNumber), false)
+        assert.ok((await directoryCard.getByRole('link', { name: 'View reviews' }).innerText()).includes('View reviews'))
         assert.ok((await directoryCard.innerText()).includes('4.5 · 2 reviews'))
         assert.equal(await directoryCard.locator('.driver-directory-price').count(), 0)
         assert.equal((await directoryCard.innerText()).includes('3,200'), false)
@@ -149,7 +154,7 @@ test('partner onboarding and approved listings work separately from customer nav
         const portraitBox = await directoryCard.locator('.driver-directory-photo').boundingBox()
         assert.equal(Math.round(portraitBox.width), Math.round(portraitBox.height))
         assert.equal((await directoryCard.innerText()).includes(driver.phone), false)
-        await directoryCard.getByRole('link', { name: 'View reviews about this driver' }).click()
+        await directoryCard.getByRole('link', { name: 'View reviews' }).click()
         await page.getByRole('heading', { name: driver.fullName, exact: true }).waitFor()
         assert.equal(await page.locator('[name="reviewerName"]').getAttribute('required'), null)
         assert.equal(await page.locator('[name="bookingId"]').getAttribute('required'), null)

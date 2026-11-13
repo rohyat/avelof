@@ -48,22 +48,22 @@ export default function DriverRegistrationPage() {
   }
   return <section className="enquiry-access-page page-width">
     <Link className="text-link" to="/partners">Partner with AVELOF</Link>
-    <div className="enquiry-access-heading"><div><p className="eyebrow">Driver partners</p><h1>Register as a driver</h1><p>After approval, your full name, masked phone number, portrait and vehicle details appear in our driver directory. Age, full phone, licence and vehicle registration remain private.</p></div></div>
+    <div className="enquiry-access-heading"><div><p className="eyebrow">Driver partners</p><h1>Register as a driver</h1><p>After approval, your full name, portrait, vehicle details and vehicle registration appear in our driver directory. Your phone and driving-licence numbers are masked; age and full contact details remain private.</p></div></div>
     <p><Link to="/driver-status">Already registered? Check driver status</Link></p>
     {receipt ? <section className="review-ready" role="status"><h2>Your driver registration has been saved.</h2><p>{hotelStatusLabels[receipt.status]}. Not a confirmed listing or booking.</p><dl className="hotel-receipt"><dt>Driver ID</dt><dd>{receipt.driverId}</dd><dt>Private access code</dt><dd>{receipt.accessCode}</dd></dl><p>Save both values now. Do not share your private code. Contact <a href={`mailto:${business.email}`}>{business.email}</a> if you lose it.</p><Link to="/driver-status" className="button button-dark">Check driver status</Link></section> : <form className="review-submission-form" onSubmit={submit}>
       <fieldset className="hotel-form-fields" disabled={busy}>
         <label>Full legal name (shown publicly after approval)<input name="fullName" maxLength={100} required autoComplete="name" /></label>
         <NumberStepper label="Age (private)" name="age" min={18} max={100} />
         <label>Phone number (masked publicly)<input name="phone" type="tel" required maxLength={30} autoComplete="tel" /><small>One driver registration per Indian phone number; only a masked number is shown publicly.</small></label>
-        <label>Driving licence number (private)<input name="licenceNumber" maxLength={40} minLength={5} required /></label>
-        <label>Vehicle registration number (private)<input name="vehicleNumber" maxLength={30} minLength={5} required /></label>
+        <label>Driving licence number (shown masked)<input name="licenceNumber" maxLength={40} minLength={5} required /></label>
+        <label>Vehicle registration number (shown publicly)<input name="vehicleNumber" maxLength={30} minLength={5} required /></label>
         <label>Vehicle<select name="vehicleId" required>{driverVehicleOptions.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.label}</option>)}</select></label>
         <label>Base location<select name="location">{registrationLocations.map((place) => <option key={place}>{place}</option>)}</select></label>
         <NumberStepper label="Passenger seats (excluding driver)" name="seats" min={1} max={60} />
         <NumberStepper label="Proposed daily rate (INR)" name="price" min={1} step={100} currency />
         <PartnerPhotos onChange={(next, loading) => { photoVersion.current++; setPhotos(next); setProcessing(loading) }} />
         <label className="enquiry-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
-        <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I consent to publishing my full name, masked phone number, driver portrait, vehicle, base location, passenger seats and reviewed daily rate after AVELOF approval. My age, full phone number, licence and vehicle registration stay private.</span></label>
+        <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I consent to publishing my full name, masked phone number, masked driving-licence number, driver portrait, vehicle registration, vehicle, base location and passenger seats after AVELOF approval. My age, full phone number and full driving-licence number stay private.</span></label>
         {error && <p className="enquiry-error review-text-field" role="alert">{error}</p>}
         <button type="submit" className="button button-dark" disabled={processing || !photos.length}>{busy ? 'Saving...' : processing ? 'Preparing photos...' : 'Submit driver for approval'}</button>
       </fieldset>

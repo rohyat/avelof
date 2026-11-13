@@ -248,8 +248,9 @@ visitors not to enter personal, payment or booking information.
 
 Driver records and private portrait BLOBs use server-side D1.
 After explicit consent and approval, the driver's full legal name, masked phone,
-portrait and reviewed vehicle listing are public. Age, full phone, licence and
-vehicle registration stay owner-only. A driver-scoped HMAC code plus ID or phone
+masked driving-licence number, vehicle registration, portrait and reviewed vehicle
+listing are public. Age, full phone and full licence stay owner-only. A recorded
+directory-credential consent flag gates the additional public fields. A driver-scoped HMAC code plus ID or phone
 is required for private POST status lookup. Admin reads/updates and pending
 portrait access require the existing owner session; public portrait responses
 are no-store. Unique phones, bounded single-image uploads, rate limits,

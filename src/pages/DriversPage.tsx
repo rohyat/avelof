@@ -9,7 +9,7 @@ export default function DriversPage() {
     <section className="page-hero"><div className="page-width">
       <div className="breadcrumb"><Link to="/">Home</Link><span>/</span><Link to="/car-rentals">Car rentals</Link><span>/</span><span>Our drivers</span></div>
       <p className="eyebrow">Local driver partners</p><h1>Meet your driver.</h1>
-      <p>Browse drivers approved by AVELOF. Full contact details and identity documents are never shown publicly.</p>
+      <p>Browse drivers approved by AVELOF. Phone and driving-licence numbers are masked for privacy.</p>
     </div></section>
     <section className="page-width driver-directory">
       {drivers.loading && <p role="status">Loading approved drivers...</p>}
@@ -26,7 +26,9 @@ export default function DriversPage() {
           <p className="driver-directory-vehicle">{driver.name}</p>
           <p className="driver-directory-facts"><span><MapPin size={15} />{driver.location}</span><span><Users size={15} />{driver.seats} passenger seats</span></p>
           <p className="driver-directory-phone">Phone: {driver.maskedPhone}</p>
-          <Link className="button button-dark" to={`/drivers/${encodeURIComponent(driver.registeredDriverId!)}/reviews`}>View reviews about this driver <ArrowRight size={16} /></Link>
+          {driver.vehicleNumber && <p className="driver-directory-phone">Vehicle registration: {driver.vehicleNumber}</p>}
+          {driver.maskedLicenceNumber && <p className="driver-directory-phone">Driving licence: {driver.maskedLicenceNumber}</p>}
+          <Link className="button button-dark" to={`/drivers/${encodeURIComponent(driver.registeredDriverId!)}/reviews`}>View reviews <ArrowRight size={16} /></Link>
         </div>
       </article>)}</div>
     </section>

@@ -117,7 +117,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     const { id, phone, age, licenceNumber, vehicleNumber, publicationConsent, website, ...details } = data
     void publicationConsent; void website
     insertingId = id
-    const row = await DB.prepare(`INSERT INTO driver_registrations (id, driver_id, phone, private_json, details_json, photo_keys_json, submitted_price, price, publication_consent, payload_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?) ON CONFLICT DO NOTHING RETURNING ${driverColumns}`)
+    const row = await DB.prepare(`INSERT INTO driver_registrations (id, driver_id, phone, private_json, details_json, photo_keys_json, submitted_price, price, publication_consent, payload_hash, directory_credentials_consent, directory_credentials_consented_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 1, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ON CONFLICT DO NOTHING RETURNING ${driverColumns}`)
       .bind(id, legacyDriverId(id), phone, JSON.stringify({ phone, age, licenceNumber, vehicleNumber }), JSON.stringify(details), JSON.stringify(keys), details.price, details.price, payloadHash).first<DriverRow>()
     if (!row) {
       await deleteRegistrationPhotos(DB, keys); keys = []

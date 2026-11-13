@@ -38,7 +38,8 @@ function catalogDriver(driver: PublicDriver): RentalCar {
   const vehicle = rentalCars.find(({ id }) => id === driver.vehicleId)
   if (!vehicle) throw new Error('Registered driver vehicle is missing from the vehicle catalog.')
   return { kind: 'car', id: driver.id, registeredDriverId: driver.driverId, driverDisplayName: driver.fullName,
-    driverPhoto: driver.photo, maskedPhone: driver.maskedPhone, name: driver.vehicleName, category: driver.vehicleName,
+    driverPhoto: driver.photo, maskedPhone: driver.maskedPhone, vehicleNumber: driver.vehicleNumber, maskedLicenceNumber: driver.maskedLicenceNumber,
+    name: driver.vehicleName, category: driver.vehicleName,
     driverAverageRating: driver.averageRating, driverReviewCount: driver.reviewCount,
     location: driver.location, seats: driver.seats, price: driver.price,
     image: vehicle.image, gallery: vehicle.gallery,
