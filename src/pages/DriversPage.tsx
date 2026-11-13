@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, MapPin, Users } from 'lucide-react'
+import { ArrowRight, CircleCheck, MapPin, Users } from 'lucide-react'
 import ReviewStars from '../components/ReviewStars'
 import { useRegisteredDrivers } from '../services/driverService'
 
@@ -27,7 +27,7 @@ export default function DriversPage() {
         </div>
         <div className="driver-directory-details">
           <p className="eyebrow">AVELOF-approved driver</p>
-          <h2>{driver.driverDisplayName}</h2>
+          <div className="driver-directory-name"><h2>{driver.driverDisplayName}</h2><span className="driver-verified-badge" role="img" aria-label="AVELOF-approved driver" title="AVELOF-approved driver"><CircleCheck size={20} aria-hidden="true" /></span></div>
           <p className="driver-directory-id">{driver.registeredDriverId}</p>
           <div className="driver-directory-rating"><ReviewStars rating={driver.driverAverageRating ?? 0} label={driver.driverAverageRating ? `${driver.driverAverageRating.toFixed(1)} out of 5 stars from ${driver.driverReviewCount} reviews` : 'No driver ratings yet'} /><span>{driver.driverAverageRating ? `${driver.driverAverageRating.toFixed(1)} · ${driver.driverReviewCount} ${driver.driverReviewCount === 1 ? 'review' : 'reviews'}` : 'No ratings yet'}</span></div>
           <p className="driver-directory-vehicle">{driver.name}</p>

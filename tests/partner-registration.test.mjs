@@ -141,6 +141,7 @@ test('partner onboarding and approved listings work separately from customer nav
         assert.equal(await page.locator('.driver-directory-card-demo').count(), 0)
         const directoryCard = page.locator('.driver-directory-card').filter({ hasText: driver.fullName })
         await directoryCard.waitFor()
+        assert.equal(await directoryCard.getByLabel('AVELOF-approved driver').count(), 1)
         assert.ok((await directoryCard.innerText()).includes(driver.maskedPhone))
         assert.ok((await directoryCard.innerText()).includes(driverId))
         assert.ok((await directoryCard.innerText()).includes(`Vehicle registration: ${driver.vehicleNumber}`))
