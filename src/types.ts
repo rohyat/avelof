@@ -7,6 +7,8 @@ export interface Destination {
   aliases: string[]
   detail: string
   image: string
+  photoIsUserProvided?: boolean
+  additionalPhotos?: { image: string; alt: string }[]
   photoCredit?: { author: string; source: string; licenseUrl: string }
   count: string
   distance: string
@@ -45,6 +47,11 @@ export interface TourPackage extends CatalogBase {
 
 export interface RentalCar extends CatalogBase {
   kind: 'car'
+  registeredDriverId?: string
+  driverDisplayName?: string
+  driverPhoto?: string
+  maskedPhone?: string
+  taxDetails?: string
   priceOnEnquiry?: boolean
   photoCredit?: { author: string; source: string; license: string; licenseUrl: string }
   seats: number
@@ -56,7 +63,12 @@ export interface RentalCar extends CatalogBase {
 
 export interface Hotel extends CatalogBase {
   kind: 'hotel'
+  registeredHotelId?: string
+  taxDetails?: string
+  totalRooms?: number
   roomOnlyPrice?: number
+  breakfastPrice?: number
+  dinnerPrice?: number
   rateBasis?: string
   mealPlan?: string
   packageId?: string

@@ -253,7 +253,7 @@ export function AdminEnquiriesPage() {
       <label className="full-field">Password<input type="password" value={code} onChange={(event) => setCode(event.target.value)} required maxLength={256} autoComplete="current-password" /></label>
       <button className="button button-dark" disabled={busy} type="submit"><LockKeyhole size={17} /> {busy ? 'Signing in...' : 'Sign in'}</button>
     </form> : <>
-      <nav className="admin-section-nav" aria-label="Owner sections"><span aria-current="page">Enquiries</span><Link to="/admin/panel/reviews">Reviews</Link></nav>
+      <nav className="admin-section-nav" aria-label="Owner sections"><span aria-current="page">Enquiries</span><Link to="/admin/panel/reviews">Reviews</Link><Link to="/admin/panel/hotels">Hotels</Link><Link to="/admin/panel/drivers">Drivers</Link></nav>
       <OwnerPushNotifications />
       <div className="admin-enquiry-toolbar">
         <strong>{total} {total === 1 ? 'enquiry' : 'enquiries'}</strong>

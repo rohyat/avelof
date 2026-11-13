@@ -4,6 +4,8 @@ import { ArrowRight, CalendarDays, Check, CircleCheck, Copy, MessageCircle, X } 
 import { hotels, rentalCars, tourPackages } from '../data/catalog'
 import { createWhatsAppUrl, enquiryPath, formatEnquiryDetails, prepareRequest, saveEnquiry } from '../services/bookingService'
 import { indianPhoneNumber } from '../services/phoneNumbers'
+import { hotelNightlyPrice, hotelSelectionValue, includedHotelMeals, useRegisteredHotels } from '../services/hotelService'
+import { driverSelectionValue, useRegisteredDrivers } from '../services/driverService'
 import HotelRates from './HotelRates'
 import type { BookingKind, BookingPayload, PreparedRequest } from '../types'
 
@@ -23,6 +25,11 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   children?: ReactNode
   submitDisabled?: boolean
 }) {
+  const registered = useRegisteredHotels(kind === 'hotel')
+  const availableHotels = [...hotels, ...registered.hotels]
+  const drivers = useRegisteredDrivers(kind !== 'hotel')
+  const availableCars = [...rentalCars, ...drivers.cars]
+  const [preferredCar, setPreferredCar] = useState(additionalFields.carRental ?? (kind === 'car' ? selectedItem ?? rentalCars[0].name : rentalCars[0].name))
   const [checkInDate, setCheckInDate] = useState(kind === 'package' ? additionalFields.arrivalDate ?? '' : '')
   const [checkOutDate, setCheckOutDate] = useState(kind === 'package' ? additionalFields.departureDate ?? '' : '')
   const plannerDates = kind === 'package' && Boolean(additionalFields.arrivalDate && additionalFields.departureDate && additionalFields.placesToVisit)
@@ -33,11 +40,11 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   const [submitError, setSubmitError] = useState('')
   const pendingRequest = useRef<{ fingerprint: string; request: PreparedRequest } | null>(null)
   const inFlight = useRef(false)
-  const selectedHotel = hotels.find((hotel) => hotel.name === preferredStay) ?? hotels[0]
-  const lockedHotel = kind === 'hotel' ? hotels.find((hotel) => hotel.name === selectedItem) : undefined
+  const selectedHotel = availableHotels.find((hotel) => hotelSelectionValue(hotel) === preferredStay)
+  const lockedHotel = kind === 'hotel' && selectedItem ? selectedHotel : undefined
   const customPackage = kind === 'package' && (packagePreference === 'Custom package' || selectedItem === 'Custom package' || Boolean(additionalFields.placesToVisit))
-  const roomOnlyPrice = selectedHotel.roomOnlyPrice ?? selectedHotel.price
-  const selectedNightlyRate = roomOnlyPrice + (selectedHotel.price - roomOnlyPrice) / 2 * (Number(hotelMeals.breakfast) + Number(hotelMeals.dinner))
+  const selectedNightlyRate = selectedHotel ? hotelNightlyPrice(selectedHotel, hotelMeals.breakfast, hotelMeals.dinner) : 0
+  const includedMeals = selectedHotel?.registeredHotelId && selectedHotel.breakfastPrice === undefined ? includedHotelMeals(selectedHotel) : hotelMeals
   const millisecondsPerDay = 24 * 60 * 60 * 1000
   const nights = checkInDate && checkOutDate ? (Date.parse(checkOutDate) - Date.parse(checkInDate)) / millisecondsPerDay : 0
   const stayDuration = nights > 0 ? `${nights + 1} days, ${nights} ${nights === 1 ? 'night' : 'nights'}` : ''
@@ -47,6 +54,8 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (inFlight.current || submitDisabled || ((kind === 'hotel' || kind === 'package') && !stayDuration) || (kind === 'car' && !rentalDays)) return
+    if (kind === 'hotel' && !selectedHotel) { setSubmitError('Wait for the selected hotel to load, or choose an available hotel.'); return }
+    if (kind !== 'hotel' && preferredCar !== 'No car needed' && !availableCars.some((car) => driverSelectionValue(car) === preferredCar)) { setSubmitError('Wait for your selected vehicle to load, or choose another vehicle.'); return }
     const data = new FormData(event.currentTarget)
     const website = String(data.get('website') ?? '')
     data.delete('website')
@@ -57,7 +66,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       return
     }
     fields.phoneNumber = phone
-    const payload: BookingPayload = { kind, fields: { ...additionalFields, ...fields, ...(kind === 'package' ? { arrivalDate: checkInDate, departureDate: checkOutDate, tripDays: String(nights + 1), tripNights: String(nights) } : {}), ...(kind === 'car' ? { rentalDays: String(rentalDays) } : {}), ...(kind === 'hotel' ? { stayDuration, breakfast: hotelMeals.breakfast ? 'Included' : 'Not included', dinner: hotelMeals.dinner ? 'Included' : 'Not included', nightlyRate: `₹${selectedNightlyRate.toLocaleString('en-IN')} per couple per night` } : {}) } }
+    const payload: BookingPayload = { kind, fields: { ...additionalFields, ...fields, ...(kind === 'package' ? { arrivalDate: checkInDate, departureDate: checkOutDate, tripDays: String(nights + 1), tripNights: String(nights) } : {}), ...(kind === 'car' ? { rentalDays: String(rentalDays) } : {}), ...(kind === 'hotel' ? { stayDuration, breakfast: includedMeals.breakfast ? 'Included' : 'Not included', dinner: includedMeals.dinner ? 'Included' : 'Not included', nightlyRate: selectedHotel?.registeredHotelId ? `INR ${selectedNightlyRate.toLocaleString('en-IN')} per room per night for 2 adults; breakfast ${includedMeals.breakfast ? 'included' : 'excluded'}, dinner ${includedMeals.dinner ? 'included' : 'excluded'}; ${selectedHotel.taxDetails}` : `₹${selectedNightlyRate.toLocaleString('en-IN')} per couple per night` } : {}) } }
     const fingerprint = JSON.stringify(payload)
     if (pendingRequest.current?.fingerprint !== fingerprint) pendingRequest.current = { fingerprint, request: prepareRequest(payload) }
     const request = pendingRequest.current.request
@@ -96,8 +105,8 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
         {tourPackages.filter((item) => !item.underDevelopment).map((item) => <option key={item.id} value={item.name}>{item.name} - {item.duration}</option>)}
       </select></label>)}
     {kind === 'hotel' && (lockedHotel
-      ? <div className="full-field selected-hotel-field"><span>Selected hotel</span><strong>{lockedHotel.name}</strong><input type="hidden" name="preferredStay" value={lockedHotel.name} /></div>
-      : <label className="full-field">Preferred stay<select name="preferredStay" value={preferredStay} onChange={(event) => { setPreferredStay(event.target.value); setHotelMeals({ breakfast: false, dinner: false }) }}>{hotels.map((hotel) => <option key={hotel.id} value={hotel.name}>{hotel.name} - {hotel.location} - {hotel.category.replace(/ package$/i, '')}</option>)}</select></label>)}
+      ? <div className="full-field selected-hotel-field"><span>Selected hotel</span><strong>{lockedHotel.name}</strong><input type="hidden" name="preferredStay" value={hotelSelectionValue(lockedHotel)} /></div>
+      : <label className="full-field">Preferred stay<select name="preferredStay" value={preferredStay} onChange={(event) => { setPreferredStay(event.target.value); setHotelMeals({ breakfast: false, dinner: false }) }}>{selectedItem && !selectedHotel && <option value={selectedItem}>{selectedItem}</option>}{availableHotels.map((hotel) => <option key={hotel.id} value={hotelSelectionValue(hotel)}>{hotel.name} - {hotel.location} - {hotel.category.replace(/ package$/i, '')}</option>)}</select></label>)}
     <fieldset className="guest-fields"><legend>{kind === 'car' ? 'Who will travel?' : 'Who will stay?'}</legend>
       <div className="form-grid">
         <label>Adults<input name="adults" type="number" min="1" max="100" defaultValue="2" required /></label>
@@ -111,14 +120,19 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
         <label><span><CalendarDays size={15} /> End date</span><input name="checkOutDate" type="date" value={checkOutDate} min={earliestCheckout} onChange={(event) => setCheckOutDate(event.target.value)} required /></label>
       </div>
       <p className="privacy-note" role="status">{stayDuration ? <strong>{stayDuration}</strong> : checkInDate && checkOutDate ? 'Check-out must be after check-in.' : null}</p>
-      <HotelRates key={selectedHotel.id} hotel={selectedHotel} onChange={(breakfast, dinner) => setHotelMeals({ breakfast, dinner })} />
-    </> : <label className="full-field">{kind === 'car' ? 'Preferred vehicle' : 'Car rental'}<select name="carRental" defaultValue={additionalFields.carRental ?? (kind === 'car' ? selectedItem ?? rentalCars[0].name : rentalCars[0].name)}>
-      {rentalCars.map((car) => <option key={car.id} value={car.name}>{car.name} - {car.seats} seats</option>)}
+      {registered.loading && <p role="status">Loading registered hotels...</p>}
+      {registered.error && <p className="enquiry-error" role="alert">{registered.error} <button type="button" className="text-link" onClick={registered.reload}>Retry loading hotels</button></p>}
+      {!selectedHotel && !registered.loading && !registered.error && <p className="enquiry-error" role="alert">This selected hotel is no longer available. Choose another hotel.</p>}
+      {selectedHotel && <HotelRates key={selectedHotel.id} hotel={selectedHotel} onChange={(breakfast, dinner) => setHotelMeals({ breakfast, dinner })} />}
+    </> : <label className="full-field">{kind === 'car' ? 'Preferred vehicle' : 'Car rental'}<select name="carRental" value={preferredCar} onChange={(event) => setPreferredCar(event.target.value)}>
+      {!availableCars.some((car) => driverSelectionValue(car) === preferredCar) && preferredCar !== 'No car needed' && <option value={preferredCar}>{preferredCar}</option>}
+      {availableCars.map((car) => <option key={car.id} value={driverSelectionValue(car)}>{car.name} - {car.seats} seats</option>)}
       <option>No car needed</option>
     </select></label>}
+    {kind !== 'hotel' && drivers.error && <p role="alert" className="enquiry-error">{drivers.error} <button className="text-link" type="button" onClick={drivers.reload}>Retry loading vehicles</button></p>}
     {customPackage && <label className="full-field">Custom trip details<textarea name="customDetails" rows={additionalFields.placesToVisit ? 8 : 4} maxLength={20000} defaultValue={formatEnquiryDetails(additionalFields)} /></label>}
     {submitError && <p className="enquiry-error" role="alert">{submitError}</p>}
-    <button className="button button-dark enquiry-submit" type="submit" disabled={submitDisabled || submitting}>{submitting ? 'Saving enquiry...' : 'Submit enquiry'} <ArrowRight size={17} /></button>
+    <button className="button button-dark enquiry-submit" type="submit" disabled={submitDisabled || submitting || (kind === 'hotel' && !selectedHotel)}>{submitting ? 'Saving enquiry...' : 'Submit enquiry'} <ArrowRight size={17} /></button>
     <p className="privacy-note" aria-live="polite">{submitting ? 'Saving your enquiry. Please wait.' : 'By submitting, you agree that AVELOF may store these details, show your selected service and dates with masked contact details in booking lookup, and contact you about your enquiry. This is not a confirmed booking.'}</p>
     <div className="enquiry-help-links">
       <a className="text-link enquiry-help" href={createWhatsAppUrl('Hello AVELOF, I need help with an enquiry.')} target="_blank" rel="noreferrer"><MessageCircle size={17} /> Need help?</a>

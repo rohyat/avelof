@@ -5,6 +5,9 @@ import { Link } from 'react-router-dom'
 import { hotels, rentalCars } from '../data/catalog'
 import { combinedExcursionId, destinationOptionId, destinationOptions } from '../data/destinationOptions'
 import { clearSavedTripPlan, tripPlanStorageKey, tripReturnStorageKey } from '../services/tripPlanStorage'
+import { hotelNightlyPrice, includedHotelMeals, useRegisteredHotels } from '../services/hotelService'
+import { driverSelectionValue, useRegisteredDrivers } from '../services/driverService'
+import type { Hotel } from '../types'
 import HotelRates from './HotelRates'
 import OfferPrice from './OfferPrice'
 import DestinationPhotos from './DestinationPhotos'
@@ -36,7 +39,6 @@ const defaultPlaceIds = ['srinagar', 'gulmarg', 'pahalgam']
 const srinagarExcursions = new Set(['sonamarg', 'doodhpathri', 'yusmarg', combinedExcursionId, 'manasbal', 'dachigam', 'wular'])
 const overnightStops = new Set(['gulmarg', 'pahalgam', 'sonamarg', 'gurez'])
 const tripPlanLifetime = 24 * 60 * 60 * 1000
-const plannerVehicles = rentalCars.filter((car) => car.category !== 'Tempo Traveller' || car.id === 'tempo-traveller')
 
 function placeDays(id: string) {
   return id === 'gurez' ? 3 : 1
@@ -95,13 +97,13 @@ function readTripPlan(sectionId: string): SavedTripPlan {
       return {
         routeTo: plannerStops.some((place) => place.id === saved.routeTo) ? saved.routeTo : undefined,
         stayAt: plannerStops.some((place) => place.id === saved.stayAt) ? saved.stayAt : undefined,
-        hotelId: hotels.some((hotel) => hotel.id === saved.hotelId) ? saved.hotelId : undefined,
+        hotelId: hotels.some((hotel) => hotel.id === saved.hotelId) || (typeof saved.hotelId === 'string' && /^[a-f0-9-]{36}$/.test(saved.hotelId)) ? saved.hotelId : undefined,
         breakfast: saved.breakfast === true,
         dinner: saved.dinner === true,
       }
     })
     const placeIds = Array.isArray(parsed.placeIds) ? [...new Set(parsed.placeIds.filter((id): id is string => typeof id === 'string').map(destinationOptionId).filter((id) => plannerStops.some((place) => place.id === id)))] : []
-    return { savedAt: parsed.savedAt, startDate: parsed.startDate, endDate: parsed.endDate, plans, placeIds, vehicleId: rentalCars.some((car) => car.id === parsed.vehicleId) ? parsed.vehicleId : undefined }
+    return { savedAt: parsed.savedAt, startDate: parsed.startDate, endDate: parsed.endDate, plans, placeIds, vehicleId: rentalCars.some((car) => car.id === parsed.vehicleId) || typeof parsed.vehicleId === 'string' && /^[a-f0-9-]{36}$/.test(parsed.vehicleId) ? parsed.vehicleId : undefined }
   } catch {
     clearSavedTripPlan(sectionId)
     return emptyPlan
@@ -142,9 +144,9 @@ function stayOptions(destinationId: string) {
   return overnightStops.has(destinationId) ? ['srinagar', destinationId] : ['srinagar']
 }
 
-function hotelsAt(locationId: string) {
+function hotelsAt(locationId: string, availableHotels: Hotel[]) {
   const locationName = stopName(locationId).toLowerCase()
-  return hotels.filter((hotel) => hotel.location.toLowerCase().includes(locationName))
+  return availableHotels.filter((hotel) => hotel.location.toLowerCase().includes(locationName))
 }
 
 function SwipeRail({ label, className, children }: { label: string; className: string; children: ReactNode }) {
@@ -222,6 +224,11 @@ function SwipeRail({ label, className, children }: { label: string; className: s
 }
 
 export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: TripPlannerProps) {
+  const registered = useRegisteredHotels(true)
+  const availableHotels = [...hotels, ...registered.hotels]
+  const drivers = useRegisteredDrivers(true)
+  const availableCars = [...rentalCars, ...drivers.cars]
+  const plannerVehicles = availableCars.filter((car) => car.registeredDriverId || car.category !== 'Tempo Traveller' || car.id === 'tempo-traveller')
   const [savedPlan] = useState(() => readTripPlan(sectionId))
   const [startDate, setStartDate] = useState(savedPlan.startDate)
   const [endDate, setEndDate] = useState(savedPlan.endDate)
@@ -230,7 +237,7 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
   const [placeIds, setPlaceIds] = useState<string[]>(savedPlan.placeIds ?? defaultPlaceIds)
   const [placeNotice, setPlaceNotice] = useState('')
   const placeNoticeRef = useRef<HTMLParagraphElement>(null)
-  const selectedVehicle = rentalCars.find((car) => car.id === vehicleId) ?? rentalCars[0]
+  const selectedVehicle = availableCars.find((car) => car.id === vehicleId) ?? rentalCars[0]
   const [minDate] = useState(() => {
     return todayDateValue()
   })
@@ -252,7 +259,7 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
     const routeTo = index === tripDays - 1 ? 'srinagar' : scheduledStops[index] ?? 'srinagar'
     const options = stayOptions(routeTo)
     const stayAt = routeTo === 'gurez' ? 'gurez' : options.includes(saved.stayAt ?? '') ? saved.stayAt! : 'srinagar'
-    const validHotel = hotelsAt(stayAt).some((hotel) => hotel.id === saved.hotelId)
+    const validHotel = hotelsAt(stayAt, availableHotels).some((hotel) => hotel.id === saved.hotelId)
     days.push({ origin, routeTo, stayAt, routeStops: routeStops(origin, routeTo), hotelId: validHotel ? saved.hotelId : undefined, breakfast: validHotel && saved.breakfast, dinner: validHotel && saved.dinner })
     return days
   }, [])
@@ -352,6 +359,7 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
 
   function continueToEnquiry() {
     if (!tripDays) return
+    if (!availableCars.some((car) => car.id === vehicleId)) { setPlaceNotice('Your selected vehicle is unavailable or still loading. Please choose an available vehicle.'); showPlaceError(); return }
     if (capacityError || placeIds.length === 0) {
       if (!capacityError) setPlaceNotice('Please select at least one place to visit before continuing.')
       showPlaceError()
@@ -361,10 +369,10 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
       const date = formatDate(addDays(startDate, index))
       const route = dayRouteLabel(day, index, dayPlans.length)
       const overnight = index < dayPlans.length - 1 ? `; stay overnight in ${stopName(day.stayAt)}` : '; departure day'
-      const selectedHotel = day.hotelId ? hotels.find((hotel) => hotel.id === day.hotelId) : undefined
-      const basePrice = selectedHotel?.roomOnlyPrice ?? selectedHotel?.price ?? 0
-      const rate = basePrice + ((selectedHotel?.price ?? basePrice) - basePrice) / 2 * (Number(Boolean(day.breakfast)) + Number(Boolean(day.dinner)))
-      const mealNote = selectedHotel ? `; breakfast: ${day.breakfast ? 'included' : 'not included'}; dinner: ${day.dinner ? 'included' : 'not included'}; hotel rate: ₹${rate.toLocaleString('en-IN')} per couple per night` : ''
+      const selectedHotel = day.hotelId ? availableHotels.find((hotel) => hotel.id === day.hotelId) : undefined
+      const rate = selectedHotel ? hotelNightlyPrice(selectedHotel, Boolean(day.breakfast), Boolean(day.dinner)) : 0
+      const included = selectedHotel?.registeredHotelId && selectedHotel.breakfastPrice === undefined ? includedHotelMeals(selectedHotel) : { breakfast: day.breakfast, dinner: day.dinner }
+      const mealNote = selectedHotel ? selectedHotel.registeredHotelId ? `; breakfast: ${included.breakfast ? 'included' : 'not included'}; dinner: ${included.dinner ? 'included' : 'not included'}; ${selectedHotel.taxDetails}; hotel ID: ${selectedHotel.registeredHotelId}; hotel rate: INR ${rate.toLocaleString('en-IN')} per room per night for 2 adults` : `; breakfast: ${included.breakfast ? 'included' : 'not included'}; dinner: ${included.dinner ? 'included' : 'not included'}; hotel rate: ₹${rate.toLocaleString('en-IN')} per couple per night` : ''
       const hotelNote = index < dayPlans.length - 1 ? `; hotel: ${selectedHotel?.name ?? 'please recommend a stay'}${mealNote}` : ''
       return `Day ${index + 1} (${date}): ${route}${overnight}${hotelNote}.`
     }).join('\n')
@@ -374,7 +382,7 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
       departureDate: endDate,
       tripDays: String(tripDays),
       tripNights: String(nights),
-      carRental: selectedVehicle.name,
+      carRental: driverSelectionValue(selectedVehicle),
       vehicleDailyRate: `₹${selectedVehicle.price.toLocaleString('en-IN')}`,
       vehicleRentalEstimate: `₹${vehicleTotal.toLocaleString('en-IN')} for ${tripDays} days; excludes hotel costs and optional extras`,
       placesToVisit: itinerary,
@@ -392,6 +400,9 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
       </div>
 
       <div className="trip-planner" aria-label="Customise your Kashmir journey">
+        {drivers.error && <p role="alert" className="enquiry-error">{drivers.error} <button type="button" className="text-link" onClick={drivers.reload}>Retry loading vehicles</button></p>}
+        {registered.loading && <p role="status">Loading registered hotel options...</p>}
+        {registered.error && <p className="enquiry-error" role="alert">{registered.error} <button type="button" className="text-link" onClick={registered.reload}>Retry loading hotels</button></p>}
         <div className="planner-heading">
           <div><span className="planner-kicker">CUSTOMIZE YOUR TRIP</span><h3>Build your trip.</h3></div>
           <span className="planner-local"><MapPin size={15} /> Planned with local care</span>
@@ -420,21 +431,22 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
         <div className="planner-vehicle-section">
           <fieldset className="planner-vehicle-picker"><legend>Choose your vehicle</legend>
             <div className="planner-vehicle-grid">{plannerVehicles.map((vehicle) => {
-              const isTraveller = vehicle.category === 'Tempo Traveller'
-              const selected = isTraveller ? selectedVehicle.category === 'Tempo Traveller' : selectedVehicle.id === vehicle.id
+              const isTraveller = !vehicle.registeredDriverId && vehicle.category === 'Tempo Traveller'
+              const selected = isTraveller ? !selectedVehicle.registeredDriverId && selectedVehicle.category === 'Tempo Traveller' : selectedVehicle.id === vehicle.id
               const displayed = selected ? selectedVehicle : vehicle
               return <div key={vehicle.id} className={`planner-vehicle-choice${selected ? ' is-selected' : ''}`}>
                 <label><input type="radio" name={`${sectionId}-vehicle`} checked={selected} onChange={() => setVehicleId(vehicle.id)} />
                   <img src={vehicle.image} alt={vehicle.name} loading="lazy" />
                   <strong>{isTraveller ? 'Tempo Traveller' : vehicle.name}</strong>
-                  <OfferPrice price={displayed.price} />
+                  {vehicle.registeredDriverId && <span>{vehicle.driverDisplayName} · {vehicle.maskedPhone}</span>}
+                  {!displayed.registeredDriverId && <OfferPrice price={displayed.price} />}
                   <span>₹{displayed.price.toLocaleString('en-IN')} per day</span>
                 </label>
                 {isTraveller && <label className="planner-vehicle-size">Seats<select aria-label="Traveller seating capacity" value={selectedVehicle.category === 'Tempo Traveller' ? selectedVehicle.id : vehicle.id} onChange={(event) => setVehicleId(event.target.value)}>{rentalCars.filter((car) => car.category === 'Tempo Traveller').map((car) => <option key={car.id} value={car.id}>{car.seats}-seater</option>)}</select></label>}
               </div>
             })}</div>
           </fieldset>
-          <div className="planner-vehicle-total" role="status"><OfferPrice price={vehicleTotal} /><strong>Vehicle rental estimate: ₹{vehicleTotal.toLocaleString('en-IN')}</strong><span>₹{selectedVehicle.price.toLocaleString('en-IN')} × {tripDays} days · vehicle only, not the full package price</span></div>
+          <div className="planner-vehicle-total" role="status">{!selectedVehicle.registeredDriverId && <OfferPrice price={vehicleTotal} />}<strong>Vehicle rental estimate: ₹{vehicleTotal.toLocaleString('en-IN')}</strong><span>₹{selectedVehicle.price.toLocaleString('en-IN')} × {tripDays} days · vehicle only, not the full package price</span></div>
         </div>
         </div>}
         {tripDays > 0 && !capacityError ? <div className="day-plans">
@@ -463,7 +475,7 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
                   <div className="planner-field overnight-field">
                     <span>Day {index + 1} · Choose a hotel in {stopName(day.stayAt)} <small className="planner-swipe-hint">Swipe for hotels</small></span>
                     <SwipeRail label={`Day ${index + 1} hotels in ${stopName(day.stayAt)}`} className="planner-hotel-rail">
-                      {hotelsAt(day.stayAt).map((hotel) => <article className={`planner-hotel-card${day.hotelId === hotel.id ? ' is-selected' : ''}`} key={hotel.id}>
+                      {hotelsAt(day.stayAt, availableHotels).map((hotel) => <article className={`planner-hotel-card${day.hotelId === hotel.id ? ' is-selected' : ''}`} key={hotel.id}>
                         <button
                           className="planner-hotel-tile"
                           type="button"
@@ -472,7 +484,7 @@ export default function TripPlanner({ onContinue, sectionId = 'custom-trip' }: T
                         >
                           <span className="planner-hotel-category">{hotel.category}</span>
                           <strong>{hotel.name}</strong>
-                          <img className="planner-hotel-photo" src={hotel.image} alt={`${hotel.name}, illustrative bedroom photo`} loading="lazy" />
+                          <img className="planner-hotel-photo" src={hotel.image} alt={`${hotel.name}, ${hotel.registeredHotelId ? 'hotel-provided photo' : 'illustrative bedroom photo'}`} loading="lazy" />
                         </button>
                         <HotelRates hotel={hotel} meals={{ breakfast: day.hotelId === hotel.id && Boolean(day.breakfast), dinner: day.hotelId === hotel.id && Boolean(day.dinner) }} onChange={(breakfast, dinner) => setPlans((current) => {
                           const next = [...current]

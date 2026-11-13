@@ -9,6 +9,14 @@ import { onRequest } from './enquiries.ts'
 import { onRequest as onAccessRequest } from './enquiry-access.ts'
 import { onRequest as onReviewRequest } from './reviews.ts'
 import { onRequest as onPushRequest } from './push.ts'
+import { onRequest as onHotelRequest } from './hotels.ts'
+import { onRequest as onDriverRequest } from './drivers.ts'
+import { onRequest as onDriverImageRequest } from './driver-images/[id]/[index].ts'
+import { driverAccessCode } from '../_lib/driverRegistration.ts'
+import { onRequest as onHotelStatusRequest } from './hotel-status.ts'
+import { onRequest as onHotelImageRequest } from './hotel-images/[id]/[index].ts'
+import { hotelAccessCode, validHotelJpeg } from '../_lib/hotelRegistration.ts'
+import { hotelPhotoLimit, hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 import { adminCookie, correctAdminUsername, createAdminSession, customerAccessCode, hashText, isAdmin, phoneCandidates, verifyAdminPassword } from '../_lib/enquiryAccess.ts'
 import { indianPhoneNumber } from '../../src/services/phoneNumbers.ts'
@@ -38,6 +46,389 @@ function database() {
     },
   }
 }
+
+const testHotelJpeg = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAf/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAB//2Q==', 'base64')
+function hotelPayload() {
+  return {
+    id: crypto.randomUUID(), name: 'Test Valley Hotel', contactName: 'Hotel Owner', phone: '+91 9876543210',
+    location: 'Gulmarg', category: 'Premium', description: 'A mountain hotel with comfortable rooms and local hospitality.',
+    price: 4200.50, mealPlan: 'Breakfast included', taxDetails: 'Taxes included', heating: 'Centralised heating',
+    amenities: ['Wi-Fi', 'Parking'], highlights: ['Mountain views', 'Near the market'], roomTypes: ['Double room'],
+    checkIn: '14:00', checkOut: '11:00', totalRooms: 12, publicationConsent: true, website: '',
+  }
+}
+function hotelBucket() {
+  const objects = new Map()
+  return {
+    objects,
+    async put(key, bytes) { objects.set(key, new Uint8Array(bytes)) },
+    async delete(keys) { for (const key of Array.isArray(keys) ? keys : [keys]) objects.delete(key) },
+    async get(key) { const bytes = objects.get(key); return bytes ? { body: bytes, size: bytes.length } : null },
+  }
+}
+async function hotelRequest(DB, bucket, method, data, options = {}) {
+  const headers = { Origin: 'https://avelof.test', ...options.headers }
+  let body
+  if (method === 'POST' && !options.lookup) {
+    body = new FormData()
+    body.append('details', JSON.stringify(data))
+    for (const image of options.photos ?? [testHotelJpeg]) body.append('photos', new Blob([image], { type: options.photoType ?? 'image/jpeg' }), 'test.jpg')
+  } else if (data !== undefined) { headers['Content-Type'] = 'application/json'; body = JSON.stringify(data) }
+  const env = {
+    DB, HOTEL_PHOTOS: bucket, ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters',
+    ENQUIRY_ADMIN_CODE_HASH: await hashText('123456789012345678901234567890123456789012345678'),
+    ...options.env,
+  }
+  return (options.handler ?? (options.lookup ? onHotelStatusRequest : onHotelRequest))({
+    request: new Request(`https://avelof.test/api/${options.lookup ? 'hotel-status' : 'hotels'}${options.query ?? ''}`, { method, headers, ...(body ? { body } : {}) }),
+    env, waitUntil: options.waitUntil ?? (() => undefined),
+  })
+}
+
+function driverPayload() {
+  return {
+    id: crypto.randomUUID(), fullName: 'Test Public Driver',
+    age: 30, phone: '+91 9876543210', licenceNumber: 'JK01 123456789', vehicleNumber: 'JK01 AB1234',
+    vehicleId: 'innova-crysta', location: 'Srinagar', seats: 6,
+    price: 3200, publicationConsent: true, website: '',
+  }
+}
+const driverRequest = (DB, bucket, method, data, options = {}) => hotelRequest(DB, bucket, method, data, { ...options, handler: onDriverRequest })
+test('driver registration is private, idempotent and unique by phone, with protected status lookup', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    const input = driverPayload()
+    const response = await driverRequest(DB, bucket, 'POST', input)
+    assert.equal(response.status, 201)
+    const receipt = await response.json()
+    assert.equal(receipt.status, 'pending')
+    assert.equal(receipt.driverId, `AVELOF_DRV_${input.id.replaceAll('-', '').toUpperCase()}`)
+    assert.equal(receipt.accessCode, await driverAccessCode('test-secret-with-more-than-thirty-two-characters', receipt.driverId))
+    assert.deepEqual(await (await driverRequest(DB, bucket, 'POST', input)).json(), receipt)
+    assert.equal(bucket.objects.size, 1)
+    assert.equal((await driverRequest(DB, bucket, 'POST', { ...input, id: crypto.randomUUID(), phone: '9876543210' })).status, 409)
+    assert.equal((await (await driverRequest(DB, bucket, 'GET')).json()).total, 0)
+    assert.equal((await driverRequest(DB, bucket, 'GET', undefined, { query: '?scope=admin' })).status, 401)
+    for (const identifier of [receipt.driverId, input.phone]) {
+      const lookup = await driverRequest(DB, bucket, 'POST', { identifier, accessCode: receipt.accessCode }, { lookup: true })
+      assert.equal(lookup.status, 200)
+      const owner = (await lookup.json()).driver
+      assert.equal(owner.fullName, input.fullName)
+      assert.equal(owner.phone, '9876543210')
+      assert.equal(owner.photo, undefined)
+      assert.equal(owner.accessCode, undefined)
+    }
+    assert.equal((await driverRequest(DB, bucket, 'POST', { identifier: receipt.driverId, accessCode: '0'.repeat(64) }, { lookup: true })).status, 404)
+  } finally { DB.sqlite.close() }
+})
+test('driver approval edits rates, excludes private data and hides photos on rejection', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    const input = driverPayload()
+    assert.equal((await driverRequest(DB, bucket, 'POST', input)).status, 201)
+    const secret = 'test-secret-with-more-than-thirty-two-characters'
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    const adminHash = await hashText('123456789012345678901234567890123456789012345678')
+    const edit = { id: input.id, version: 0, status: 'approved', price: 2900.25, ownerNote: 'Approved after manual review.' }
+    const photo = (index = '0', headers = {}) => onDriverImageRequest({ request: new Request(`https://avelof.test/api/driver-images/${input.id}/${index}`, { headers }), params: { id: input.id, index }, env: { DB, HOTEL_PHOTOS: bucket, ENQUIRY_ACCESS_SECRET: secret, ENQUIRY_ADMIN_CODE_HASH: adminHash } })
+    assert.equal((await photo()).status, 404)
+    assert.equal((await photo('0', { Cookie })).status, 200)
+    assert.equal((await driverRequest(DB, bucket, 'PATCH', edit)).status, 401)
+    assert.equal((await driverRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie, Origin: 'https://elsewhere.test' } })).status, 403)
+    assert.equal((await driverRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })).status, 200)
+    assert.equal((await driverRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })).status, 409)
+    const driver = (await (await driverRequest(DB, bucket, 'GET')).json()).drivers[0]
+    assert.equal(driver.price, 2900.25)
+    assert.equal(driver.fullName, input.fullName)
+    assert.equal(driver.maskedPhone, '987*****10')
+    assert.equal(driver.vehicleName, 'Toyota Innova Crysta')
+    for (const key of ['age', 'phone', 'licenceNumber', 'vehicleNumber', 'private_json', 'ownerNote', 'payload_hash']) assert.equal(driver[key], undefined)
+    assert.equal(driver.photo, `/api/driver-images/${input.id}/0`)
+    assert.equal((await photo()).headers.get('Cache-Control'), 'private, no-store')
+    assert.equal((await photo('1')).status, 404)
+    assert.equal((await driverRequest(DB, bucket, 'PATCH', { ...edit, version: 1, status: 'rejected' }, { headers: { Cookie } })).status, 200)
+    assert.equal((await photo()).status, 404)
+    assert.equal((await (await driverRequest(DB, bucket, 'GET')).json()).total, 0)
+  } finally { DB.sqlite.close() }
+})
+test('driver validation and failed uploads never return success or leave unreferenced photos', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    for (const [index, invalid] of [{ age: 17 }, { seats: 2.5 }, { price: -1 }, { vehicleId: 'Invalid' }].entries()) {
+      assert.equal((await driverRequest(DB, bucket, 'POST', { ...driverPayload(), ...invalid }, { headers: { 'CF-Connecting-IP': `192.0.2.${index + 1}` } })).status, 400)
+    }
+    assert.equal((await driverRequest(DB, bucket, 'POST', driverPayload(), { photos: [testHotelJpeg, testHotelJpeg], headers: { 'CF-Connecting-IP': '192.0.2.10' } })).status, 400)
+    assert.equal((await driverRequest(DB, bucket, 'POST', driverPayload(), { photos: [] })).status, 400)
+  } finally { DB.sqlite.close() }
+  const failedDB = database(), failedBucket = hotelBucket()
+  try {
+    const put = failedBucket.put
+    failedBucket.put = async (key, bytes) => { await put(key, bytes); throw new Error('Synthetic photo failure') }
+    assert.equal((await driverRequest(failedDB, failedBucket, 'POST', driverPayload())).status, 503)
+    assert.equal(failedBucket.objects.size, 0)
+    assert.equal(failedDB.sqlite.prepare('SELECT count(*) AS total FROM driver_registrations').get().total, 0)
+  } finally { failedDB.sqlite.close() }
+})
+test('approved driver selections are preserved in masked booking summaries without private contacts', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    const input = driverPayload()
+    const receipt = await (await driverRequest(DB, bucket, 'POST', input)).json()
+    DB.sqlite.prepare("UPDATE driver_registrations SET status = 'approved' WHERE id = ?").run(input.id)
+    const booking = payload('car')
+    booking.fields.carRental = `Toyota Innova Crysta (${receipt.driverId})`
+    const saved = await (await send(DB, booking)).json()
+    const summary = await (await access(DB, { action: 'booking-summary', reference: saved.reference })).json()
+    assert.equal(summary.booking.bookingDetails.name, booking.fields.carRental)
+    assert.equal(JSON.stringify(summary).includes(input.fullName), false)
+    assert.equal(JSON.stringify(summary).includes(input.licenceNumber), false)
+    DB.sqlite.prepare('UPDATE enquiries SET fields_json = ? WHERE public_reference = ?').run(JSON.stringify({ ...booking.fields, carRental: `Private driver phone (${receipt.driverId})` }), saved.reference)
+    const safe = await (await access(DB, { action: 'booking-summary', reference: saved.reference })).json()
+    assert.equal(JSON.stringify(safe).includes('Private driver phone'), false)
+  } finally { DB.sqlite.close() }
+})
+test('concurrent driver submissions save once and queue one notification', async () => {
+  const DB = database(), bucket = hotelBucket(), tasks = []
+  try {
+    const input = driverPayload()
+    const options = { waitUntil: (task) => tasks.push(task), env: { ENQUIRY_VAPID_PUBLIC_KEY: 'test-public-key', ENQUIRY_VAPID_PRIVATE_KEY: 'test-private-key', ENQUIRY_VAPID_SUBJECT: 'mailto:info@avelof.in' } }
+    const responses = await Promise.all([driverRequest(DB, bucket, 'POST', input, options), driverRequest(DB, bucket, 'POST', input, options)])
+    assert.deepEqual(responses.map((response) => response.status).sort(), [200, 201])
+    assert.equal(bucket.objects.size, 1)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM driver_registrations').get().total, 1)
+    assert.equal(tasks.length, 1)
+    await Promise.all(tasks)
+  } finally { DB.sqlite.close() }
+})
+test('uncertain driver database response preserves saved photos and permits safe retry', async () => {
+  const DB = database(), bucket = hotelBucket()
+  const uncertain = { prepare(sql) {
+    const statement = DB.prepare(sql)
+    if (!sql.startsWith('INSERT INTO driver_registrations')) return statement
+    return { bind(...values) {
+      const bound = statement.bind(...values)
+      return { async first() { await bound.first(); throw new Error('Synthetic lost driver database response') } }
+    } }
+  } }
+  try {
+    const input = driverPayload()
+    assert.equal((await driverRequest(uncertain, bucket, 'POST', input)).status, 503)
+    assert.equal(bucket.objects.size, 1)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM driver_registrations').get().total, 1)
+    assert.equal((await driverRequest(DB, bucket, 'POST', input)).status, 200)
+    assert.equal(bucket.objects.size, 1)
+  } finally { DB.sqlite.close() }
+})
+test('hotel room-only and meal add-on rates survive approval, including free meals', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    const input = { ...hotelPayload(), mealPlan: 'Room only', breakfastPrice: 500, dinnerPrice: 650 }
+    assert.equal((await hotelRequest(DB, bucket, 'POST', input)).status, 201)
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    const edit = { id: input.id, version: 0, status: 'approved', price: 3800, ownerNote: '', breakfastPrice: 0, dinnerPrice: 700 }
+    assert.equal((await hotelRequest(DB, bucket, 'PATCH', { ...edit, dinnerPrice: undefined }, { headers: { Cookie } })).status, 400)
+    assert.equal((await hotelRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })).status, 200)
+    const published = (await (await hotelRequest(DB, bucket, 'GET')).json()).hotels[0]
+    assert.equal(published.price, 3800)
+    assert.equal(published.breakfastPrice, 0)
+    assert.equal(published.dinnerPrice, 700)
+    assert.equal(published.mealPlan, 'Room only')
+  } finally { DB.sqlite.close() }
+})
+
+test('hotel registration persists photos, unique private contact and a stable receipt without publishing before approval', async () => {
+  const DB = database()
+  const bucket = hotelBucket()
+  try {
+    assert.equal(validHotelJpeg(testHotelJpeg), true)
+    const input = hotelPayload()
+    input.id = input.id.toUpperCase()
+    const response = await hotelRequest(DB, bucket, 'POST', input, { photos: Array(5).fill(testHotelJpeg) })
+    assert.equal(response.status, 201)
+    const receipt = await response.json()
+    assert.equal(receipt.saved, true)
+    assert.equal(receipt.id, input.id.toLowerCase())
+    assert.equal(receipt.status, 'pending')
+    assert.equal(receipt.hotelId, `AVELOF_HTL_${input.id.replaceAll('-', '').toUpperCase()}`)
+    assert.equal(receipt.accessCode, await hotelAccessCode('test-secret-with-more-than-thirty-two-characters', receipt.hotelId))
+    assert.equal(bucket.objects.size, 5)
+    const retry = await hotelRequest(DB, bucket, 'POST', input, { photos: Array(5).fill(testHotelJpeg) })
+    assert.equal(retry.status, 200)
+    assert.deepEqual(await retry.json(), receipt)
+    assert.equal(bucket.objects.size, 5)
+    const duplicate = await hotelRequest(DB, bucket, 'POST', { ...input, id: crypto.randomUUID(), phone: '9876543210' })
+    assert.equal(duplicate.status, 409)
+    assert.equal(bucket.objects.size, 5)
+    assert.equal((await (await hotelRequest(DB, bucket, 'GET')).json()).total, 0)
+    const lookup = await hotelRequest(DB, bucket, 'POST', { identifier: input.phone, accessCode: receipt.accessCode }, { lookup: true })
+    assert.equal(lookup.status, 200)
+    const owner = (await lookup.json()).hotel
+    assert.equal(owner.status, 'pending')
+    assert.equal(owner.phone, '9876543210')
+    assert.equal(owner.photos, undefined)
+    assert.equal(owner.accessCode, undefined)
+    assert.equal(owner.payload_hash, undefined)
+    assert.equal((await hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: '0'.repeat(64) }, { lookup: true })).status, 404)
+    assert.equal((await hotelRequest(DB, bucket, 'GET', undefined, { query: '?scope=admin' })).status, 401)
+  } finally { DB.sqlite.close() }
+})
+
+test('hotel moderation publishes edited prices only with owner auth and hides photos again on rejection', async () => {
+  const DB = database()
+  const bucket = hotelBucket()
+  try {
+    const input = hotelPayload()
+    const receipt = await (await hotelRequest(DB, bucket, 'POST', input, { photos: Array(5).fill(testHotelJpeg) })).json()
+    const edit = { id: input.id, version: 0, status: 'approved', price: 3900.25, ownerNote: 'Approved at the agreed rate.' }
+    assert.equal((await hotelRequest(DB, bucket, 'PATCH', edit)).status, 401)
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    const photoEnv = { DB, HOTEL_PHOTOS: bucket, ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters', ENQUIRY_ADMIN_CODE_HASH: await hashText('123456789012345678901234567890123456789012345678') }
+    const photoRequest = (headers = {}, method = 'GET', index = '0') => onHotelImageRequest({ request: new Request(`https://avelof.test/api/hotel-images/${input.id}/${index}`, { headers, method }), params: { id: input.id, index }, env: photoEnv })
+    assert.equal((await photoRequest()).status, 404)
+    assert.equal((await photoRequest({ Cookie })).status, 200)
+    assert.equal((await hotelRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie, Origin: 'https://other.test' } })).status, 403)
+    assert.equal((await hotelRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })).status, 200)
+    assert.equal((await hotelRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })).status, 409)
+    const feed = (await (await hotelRequest(DB, bucket, 'GET')).json()).hotels
+    assert.equal(feed.length, 1)
+    assert.equal(feed[0].photos.length, 5)
+    assert.equal(feed[0].price, edit.price)
+    assert.equal(feed[0].hotelId, receipt.hotelId)
+    for (const key of ['phone', 'contactName', 'ownerNote', 'payload_hash', 'photo_keys_json', 'accessCode', 'version']) assert.equal(feed[0][key], undefined)
+    const image = await photoRequest()
+    assert.equal(image.status, 200)
+    assert.equal(image.headers.get('Content-Type'), 'image/jpeg')
+    assert.equal(image.headers.get('Cache-Control'), 'private, no-store')
+    assert.deepEqual(Buffer.from(await image.arrayBuffer()), testHotelJpeg)
+    assert.equal((await photoRequest({}, 'GET', '4')).status, 200)
+    assert.equal((await photoRequest({}, 'GET', '5')).status, 404)
+    assert.equal((await photoRequest({}, 'HEAD')).status, 200)
+    assert.equal((await (await photoRequest({}, 'HEAD')).arrayBuffer()).byteLength, 0)
+    assert.equal((await hotelRequest(DB, bucket, 'PATCH', { ...edit, version: 1, status: 'rejected', ownerNote: 'Please contact us.' }, { headers: { Cookie } })).status, 200)
+    assert.equal((await (await hotelRequest(DB, bucket, 'GET')).json()).total, 0)
+    assert.equal((await photoRequest()).status, 404)
+    assert.equal((await photoRequest({}, 'GET', '4')).status, 404)
+    const owner = (await (await hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: receipt.accessCode }, { lookup: true })).json()).hotel
+    assert.equal(owner.status, 'rejected')
+    assert.equal(owner.price, edit.price)
+    assert.equal(owner.ownerNote, 'Please contact us.')
+  } finally { DB.sqlite.close() }
+})
+
+test('hotel JPEG validation accepts 1920px and 1 MB boundaries but rejects larger images', () => {
+  const frame = testHotelJpeg.indexOf(Buffer.from([0xff, 0xc0]))
+  assert.ok(frame > 0)
+  const image = Buffer.from(testHotelJpeg)
+  image.writeUInt16BE(1920, frame + 5)
+  image.writeUInt16BE(1920, frame + 7)
+  assert.equal(validHotelJpeg(image), true)
+  image.writeUInt16BE(1921, frame + 7)
+  assert.equal(validHotelJpeg(image), false)
+  const padded = Buffer.concat([testHotelJpeg.subarray(0, -2), Buffer.alloc(hotelPhotoLimit - testHotelJpeg.length), testHotelJpeg.subarray(-2)])
+  assert.equal(validHotelJpeg(padded), true)
+  assert.equal(validHotelJpeg(Buffer.concat([padded.subarray(0, -2), Buffer.alloc(1), padded.subarray(-2)])), false)
+})
+
+test('hotel validation enforces dropdowns, consent, pricing and image limits', async () => {
+  const DB = database()
+  const bucket = hotelBucket()
+  try {
+    for (const change of [{ publicationConsent: false }, { location: 'Unknown' }, { category: 'Six star' }, { phone: '123' }, { price: 0 }, { price: 4.123 }, { highlights: [] }, { website: 'spam' }, { heating: '' }, { checkIn: '25:00' }]) {
+      assert.equal((await hotelRequest(DB, bucket, 'POST', { ...hotelPayload(), ...change })).status, 400)
+      DB.sqlite.exec('DELETE FROM enquiry_access_limits')
+    }
+    for (const options of [{ photos: [] }, { photos: Array(6).fill(testHotelJpeg) }, { photos: [Buffer.from('not an image')] }, { photoType: 'image/svg+xml' }]) {
+      assert.equal((await hotelRequest(DB, bucket, 'POST', hotelPayload(), options)).status, 400)
+      DB.sqlite.exec('DELETE FROM enquiry_access_limits')
+    }
+    assert.equal((await hotelRequest(DB, bucket, 'POST', hotelPayload(), { photos: [Buffer.alloc(hotelUploadLimit + 1)] })).status, 413)
+    assert.equal((await hotelRequest(DB, bucket, 'POST', hotelPayload(), { headers: { Origin: 'https://other.test' } })).status, 403)
+    assert.equal(bucket.objects.size, 0)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM hotel_registrations').get().total, 0)
+  } finally { DB.sqlite.close() }
+})
+
+test('hotel upload failure cleans up only its own images and never confirms storage', async () => {
+  const DB = database()
+  const bucket = hotelBucket()
+  let count = 0
+  bucket.put = async (key, bytes) => { if (++count === 2) throw new Error('R2 test outage'); bucket.objects.set(key, bytes) }
+  try {
+    const response = await hotelRequest(DB, bucket, 'POST', hotelPayload(), { photos: [testHotelJpeg, testHotelJpeg] })
+    assert.equal(response.status, 503)
+    assert.equal((await response.json()).saved, undefined)
+    assert.equal(bucket.objects.size, 0)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM hotel_registrations').get().total, 0)
+    assert.equal((await hotelRequest(DB, undefined, 'POST', hotelPayload())).status, 503)
+  } finally { DB.sqlite.close() }
+})
+test('approved registered hotel selections are preserved in masked enquiry summaries without echoing arbitrary text', async () => {
+  const DB = database()
+  const bucket = hotelBucket()
+  try {
+    const input = hotelPayload()
+    const receipt = await (await hotelRequest(DB, bucket, 'POST', input)).json()
+    DB.sqlite.prepare("UPDATE hotel_registrations SET status = 'approved' WHERE id = ?").run(input.id)
+    const booking = payload('hotel')
+    booking.fields.preferredStay = `${input.name} (${receipt.hotelId})`
+    const saved = await (await send(DB, booking)).json()
+    const lookup = await access(DB, { action: 'booking-summary', reference: saved.reference })
+    const result = await lookup.json()
+    assert.equal(result.booking.bookingDetails.name, booking.fields.preferredStay)
+    assert.equal(JSON.stringify(result).includes(input.contactName), false)
+    const injection = 'Private contact details'
+    DB.sqlite.prepare('UPDATE enquiries SET fields_json = ? WHERE public_reference = ?').run(JSON.stringify({ ...booking.fields, preferredStay: `${injection} (${receipt.hotelId})` }), saved.reference)
+    const safe = await (await access(DB, { action: 'booking-summary', reference: saved.reference })).json()
+    assert.equal(safe.booking.bookingDetails.name, 'Hotel selection pending')
+    assert.equal(JSON.stringify(safe).includes(injection), false)
+  } finally { DB.sqlite.close() }
+})
+
+test('concurrent hotel retries keep one row, one photo set and one notification', async () => {
+  const DB = database()
+  const bucket = hotelBucket()
+  const tasks = []
+  const options = { waitUntil: (task) => tasks.push(task), env: { ENQUIRY_VAPID_PUBLIC_KEY: 'test-public-key', ENQUIRY_VAPID_PRIVATE_KEY: 'test-private-key', ENQUIRY_VAPID_SUBJECT: 'mailto:info@avelof.in' } }
+  try {
+    const input = hotelPayload()
+    const responses = await Promise.all([hotelRequest(DB, bucket, 'POST', input, options), hotelRequest(DB, bucket, 'POST', input, options)])
+    assert.deepEqual(responses.map((response) => response.status).sort(), [200, 201])
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM hotel_registrations').get().total, 1)
+    assert.equal(bucket.objects.size, 1)
+    assert.equal(tasks.length, 1)
+    await Promise.all(tasks)
+  } finally { DB.sqlite.close() }
+})
+
+test('an uncertain hotel database insert never deletes photos referenced by a saved row', async () => {
+  const DB = database()
+  const bucket = hotelBucket()
+  const uncertainDB = {
+    prepare(sql) {
+      const statement = DB.prepare(sql)
+      if (!sql.startsWith('INSERT INTO hotel_registrations')) return statement
+      return { bind(...values) {
+        const bound = statement.bind(...values)
+        return { async first() { await bound.first(); throw new Error('Database response lost after insert') } }
+      } }
+    },
+  }
+  try {
+    const input = hotelPayload()
+    const response = await hotelRequest(uncertainDB, bucket, 'POST', input)
+    assert.equal(response.status, 503)
+    assert.equal((await response.json()).saved, undefined)
+    assert.equal(bucket.objects.size, 1)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM hotel_registrations').get().total, 1)
+    const retry = await hotelRequest(DB, bucket, 'POST', input)
+    assert.equal(retry.status, 200)
+    assert.equal((await retry.json()).saved, true)
+    assert.equal(bucket.objects.size, 1)
+  } finally { DB.sqlite.close() }
+})
 
 function payload(kind = 'package') {
   return {
@@ -417,7 +808,7 @@ test('push subscriptions are private to the owner and can be enabled or removed 
   } finally { DB.sqlite.close() }
 })
 
-test('new bookings and reviews queue one owner push only after a new insert', async () => {
+test('new bookings, reviews and hotels queue one owner push only after a new insert', async () => {
   const DB = database()
   const vapid = { ENQUIRY_VAPID_PUBLIC_KEY: 'test-public-key', ENQUIRY_VAPID_PRIVATE_KEY: 'test-private-key', ENQUIRY_VAPID_SUBJECT: 'mailto:info@avelof.in' }
   const tasks = []
@@ -435,6 +826,13 @@ test('new bookings and reviews queue one owner push only after a new insert', as
     assert.equal(tasks.length, 1)
     await Promise.all(tasks.splice(0))
     assert.equal((await reviewRequest(DB, 'POST', review, { env: vapid, waitUntil })).status, 200)
+    assert.equal(tasks.length, 0)
+    const hotel = hotelPayload()
+    const bucket = hotelBucket()
+    assert.equal((await hotelRequest(DB, bucket, 'POST', hotel, { env: vapid, waitUntil })).status, 201)
+    assert.equal(tasks.length, 1)
+    await Promise.all(tasks.splice(0))
+    assert.equal((await hotelRequest(DB, bucket, 'POST', hotel, { env: vapid, waitUntil })).status, 200)
     assert.equal(tasks.length, 0)
   } finally { DB.sqlite.close() }
 })

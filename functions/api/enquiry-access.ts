@@ -3,6 +3,9 @@ import { accessConfigured, adminCookie, allowAccessAttempt, correctAdminUsername
 import type { AccessEnv } from '../_lib/enquiryAccess.ts'
 import { indianPhoneNumber } from '../../src/services/phoneNumbers.ts'
 import { requestedBooking } from '../../src/services/bookingDetails.ts'
+import { hotelDetailsSchema } from '../../src/services/hotelSchema.ts'
+import { driverDetailsSchema } from '../../src/services/driverSchema.ts'
+import { driverVehicleOptions } from '../../src/data/driverRegistration.ts'
 import { hotels, rentalCars, tourPackages } from '../../src/data/catalog.ts'
 import type { BookingKind } from '../../src/types.ts'
 
@@ -59,12 +62,35 @@ function summary(row: EnquiryRow, maskContacts = false) {
   return { reference: row.public_reference, kind: row.kind, status: row.booking_status, statusVersion: row.booking_status_version, statusUpdatedAt: row.booking_status_updated_at, createdAt: row.created_at, fields }
 }
 
-function publicSummary(row: EnquiryRow) {
+async function publicSummary(row: EnquiryRow, database: D1Database) {
   const fields: unknown = JSON.parse(row.fields_json)
   const source = fields && typeof fields === 'object' ? fields as Record<string, unknown> : {}
   const selected: Record<string, string> = {}
   if (typeof source.preferredStay === 'string' && hotels.some((hotel) => hotel.name === source.preferredStay)) selected.preferredStay = source.preferredStay
+  if (!selected.preferredStay && typeof source.preferredStay === 'string') {
+    const match = /\((AVELOF_HTL_[A-F0-9]{32})\)$/.exec(source.preferredStay)
+    if (match) {
+      const hotel = await database.prepare("SELECT details_json FROM hotel_registrations WHERE hotel_id = ? AND status = 'approved'").bind(match[1]).first<{ details_json: string }>()
+      if (hotel) {
+        const details = hotelDetailsSchema.parse(JSON.parse(hotel.details_json))
+        const name = `${details.name} (${match[1]})`
+        if (source.preferredStay === name) selected.preferredStay = name
+      }
+    }
+  }
   if (typeof source.carRental === 'string' && rentalCars.some((car) => car.name === source.carRental)) selected.carRental = source.carRental
+  if (!selected.carRental && typeof source.carRental === 'string') {
+    const match = /\((AVELOF_DRV_[A-F0-9]{32})\)$/.exec(source.carRental)
+    if (match) {
+      const driver = await database.prepare("SELECT details_json FROM driver_registrations WHERE driver_id = ? AND status = 'approved'").bind(match[1]).first<{ details_json: string }>()
+      if (driver) {
+        const details = driverDetailsSchema.parse(JSON.parse(driver.details_json))
+        const vehicle = driverVehicleOptions.find(({ id }) => id === details.vehicleId)
+        const name = vehicle ? `${vehicle.label} (${match[1]})` : ''
+        if (source.carRental === name) selected.carRental = name
+      }
+    }
+  }
   if (typeof source.packagePreference === 'string' && (tourPackages.some((item) => item.name === source.packagePreference) || ['Custom package', 'Stay or car only'].includes(source.packagePreference))) selected.packagePreference = source.packagePreference
   if (row.kind === 'package' && (source.packagePreference === 'Custom package' || typeof source.placesToVisit === 'string' && source.placesToVisit.trim())) selected.packagePreference = 'Custom package'
   for (const key of ['checkInDate', 'checkOutDate', 'startDate', 'endDate', 'arrivalDate', 'departureDate']) {
@@ -153,18 +179,18 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env }) => {
       if (referencePattern.test(reference)) {
         const row = await env.DB.prepare(`SELECT ${enquiryColumns} FROM enquiries WHERE public_reference = ?`).bind(reference).first<EnquiryRow>()
         if (!row) return privateReply({ error: 'No matching booking requests.' }, 404)
-        return privateReply({ bookings: [publicSummary(row)] })
+        return privateReply({ bookings: [await publicSummary(row, env.DB)] })
       }
       const candidates = phoneCandidates(action.identifier)
       if (!candidates.length) return privateReply({ error: 'Enter a valid booking ID or phone number.' }, 400)
       const result = await env.DB.prepare(`SELECT ${enquiryColumns} FROM enquiries WHERE phone_lookup IN (?, ?) ORDER BY created_at DESC, public_reference DESC LIMIT 25`).bind(candidates[0], candidates[1]).all<EnquiryRow>()
       if (!result.results.length) return privateReply({ error: 'No matching booking requests.' }, 404)
-      return privateReply({ bookings: result.results.map(publicSummary) })
+      return privateReply({ bookings: await Promise.all(result.results.map((row) => publicSummary(row, env.DB!))) })
     }
     const row = await env.DB.prepare(`SELECT ${enquiryColumns}, access_code_hash FROM enquiries WHERE public_reference = ?`).bind(action.reference).first<EnquiryRow>()
     if (action.action === 'booking-summary') {
       if (!row) return privateReply({ error: 'No matching enquiry. Check your booking ID.' }, 404)
-      return privateReply({ booking: publicSummary(row) })
+      return privateReply({ booking: await publicSummary(row, env.DB) })
     }
     const suppliedHash = await hashText(action.accessCode)
     if (!row?.access_code_hash || !equalHashes(suppliedHash, row.access_code_hash)) return privateReply({ error: 'No matching enquiry. Check the ID and private code.' }, 404)
