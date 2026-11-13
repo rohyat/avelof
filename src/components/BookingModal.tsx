@@ -5,7 +5,6 @@ import { hotels, rentalCars, tourPackages } from '../data/catalog'
 import { createWhatsAppUrl, enquiryPath, formatEnquiryDetails, prepareRequest, saveEnquiry } from '../services/bookingService'
 import { indianPhoneNumber } from '../services/phoneNumbers'
 import { hotelNightlyPrice, hotelSelectionValue, includedHotelMeals, useRegisteredHotels } from '../services/hotelService'
-import { driverSelectionValue, useRegisteredDrivers } from '../services/driverService'
 import HotelRates from './HotelRates'
 import type { BookingKind, BookingPayload, PreparedRequest } from '../types'
 
@@ -15,6 +14,11 @@ interface BookingModalProps {
   initialFields?: Record<string, string>
   initialRequest?: PreparedRequest
   onClose: () => void
+}
+
+function catalogCarSelection(value?: string) {
+  if (value === 'No car needed') return value
+  return rentalCars.find((car) => value === car.name || value?.startsWith(`${car.name} (AVELOF-DRV-`))?.name ?? rentalCars[0].name
 }
 
 export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additionalFields = {}, children, submitDisabled = false }: {
@@ -27,9 +31,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
 }) {
   const registered = useRegisteredHotels(kind === 'hotel')
   const availableHotels = [...hotels, ...registered.hotels]
-  const drivers = useRegisteredDrivers(kind !== 'hotel')
-  const availableCars = [...rentalCars, ...drivers.cars]
-  const [preferredCar, setPreferredCar] = useState(additionalFields.carRental ?? (kind === 'car' ? selectedItem ?? rentalCars[0].name : rentalCars[0].name))
+  const [preferredCar, setPreferredCar] = useState(catalogCarSelection(additionalFields.carRental ?? (kind === 'car' ? selectedItem : undefined)))
   const [checkInDate, setCheckInDate] = useState(kind === 'package' ? additionalFields.arrivalDate ?? '' : '')
   const [checkOutDate, setCheckOutDate] = useState(kind === 'package' ? additionalFields.departureDate ?? '' : '')
   const plannerDates = kind === 'package' && Boolean(additionalFields.arrivalDate && additionalFields.departureDate && additionalFields.placesToVisit)
@@ -55,7 +57,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     event.preventDefault()
     if (inFlight.current || submitDisabled || ((kind === 'hotel' || kind === 'package') && !stayDuration) || (kind === 'car' && !rentalDays)) return
     if (kind === 'hotel' && !selectedHotel) { setSubmitError('Wait for the selected hotel to load, or choose an available hotel.'); return }
-    if (kind !== 'hotel' && preferredCar !== 'No car needed' && !availableCars.some((car) => driverSelectionValue(car) === preferredCar)) { setSubmitError('Wait for your selected vehicle to load, or choose another vehicle.'); return }
+    if (kind !== 'hotel' && preferredCar !== 'No car needed' && !rentalCars.some((car) => car.name === preferredCar)) { setSubmitError('Choose an available vehicle.'); return }
     const data = new FormData(event.currentTarget)
     const website = String(data.get('website') ?? '')
     data.delete('website')
@@ -125,11 +127,9 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       {!selectedHotel && !registered.loading && !registered.error && <p className="enquiry-error" role="alert">This selected hotel is no longer available. Choose another hotel.</p>}
       {selectedHotel && <HotelRates key={selectedHotel.id} hotel={selectedHotel} onChange={(breakfast, dinner) => setHotelMeals({ breakfast, dinner })} />}
     </> : <label className="full-field">{kind === 'car' ? 'Preferred vehicle' : 'Car rental'}<select name="carRental" value={preferredCar} onChange={(event) => setPreferredCar(event.target.value)}>
-      {!availableCars.some((car) => driverSelectionValue(car) === preferredCar) && preferredCar !== 'No car needed' && <option value={preferredCar}>{preferredCar}</option>}
-      {availableCars.map((car) => <option key={car.id} value={driverSelectionValue(car)}>{car.name} - {car.seats} seats</option>)}
+      {rentalCars.map((car) => <option key={car.id} value={car.name}>{car.name} - {car.seats} seats</option>)}
       <option>No car needed</option>
     </select></label>}
-    {kind !== 'hotel' && drivers.error && <p role="alert" className="enquiry-error">{drivers.error} <button className="text-link" type="button" onClick={drivers.reload}>Retry loading vehicles</button></p>}
     {customPackage && <label className="full-field">Custom trip details<textarea name="customDetails" rows={additionalFields.placesToVisit ? 8 : 4} maxLength={20000} defaultValue={formatEnquiryDetails(additionalFields)} /></label>}
     {submitError && <p className="enquiry-error" role="alert">{submitError}</p>}
     <button className="button button-dark enquiry-submit" type="submit" disabled={submitDisabled || submitting || (kind === 'hotel' && !selectedHotel)}>{submitting ? 'Saving enquiry...' : 'Submit enquiry'} <ArrowRight size={17} /></button>

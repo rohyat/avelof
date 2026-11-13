@@ -48,6 +48,8 @@ export interface TourPackage extends CatalogBase {
 export interface RentalCar extends CatalogBase {
   kind: 'car'
   registeredDriverId?: string
+  catalogVehicleId?: string
+  approvedDriverCount?: number
   driverDisplayName?: string
   driverPhoto?: string
   maskedPhone?: string

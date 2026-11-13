@@ -117,6 +117,7 @@ test('partner onboarding and approved listings work separately from customer nav
       const page = await browser.newPage()
       const { age, phone, licenceNumber, vehicleNumber, submittedPrice, status, version, ownerNote, createdAt, ...publicDriver } = driver
       void age; void phone; void licenceNumber; void vehicleNumber; void submittedPrice; void status; void version; void ownerNote; void createdAt
+      const secondPublicDriver = { ...publicDriver, id: '00000000-0000-4000-8000-000000000003', driverId: 'AVELOF-DRV-10002', fullName: 'Second Public Driver', maskedPhone: '912*****89', photo: '/api/driver-images/00000000-0000-4000-8000-000000000003/0' }
       const hotel = {
         id, hotelId: `AVELOF_HTL_${id.replaceAll('-', '').toUpperCase()}`, name: 'Meal Partner Hotel',
         location: 'Gulmarg', category: 'Premium', description: 'A comfortable mountain hotel with optional breakfast and dinner.',
@@ -124,7 +125,7 @@ test('partner onboarding and approved listings work separately from customer nav
         heating: 'Centralised heating', amenities: ['Wi-Fi'], highlights: ['Mountain views'], roomTypes: ['Double room'],
         totalRooms: 10, checkIn: '14:00', checkOut: '11:00', photos: [`/api/hotel-images/${id}/0`],
       }
-      await page.route('**/api/drivers*', (route) => route.fulfill({ json: listing([publicDriver]) }))
+      await page.route('**/api/drivers*', (route) => route.fulfill({ json: listing([publicDriver, secondPublicDriver]) }))
       await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [hotel], total: 1, page: 1, pageSize: 25 } }))
       const submittedReviews = []
       await page.route('**/api/reviews*', (route) => {
@@ -164,15 +165,19 @@ test('partner onboarding and approved listings work separately from customer nav
         assert.equal(driverReview.rating, 5)
         assert.equal(driverReview.reviewText, '')
         await page.goto(`${origin}/car-rentals`)
-        const car = page.locator('.catalog-card').filter({ hasText: driver.fullName })
+        const car = page.locator('.catalog-card').filter({ hasText: driver.vehicleName })
         await car.waitFor()
-        assert.ok((await car.innerText()).includes(driver.fullName))
+        await car.getByText('2 approved drivers registered').waitFor()
+        assert.ok((await car.locator('.vehicle-driver-count').textContent()).includes('2 approved drivers registered'))
+        assert.equal((await car.innerText()).includes(driver.fullName), false)
         assert.equal((await car.innerText()).includes(driver.phone), false)
-        assert.ok((await car.innerText()).includes(driver.maskedPhone))
-        assert.equal((await car.innerText()).includes('Before offer'), false)
+        assert.equal((await car.innerText()).includes(driver.maskedPhone), false)
+        assert.equal(await page.locator('.catalog-card').filter({ hasText: driver.fullName }).count(), 0)
+        assert.equal((await car.innerText()).includes('Before offer'), true)
         await car.getByRole('button', { name: 'Book Now' }).click()
         await page.locator('[name="carRental"]').waitFor()
-        assert.equal(await page.locator('[name="carRental"]').inputValue(), `${driver.vehicleName} (${driverId})`)
+        assert.equal(await page.locator('[name="carRental"]').inputValue(), driver.vehicleName)
+        assert.equal((await page.locator('[name="carRental"]').innerText()).includes(driverId), false)
         await page.goto(`${origin}/hotels`)
         const stay = page.locator('.catalog-card').filter({ hasText: hotel.name })
         await stay.waitFor()
@@ -227,10 +232,12 @@ test('partner onboarding and approved listings work separately from customer nav
         const planner = page.locator('.trip-planner')
         await planner.getByLabel('Start date').fill('2027-01-10')
         await planner.getByLabel('End date').fill('2027-01-14')
-        const vehicle = planner.locator('.planner-vehicle-choice').filter({ hasText: driver.fullName })
+        const vehicle = planner.locator('.planner-vehicle-choice').filter({ hasText: driver.vehicleName })
         await vehicle.getByRole('radio').check()
-        assert.equal((await vehicle.innerText()).includes('Before offer'), false)
-        assert.ok((await planner.locator('.planner-vehicle-total').innerText()).includes('16,000'))
+        assert.equal((await planner.innerText()).includes(driver.fullName), false)
+        assert.equal((await planner.innerText()).includes(driverId), false)
+        assert.equal((await vehicle.innerText()).includes('Before offer'), true)
+        assert.ok((await planner.locator('.planner-vehicle-total').innerText()).includes('17,500'))
         await planner.getByRole('button', { name: 'Stay in Gulmarg', exact: true }).first().click()
         const plannedHotel = planner.locator('.planner-hotel-card').filter({ hasText: hotel.name }).first()
         await plannedHotel.getByLabel('Breakfast', { exact: false }).check()
@@ -238,7 +245,8 @@ test('partner onboarding and approved listings work separately from customer nav
         assert.ok((await plannedHotel.locator('.hotel-rates').innerText()).includes('5,200'))
         await planner.getByRole('button', { name: 'Continue with this plan' }).click()
         await page.locator('.enquiry-form [name="carRental"]').waitFor()
-        assert.equal(await page.locator('.enquiry-form [name="carRental"]').inputValue(), `${driver.vehicleName} (${driverId})`)
+        assert.equal(await page.locator('.enquiry-form [name="carRental"]').inputValue(), driver.vehicleName)
+        assert.equal((await page.locator('.enquiry-form [name="carRental"]').innerText()).includes(driverId), false)
       } finally { await page.close() }
     })
   } finally { await browser.close() }
