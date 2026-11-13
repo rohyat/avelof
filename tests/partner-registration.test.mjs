@@ -140,7 +140,7 @@ test('partner onboarding and approved listings work separately from customer nav
       const publicDriver = { ...publicDriverBase, maskedLicenceNumber: 'JK0********89' }
       void age; void phone; void licenceNumber; void status; void version; void ownerNote; void createdAt
       const hotel = {
-        id, hotelId: `AVELOF_HTL_${id.replaceAll('-', '').toUpperCase()}`, name: 'Meal Partner Hotel',
+        id, hotelId: 'AVELOF_HTL_10001GLM', name: 'Meal Partner Hotel',
         location: 'Gulmarg', category: 'Premium', description: 'A comfortable mountain hotel with optional breakfast and dinner.',
         price: 4000, breakfastPrice: 500, dinnerPrice: 700, mealPlan: 'Room only', taxDetails: 'Taxes included',
         heating: 'Centralised heating', amenities: ['Wi-Fi'], highlights: ['Mountain views'], roomTypes: ['Double room'],

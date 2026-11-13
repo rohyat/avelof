@@ -6,7 +6,7 @@ import { hotelPhotoLimit } from '../src/data/hotelRegistration.ts'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
 const id = '00000000-0000-4000-8000-000000000001'
-const hotelId = `AVELOF_HTL_${id.replaceAll('-', '').toUpperCase()}`
+const hotelId = 'AVELOF_HTL_10001GLM'
 const accessCode = 'VALL3210'
 const hotel = {
   id, hotelId, name: 'Valley Partner Hotel', contactName: 'Private Partner', phone: '9876543210',
@@ -89,7 +89,7 @@ test('hotel registration, private lookup and moderation integrate with public st
           assert.equal(buffer.readUInt16BE(frame + 5), 1344)
           assert.equal(buffer.readUInt16BE(frame + 7), 1920)
         }
-        return route.fulfill({ status: fail ? 503 : 201, json: fail ? { error: 'Photo storage is unavailable.' } : { saved: true, id: saved.id, hotelId: `AVELOF_HTL_${saved.id.replaceAll('-', '').toUpperCase()}`, status: 'pending', accessCode } })
+        return route.fulfill({ status: fail ? 503 : 201, json: fail ? { error: 'Photo storage is unavailable.' } : { saved: true, id: saved.id, hotelId, status: 'pending', accessCode } })
       })
       try {
         await page.goto(`${origin}/register-hotel`)

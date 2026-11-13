@@ -1,7 +1,8 @@
 import { hotelLookupSchema } from '../../src/services/hotelSchema.ts'
 import { allowAccessAttempt, equalHashes, privateReply, sameOrigin } from '../_lib/enquiryAccess.ts'
 import { indianPhoneNumber } from '../../src/services/phoneNumbers.ts'
-import { hotelAccessCode, hotelColumns, limitedBody, publicHotel } from '../_lib/hotelRegistration.ts'
+import { hotelLookupIdPattern } from '../../src/data/hotelRegistration.ts'
+import { hotelAccessCode, hotelColumns, limitedBody, publicHotel, resolveHotelId } from '../_lib/hotelRegistration.ts'
 import type { HotelEnv, HotelRow } from '../_lib/hotelRegistration.ts'
 
 export const onRequest: PagesFunction<HotelEnv> = async ({ request, env }) => {
@@ -19,8 +20,9 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env }) => {
     if (!parsed.success) return privateReply({ error: 'Enter your hotel ID or phone number and status access code.' }, 400)
     const identifier = parsed.data.identifier.toUpperCase()
     const phone = indianPhoneNumber(identifier)
-    if (!phone && !/^AVELOF_HTL_[A-F0-9]{32}$/.test(identifier)) return privateReply({ error: 'Enter a valid hotel ID or Indian phone number.' }, 400)
-    const row = await env.DB.prepare(`SELECT ${hotelColumns} FROM hotel_registrations WHERE hotel_id = ? OR phone = ?`).bind(identifier, phone || null).first<HotelRow>()
+    if (!phone && !hotelLookupIdPattern.test(identifier)) return privateReply({ error: 'Enter a valid hotel ID or Indian phone number.' }, 400)
+    const currentHotelId = !phone ? (await resolveHotelId(env.DB, identifier))?.hotel_id ?? identifier : identifier
+    const row = await env.DB.prepare(`SELECT ${hotelColumns} FROM hotel_registrations WHERE hotel_id = ? OR phone = ?`).bind(currentHotelId, phone || null).first<HotelRow>()
     if (!row || !equalHashes(hotelAccessCode(row), parsed.data.accessCode)) return privateReply({ error: 'No matching hotel and access code. Check your details.' }, 404)
     const { photos, averageRating, reviewCount, ...hotel } = publicHotel(row)
     void photos; void averageRating; void reviewCount

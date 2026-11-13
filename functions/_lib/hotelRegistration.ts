@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { hotelDetailsSchema } from '../../src/services/hotelSchema.ts'
-import { hotelPhotoCount, hotelPhotoDimension, hotelPhotoLimit } from '../../src/data/hotelRegistration.ts'
+import { hotelLocationCodes, hotelPhotoCount, hotelPhotoDimension, hotelPhotoLimit } from '../../src/data/hotelRegistration.ts'
 import { partnerStatusAccessCode } from '../../src/services/partnerAccessCode.ts'
 import type { AccessEnv } from './enquiryAccess.ts'
 
@@ -13,6 +13,19 @@ export interface HotelRow {
   average_rating?: number | null; review_count?: number;
 }
 export const hotelColumns = 'id, hotel_id, phone, contact_name, details_json, photo_keys_json, submitted_price, price, status, version, owner_note, payload_hash, created_at, updated_at'
+export const legacyHotelId = (id: string) => `AVELOF_HTL_${id.replaceAll('-', '').toUpperCase()}`
+export async function assignHotelId(DB: D1Database, row: HotelRow) {
+  const details = hotelDetailsSchema.parse(JSON.parse(row.details_json))
+  await DB.prepare('INSERT INTO hotel_reference_numbers (registration_id, legacy_hotel_id) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM hotel_reference_numbers WHERE registration_id = ?)')
+    .bind(row.id, legacyHotelId(row.id), row.id).run()
+  await DB.prepare("UPDATE hotel_registrations SET hotel_id = 'AVELOF_HTL_' || printf('%05d', (SELECT number + 10000 FROM hotel_reference_numbers WHERE registration_id = ?)) || ? WHERE id = ?")
+    .bind(row.id, hotelLocationCodes[details.location], row.id).run()
+  return DB.prepare(`SELECT ${hotelColumns} FROM hotel_registrations WHERE id = ?`).bind(row.id).first<HotelRow>()
+}
+export async function resolveHotelId(DB: D1Database, hotelId: string) {
+  return DB.prepare('SELECT hotel_id FROM hotel_registrations WHERE hotel_id = ? OR id = (SELECT registration_id FROM hotel_reference_numbers WHERE legacy_hotel_id = ?)')
+    .bind(hotelId, hotelId).first<{ hotel_id: string }>()
+}
 export const photoKeys = (row: Pick<HotelRow, 'photo_keys_json'>) => z.array(z.string().regex(/^hotels\/[a-f0-9-]{36}\/[a-f0-9-]{36}\/[0-4]\.jpg$/)).min(1).max(hotelPhotoCount).parse(JSON.parse(row.photo_keys_json))
 export function publicHotel(row: HotelRow) {
   return {

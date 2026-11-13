@@ -1,8 +1,9 @@
 import { z } from 'zod'
+import { hotelLookupIdPattern } from '../data/hotelRegistration.ts'
 
 export const reviewStatusSchema = z.enum(['pending', 'published', 'rejected'])
 export const driverReviewIdSchema = z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/)
-export const hotelReviewIdSchema = z.string().regex(/^AVELOF_HTL_[A-F0-9]{32}$/)
+export const hotelReviewIdSchema = z.string().regex(hotelLookupIdPattern)
 export const reviewSubmissionSchema = z.object({
   id: z.uuidv4(),
   reviewerName: z.string().trim().max(80).default(''),

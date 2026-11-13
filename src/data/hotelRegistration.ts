@@ -1,4 +1,16 @@
 export const registrationLocations = ['Srinagar', 'Gulmarg', 'Pahalgam', 'Sonamarg', 'Doodhpathri', 'Yusmarg', 'Gurez'] as const
+export const hotelLocationCodes: Record<(typeof registrationLocations)[number], string> = {
+  Srinagar: 'SRG',
+  Gulmarg: 'GLM',
+  Pahalgam: 'PHL',
+  Sonamarg: 'SNG',
+  Doodhpathri: 'DDP',
+  Yusmarg: 'YSM',
+  Gurez: 'GRZ',
+}
+export const hotelIdPattern = /^AVELOF_HTL_[0-9]{5,10}[A-Z]{3}$/
+export const legacyHotelIdPattern = /^AVELOF_HTL_[A-F0-9]{32}$/
+export const hotelLookupIdPattern = /^(?:AVELOF_HTL_[0-9]{5,10}[A-Z]{3}|AVELOF_HTL_[A-F0-9]{32})$/
 export const hotelCategories = ['Deluxe', 'Premium', 'Luxury'] as const
 export const hotelCategoryLabels = { Deluxe: 'Deluxe - 2-star', Premium: 'Premium - 3-star', Luxury: 'Luxury - 4-5-star' }
 export const hotelRoomTypes = ['Standard', 'Deluxe', 'Premium', 'Family', 'Suite'] as const

@@ -1,16 +1,16 @@
 import { z } from 'zod'
 import { hotelModerationSchema, hotelSubmissionSchema } from '../../src/services/hotelSchema.ts'
-import { hotelPhotoCount, hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
+import { hotelLookupIdPattern, hotelPhotoCount, hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
 import { accessConfigured, allowAccessAttempt, hashText, isAdmin, privateReply, sameOrigin } from '../_lib/enquiryAccess.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
-import { adminHotel, deleteRegistrationPhotos, hotelAccessCode, hotelColumns, limitedBody, publicHotel, saveRegistrationPhoto, validHotelJpeg } from '../_lib/hotelRegistration.ts'
+import { adminHotel, assignHotelId, deleteRegistrationPhotos, hotelAccessCode, hotelColumns, legacyHotelId, limitedBody, publicHotel, resolveHotelId, saveRegistrationPhoto, validHotelJpeg } from '../_lib/hotelRegistration.ts'
 import type { HotelEnv, HotelRow } from '../_lib/hotelRegistration.ts'
 
 const listSchema = z.object({
   scope: z.enum(['public', 'admin']).default('public'),
   page: z.coerce.number().int().min(1).max(10000).default(1),
   id: z.uuidv4().toLowerCase().optional(),
-  hotelId: z.string().regex(/^AVELOF_HTL_[A-F0-9]{32}$/).optional(),
+  hotelId: z.string().regex(hotelLookupIdPattern).optional(),
   status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all'),
 }).strict()
 const deletionSchema = z.object({ id: z.uuidv4().toLowerCase(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
@@ -30,8 +30,9 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       const { scope, page, id, hotelId, status } = parsed.data
       const admin = scope === 'admin'
       if (admin && !await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
+      const currentHotelId = hotelId ? (await resolveHotelId(DB, hotelId))?.hotel_id ?? hotelId : null
       const where = admin ? "WHERE (? = 'all' OR status = ?) AND (? IS NULL OR id = ?) AND (? IS NULL OR hotel_id = ?)" : "WHERE status = 'approved' AND (? IS NULL OR id = ?) AND (? IS NULL OR hotel_id = ?)"
-      const values = admin ? [status, status, id ?? null, id ?? null, hotelId ?? null, hotelId ?? null] : [id ?? null, id ?? null, hotelId ?? null, hotelId ?? null]
+      const values = admin ? [status, status, id ?? null, id ?? null, currentHotelId, currentHotelId] : [id ?? null, id ?? null, currentHotelId, currentHotelId]
       const total = await DB.prepare(`SELECT count(*) AS total FROM hotel_registrations ${where}`).bind(...values).first<{ total: number }>()
       const listingColumns = admin ? hotelColumns : `${hotelColumns}, (SELECT avg(rating) FROM reviews WHERE reviews.hotel_id = hotel_registrations.hotel_id AND reviews.status = 'published') AS average_rating, (SELECT count(*) FROM reviews WHERE reviews.hotel_id = hotel_registrations.hotel_id AND reviews.status = 'published') AS review_count`
       const rows = await DB.prepare(`SELECT ${listingColumns} FROM hotel_registrations ${where} ORDER BY created_at DESC, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<HotelRow>()
@@ -91,7 +92,11 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     }))
     const payloadHash = await hashText(JSON.stringify({ data, photoHashes }))
     const existing = await DB.prepare(`SELECT ${hotelColumns} FROM hotel_registrations WHERE id = ? OR phone = ?`).bind(data.id, data.phone).first<HotelRow>()
-    const receipt = async (row: HotelRow, status = 200) => privateReply({ saved: true, id: row.id, hotelId: row.hotel_id, status: row.status, accessCode: hotelAccessCode(row) }, status)
+    const receipt = async (row: HotelRow, status = 200) => {
+      const assigned = await assignHotelId(DB, row)
+      if (!assigned) return privateReply({ error: 'Hotel ID could not be assigned.' }, 503)
+      return privateReply({ saved: true, id: assigned.id, hotelId: assigned.hotel_id, status: assigned.status, accessCode: hotelAccessCode(assigned) }, status)
+    }
     if (existing) return existing.id === data.id && existing.payload_hash === payloadHash ? await receipt(existing) : privateReply({ error: 'This phone number or submission ID is already registered. Use private hotel status lookup or contact AVELOF.' }, 409)
     const uploadId = crypto.randomUUID()
     for (const [index, image] of images.entries()) {
@@ -99,7 +104,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       uploadedKeys.push(key)
       await saveRegistrationPhoto(DB, key, image)
     }
-    const hotelId = `AVELOF_HTL_${data.id.replaceAll('-', '').toUpperCase()}`
+    const hotelId = legacyHotelId(data.id)
     const { id, phone, contactName, publicationConsent, website, ...publicDetails } = data
     void publicationConsent
     void website

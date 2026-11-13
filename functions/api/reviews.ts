@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import { reviewStatusSchema, reviewSubmissionSchema } from '../../src/services/reviewSchema.ts'
+import { hotelLookupIdPattern } from '../../src/data/hotelRegistration.ts'
 import { allowAccessAttempt, hashText, isAdmin, privateReply, sameOrigin } from '../_lib/enquiryAccess.ts'
+import { resolveHotelId } from '../_lib/hotelRegistration.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 import type { AccessEnv } from '../_lib/enquiryAccess.ts'
 
@@ -29,7 +31,7 @@ const listSchema = z.object({
   page: z.coerce.number().int().min(1).max(10000).default(1),
   status: z.union([z.literal('all'), reviewStatusSchema]).default('pending'),
   driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/).optional(),
-  hotelId: z.string().regex(/^AVELOF_HTL_[A-F0-9]{32}$/).optional(),
+  hotelId: z.string().regex(hotelLookupIdPattern).optional(),
 }).strict().refine(({ driverId, hotelId }) => !(driverId && hotelId))
 const moderationSchema = z.object({ id: z.uuidv4(), status: reviewStatusSchema, version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
 const deletionSchema = z.object({ id: z.uuidv4(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
@@ -68,8 +70,9 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env, waitUn
       const { scope, page, status, driverId, hotelId } = parsed.data
       if (scope === 'admin' && !await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
       const admin = scope === 'admin'
+      const currentHotelId = hotelId ? (await resolveHotelId(env.DB, hotelId))?.hotel_id ?? hotelId : null
       const where = admin ? "WHERE (? = 'all' OR status = ?) AND (? IS NULL OR driver_id = ?) AND (? IS NULL OR hotel_id = ?)" : "WHERE status = 'published' AND (? IS NULL OR driver_id = ?) AND (? IS NULL OR hotel_id = ?)"
-      const values = admin ? [status, status, driverId ?? null, driverId ?? null, hotelId ?? null, hotelId ?? null] : [driverId ?? null, driverId ?? null, hotelId ?? null, hotelId ?? null]
+      const values = admin ? [status, status, driverId ?? null, driverId ?? null, currentHotelId, currentHotelId] : [driverId ?? null, driverId ?? null, currentHotelId, currentHotelId]
       const totals = await env.DB.prepare(`SELECT count(*) AS total, avg(rating) AS averageRating FROM reviews ${where}`).bind(...values).first<{ total: number; averageRating: number | null }>()
       const result = await env.DB.prepare(`SELECT ${columns} FROM reviews ${where} ORDER BY ${admin ? 'created_at DESC' : "COALESCE(review_month, substr(published_at, 1, 7)) DESC, published_at DESC"}, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<ReviewRow>()
       return privateReply({ reviews: result.results.map(admin ? adminReview : publicReview), total: totals?.total ?? 0, averageRating: totals?.averageRating ?? null, page, pageSize: 25 })
@@ -99,14 +102,17 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env, waitUn
     }
     const parsed = reviewSubmissionSchema.safeParse(input)
     if (!parsed.success || parsed.data.website) return privateReply({ error: 'Check your review details and consent.' }, 400)
-    const { id, reviewerName, bookingId, experience, rating, title, reviewText, driverId, hotelId } = parsed.data
+    const { id, reviewerName, bookingId, experience, rating, title, reviewText, driverId, hotelId: submittedHotelId } = parsed.data
+    let hotelId = submittedHotelId
     if (driverId) {
       const driver = await env.DB.prepare("SELECT driver_id FROM driver_registrations WHERE driver_id = ? AND status = 'approved'").bind(driverId).first<{ driver_id: string }>()
       if (!driver) return privateReply({ error: 'This driver is not available for public reviews.' }, 404)
     }
     if (hotelId) {
-      const hotel = await env.DB.prepare("SELECT hotel_id FROM hotel_registrations WHERE hotel_id = ? AND status = 'approved'").bind(hotelId).first<{ hotel_id: string }>()
-      if (!hotel) return privateReply({ error: 'This hotel is not available for public reviews.' }, 404)
+      const hotel = await resolveHotelId(env.DB, hotelId)
+      const approved = hotel ? await env.DB.prepare("SELECT hotel_id FROM hotel_registrations WHERE hotel_id = ? AND status = 'approved'").bind(hotel.hotel_id).first<{ hotel_id: string }>() : null
+      if (!approved) return privateReply({ error: 'This hotel is not available for public reviews.' }, 404)
+      hotelId = approved.hotel_id
     }
     const payloadHash = await hashText(JSON.stringify({ reviewerName, bookingId, experience, rating, title, reviewText, ...(driverId ? { driverId } : {}), ...(hotelId ? { hotelId } : {}), publicationConsent: true }))
     const existing = await env.DB.prepare('SELECT status, payload_hash FROM reviews WHERE id = ?').bind(id).first<ReviewRow>()

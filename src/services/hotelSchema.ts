@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { heatingOptions, hotelAmenities, hotelCategories, hotelMealPlans, hotelPhotoCount, hotelTaxOptions, registrationLocations } from '../data/hotelRegistration.ts'
+import { heatingOptions, hotelAmenities, hotelCategories, hotelIdPattern, hotelMealPlans, hotelPhotoCount, hotelTaxOptions, registrationLocations } from '../data/hotelRegistration.ts'
 import { indianPhoneNumber } from './phoneNumbers.ts'
 import { partnerStatusAccessCodePattern } from './partnerAccessCode.ts'
 
@@ -26,7 +26,7 @@ export const hotelSubmissionSchema = hotelDetailsSchema.extend({
   publicationConsent: z.literal(true), website: z.string().max(200).default(''),
 }).strict()
 export const publicHotelSchema = hotelDetailsSchema.extend({
-  id: z.uuidv4().toLowerCase(), hotelId: z.string().regex(/^AVELOF_HTL_[A-F0-9]{32}$/),
+  id: z.uuidv4().toLowerCase(), hotelId: z.string().regex(hotelIdPattern),
   photos: z.array(z.string().regex(/^\/api\/hotel-images\/[a-f0-9-]{36}\/[0-4]$/)).min(1).max(hotelPhotoCount),
   averageRating: z.number().min(1).max(5).nullable().default(null), reviewCount: z.number().int().min(0).default(0),
 })
@@ -39,7 +39,7 @@ export const hotelStatusResultSchema = publicHotelSchema.omit({ photos: true, av
   status: hotelStatusSchema,
 })
 export const hotelReceiptSchema = z.object({
-  saved: z.literal(true), id: z.uuidv4(), hotelId: z.string(),
+  saved: z.literal(true), id: z.uuidv4(), hotelId: z.string().regex(hotelIdPattern),
   accessCode: z.string().regex(partnerStatusAccessCodePattern), status: hotelStatusSchema,
 })
 export const hotelModerationSchema = z.object({

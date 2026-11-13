@@ -175,6 +175,28 @@ test('driver migrations retain legacy access, linked reviews and recorded direct
     assert.ok(consent.directory_credentials_consented_at)
   } finally { sqlite.close() }
 })
+
+test('hotel reference migration assigns sequential location IDs and preserves legacy references', () => {
+  const sqlite = new DatabaseSync(':memory:')
+  try {
+    sqlite.exec('PRAGMA foreign_keys = ON')
+    const migrations = new URL('../../migrations/', import.meta.url)
+    for (const migration of readdirSync(migrations).filter((name) => name.endsWith('.sql') && name < '0018').sort()) sqlite.exec(readFileSync(new URL(migration, migrations), 'utf8'))
+    const input = hotelPayload()
+    const legacyId = `AVELOF_HTL_${input.id.replaceAll('-', '').toUpperCase()}`
+    const { id, phone, contactName, publicationConsent, website, ...details } = input
+    void publicationConsent; void website
+    sqlite.prepare("INSERT INTO hotel_registrations (id, hotel_id, phone, contact_name, details_json, photo_keys_json, submitted_price, price, publication_consent, payload_hash) VALUES (?, ?, ?, ?, ?, '[]', ?, ?, 1, 'hotel-hash')")
+      .run(id, legacyId, phone, contactName, JSON.stringify(details), input.price, input.price)
+    sqlite.prepare("INSERT INTO reviews (id, reviewer_name, experience, rating, review_text, publication_consent, payload_hash, status, hotel_id) VALUES (?, 'Guest', 'Hotel stay', 5, 'Legacy hotel review', 1, 'review-hash', 'published', ?)")
+      .run(crypto.randomUUID(), legacyId)
+    sqlite.exec(readFileSync(new URL('0018_hotel_reference_ids.sql', migrations), 'utf8'))
+    assert.equal(sqlite.prepare('SELECT hotel_id FROM hotel_registrations WHERE id = ?').get(id).hotel_id, 'AVELOF_HTL_10001GLM')
+    assert.equal(sqlite.prepare('SELECT hotel_id FROM reviews').get().hotel_id, 'AVELOF_HTL_10001GLM')
+    assert.equal(sqlite.prepare('SELECT legacy_hotel_id FROM hotel_reference_numbers WHERE registration_id = ?').get(id).legacy_hotel_id, legacyId)
+  } finally { sqlite.close() }
+})
+
 test('driver approval edits rates, excludes private data and hides photos on rejection', async () => {
   const DB = database(), bucket = hotelBucket()
   try {
@@ -311,7 +333,7 @@ test('hotel registration persists photos, unique private contact and a stable re
     assert.equal(receipt.saved, true)
     assert.equal(receipt.id, input.id.toLowerCase())
     assert.equal(receipt.status, 'pending')
-    assert.equal(receipt.hotelId, `AVELOF_HTL_${input.id.replaceAll('-', '').toUpperCase()}`)
+    assert.equal(receipt.hotelId, 'AVELOF_HTL_10001GLM')
     const storedHotel = DB.sqlite.prepare('SELECT phone, details_json FROM hotel_registrations WHERE id = ?').get(receipt.id)
     assert.equal(receipt.accessCode, hotelAccessCode(storedHotel))
     assert.equal(photoCount(DB), 5)
@@ -334,6 +356,11 @@ test('hotel registration persists photos, unique private contact and a stable re
     assert.equal(owner.photos, undefined)
     assert.equal(owner.accessCode, undefined)
     assert.equal(owner.payload_hash, undefined)
+    const legacyId = `AVELOF_HTL_${receipt.id.replaceAll('-', '').toUpperCase()}`
+    assert.equal((await hotelRequest(DB, bucket, 'POST', { identifier: legacyId, accessCode: receipt.accessCode }, { lookup: true })).status, 200)
+    const srinagar = { ...hotelPayload(), id: crypto.randomUUID(), phone: '9876543211', location: 'Srinagar' }
+    const srinagarReceipt = await (await hotelRequest(DB, bucket, 'POST', srinagar)).json()
+    assert.equal(srinagarReceipt.hotelId, 'AVELOF_HTL_10002SRG')
     assert.equal((await hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: 'WRNG0000' }, { lookup: true })).status, 404)
     assert.equal((await hotelRequest(DB, bucket, 'GET', undefined, { query: '?scope=admin' })).status, 401)
   } finally { DB.sqlite.close() }
@@ -1229,7 +1256,7 @@ test('anonymous hotel stars and written hotel feedback rules use the approved ho
     assert.equal(listing.hotels[0].hotelId, receipt.hotelId)
     assert.equal(listing.hotels[0].averageRating, 4)
     assert.equal(listing.hotels[0].reviewCount, 1)
-    const unavailable = { ...rating, id: crypto.randomUUID(), hotelId: 'AVELOF_HTL_00000000000000000000000000000000' }
+    const unavailable = { ...rating, id: crypto.randomUUID(), hotelId: 'AVELOF_HTL_99999SRG' }
     assert.equal((await reviewRequest(DB, 'POST', unavailable)).status, 404)
   } finally { DB.sqlite.close() }
 })
