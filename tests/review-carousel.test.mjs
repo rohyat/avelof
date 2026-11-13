@@ -113,7 +113,7 @@ test('review carousel preserves layout and supports accessible automatic and man
         const tiles = page.locator('.home-shortcut-link')
         const shortcuts = page.getByRole('navigation', { name: 'Explore AVELOF' })
         await tiles.last().waitFor()
-        assert.deepEqual(await tiles.allTextContents(), ['Plan a trip', 'Packages', 'Cabs', 'Hotels', 'Places', 'Bookings', 'Reviews', 'Contact', 'Partner'])
+        assert.deepEqual(await tiles.allTextContents(), ['Plan a trip', 'Packages', 'Cabs', 'Hotels', 'Places', 'Bookings', 'Reviews', 'Drivers', 'Partner'])
         assert.equal(await page.getByRole('button', { name: 'Ask AVELOF' }).count(), 0)
         assert.ok(await page.getByRole('heading', { name: 'Experience Kashmir Beyond Expectations.' }).isVisible())
         assert.ok(await page.getByText("Where Kashmir's natural beauty meets warm hospitality, memorable stays and genuine local care.", { exact: true }).isVisible())
@@ -167,7 +167,7 @@ test('review carousel preserves layout and supports accessible automatic and man
         assert.equal(await shortcuts.getByRole('link', { name: 'Places', exact: true }).getAttribute('href'), '/destinations')
         assert.equal(await shortcuts.getByRole('link', { name: 'Bookings', exact: true }).getAttribute('href'), '/my-enquiries')
         assert.equal(await shortcuts.getByRole('link', { name: 'Reviews', exact: true }).getAttribute('href'), '/reviews')
-        assert.equal(await shortcuts.getByRole('link', { name: 'Contact', exact: true }).getAttribute('href'), '/contact')
+        assert.equal(await shortcuts.getByRole('link', { name: 'Drivers', exact: true }).getAttribute('href'), '/drivers')
         assert.equal(await shortcuts.getByRole('link', { name: 'Partner', exact: true }).getAttribute('href'), '/partners')
         for (const width of [1440, 1060, 900, 821, 820, 768, 744, 390, 320]) {
           await page.setViewportSize({ width, height: 900 })

@@ -89,7 +89,7 @@ export function HomePage() {
         <Link className="home-shortcut-link" to="/destinations"><span className="home-shortcut-icon"><MapPin size={20} aria-hidden="true" /></span><span>Places</span></Link>
         <Link className="home-shortcut-link" to="/my-enquiries"><span className="home-shortcut-icon"><ClipboardList size={20} aria-hidden="true" /></span><span>Bookings</span></Link>
         <Link className="home-shortcut-link" to="/reviews"><span className="home-shortcut-icon"><Star size={20} aria-hidden="true" /></span><span>Reviews</span></Link>
-        <Link className="home-shortcut-link" to="/contact"><span className="home-shortcut-icon"><Phone size={20} aria-hidden="true" /></span><span>Contact</span></Link>
+        <Link className="home-shortcut-link" to="/drivers"><span className="home-shortcut-icon"><CarFront size={20} aria-hidden="true" /></span><span>Drivers</span></Link>
         <Link className="home-shortcut-link" to="/partners"><span className="home-shortcut-icon"><Users size={20} aria-hidden="true" /></span><span>Partner</span></Link>
       </nav>
     </section>
