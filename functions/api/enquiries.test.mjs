@@ -12,7 +12,7 @@ import { onRequest as onPushRequest } from './push.ts'
 import { onRequest as onHotelRequest } from './hotels.ts'
 import { onRequest as onDriverRequest } from './drivers.ts'
 import { onRequest as onDriverImageRequest } from './driver-images/[id]/[index].ts'
-import { driverAccessCode } from '../_lib/driverRegistration.ts'
+import { driverAccessCode, maskedDriverLicence } from '../_lib/driverRegistration.ts'
 import { onRequest as onHotelStatusRequest } from './hotel-status.ts'
 import { onRequest as onHotelImageRequest } from './hotel-images/[id]/[index].ts'
 import { hotelAccessCode, registrationPhotoBytes, validHotelJpeg } from '../_lib/hotelRegistration.ts'
@@ -140,6 +140,9 @@ test('driver registration is private, idempotent and unique by phone, with prote
     }
     assert.equal((await driverRequest(DB, bucket, 'POST', { identifier: receipt.driverId, accessCode: '0'.repeat(64) }, { lookup: true })).status, 404)
   } finally { DB.sqlite.close() }
+})
+test('short driving licence numbers retain only masked edge characters', () => {
+  assert.equal(maskedDriverLicence('12345'), '1***5')
 })
 test('driver migrations retain legacy access, linked reviews and recorded directory credential consent', () => {
   const sqlite = new DatabaseSync(':memory:')

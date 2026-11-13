@@ -18,7 +18,8 @@ export function maskedDriverPhone(phone: string) {
 }
 export function maskedDriverLicence(licenceNumber: string) {
   const compact = licenceNumber.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
-  return compact.length > 5 ? `${compact.slice(0, 3)}${'*'.repeat(compact.length - 5)}${compact.slice(-2)}` : '***'
+  if (compact.length > 5) return `${compact.slice(0, 3)}${'*'.repeat(compact.length - 5)}${compact.slice(-2)}`
+  return compact.length >= 3 ? `${compact[0]}${'*'.repeat(compact.length - 2)}${compact.at(-1)}` : '***'
 }
 export function publicDriver(row: DriverRow) {
   const details = driverDetailsSchema.parse(JSON.parse(row.details_json))
