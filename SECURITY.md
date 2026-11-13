@@ -254,7 +254,7 @@ is required for private POST status lookup. Admin reads/updates and pending
 portrait access require the existing owner session; public portrait responses
 are no-store. Unique phones, bounded single-image uploads, rate limits,
 idempotent saves and versioned moderation follow hotel registration protections.
-The public directory displays the stable `AVELOF_DRV_...` ID and approved
+The public directory displays the stable sequential `AVELOF-DRV-10001` ID format and approved
 driver review aggregate but does not publish the reviewed or submitted rate.
 Neither identity nor licence validity is automatically verified. Confirm
 identity, portrait ownership and consent before publication. Include driver

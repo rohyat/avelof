@@ -28,7 +28,7 @@ const listSchema = z.object({
   scope: z.enum(['public', 'admin']).default('public'),
   page: z.coerce.number().int().min(1).max(10000).default(1),
   status: z.union([z.literal('all'), reviewStatusSchema]).default('pending'),
-  driverId: z.string().regex(/^AVELOF_DRV_[A-F0-9]{32}$/).optional(),
+  driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/).optional(),
   hotelId: z.string().regex(/^AVELOF_HTL_[A-F0-9]{32}$/).optional(),
 }).strict().refine(({ driverId, hotelId }) => !(driverId && hotelId))
 const moderationSchema = z.object({ id: z.uuidv4(), status: reviewStatusSchema, version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()

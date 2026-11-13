@@ -119,11 +119,14 @@ test('driver registration is private, idempotent and unique by phone, with prote
     assert.equal(response.status, 201)
     const receipt = await response.json()
     assert.equal(receipt.status, 'pending')
-    assert.equal(receipt.driverId, `AVELOF_DRV_${input.id.replaceAll('-', '').toUpperCase()}`)
-    assert.equal(receipt.accessCode, await driverAccessCode('test-secret-with-more-than-thirty-two-characters', receipt.driverId))
+    assert.equal(receipt.driverId, 'AVELOF-DRV-10001')
+    assert.equal(receipt.accessCode, await driverAccessCode('test-secret-with-more-than-thirty-two-characters', `AVELOF_DRV_${input.id.replaceAll('-', '').toUpperCase()}`))
     assert.deepEqual(await (await driverRequest(DB, bucket, 'POST', input)).json(), receipt)
     assert.equal(photoCount(DB), 1)
     assert.equal((await driverRequest(DB, bucket, 'POST', { ...input, id: crypto.randomUUID(), phone: '9876543210' })).status, 409)
+    const second = await (await driverRequest(DB, bucket, 'POST', { ...input, id: crypto.randomUUID(), phone: '9123456789' })).json()
+    assert.equal(second.driverId, 'AVELOF-DRV-10002')
+    assert.equal(photoCount(DB), 2)
     assert.equal((await (await driverRequest(DB, bucket, 'GET')).json()).total, 0)
     assert.equal((await driverRequest(DB, bucket, 'GET', undefined, { query: '?scope=admin' })).status, 401)
     for (const identifier of [receipt.driverId, input.phone]) {
@@ -137,6 +140,24 @@ test('driver registration is private, idempotent and unique by phone, with prote
     }
     assert.equal((await driverRequest(DB, bucket, 'POST', { identifier: receipt.driverId, accessCode: '0'.repeat(64) }, { lookup: true })).status, 404)
   } finally { DB.sqlite.close() }
+})
+test('driver ID migration renumbers existing drivers and linked reviews while retaining the legacy access reference', () => {
+  const sqlite = new DatabaseSync(':memory:')
+  try {
+    sqlite.exec('PRAGMA foreign_keys = ON')
+    const migrations = new URL('../../migrations/', import.meta.url)
+    for (const migration of readdirSync(migrations).filter((name) => name.endsWith('.sql') && name < '0016').sort()) sqlite.exec(readFileSync(new URL(migration, migrations), 'utf8'))
+    const id = crypto.randomUUID()
+    const legacyId = `AVELOF_DRV_${id.replaceAll('-', '').toUpperCase()}`
+    sqlite.prepare("INSERT INTO driver_registrations (id, driver_id, phone, private_json, details_json, photo_keys_json, submitted_price, price, publication_consent, payload_hash) VALUES (?, ?, '9876543210', '{}', '{}', '[]', 1000, 1000, 1, 'hash')")
+      .run(id, legacyId)
+    sqlite.prepare("INSERT INTO reviews (id, reviewer_name, booking_id, experience, rating, title, review_text, driver_id, publication_consent, payload_hash, status, published_at) VALUES (?, '', '', 'Driver experience', 5, '', '', ?, 1, 'review-hash', 'published', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))")
+      .run(crypto.randomUUID(), legacyId)
+    sqlite.exec(readFileSync(new URL('0016_driver_reference_ids.sql', migrations), 'utf8'))
+    assert.equal(sqlite.prepare('SELECT driver_id FROM driver_registrations WHERE id = ?').get(id).driver_id, 'AVELOF-DRV-10001')
+    assert.equal(sqlite.prepare('SELECT driver_id FROM reviews').get().driver_id, 'AVELOF-DRV-10001')
+    assert.equal(sqlite.prepare('SELECT legacy_driver_id FROM driver_reference_numbers WHERE registration_id = ?').get(id).legacy_driver_id, legacyId)
+  } finally { sqlite.close() }
 })
 test('driver approval edits rates, excludes private data and hides photos on rejection', async () => {
   const DB = database(), bucket = hotelBucket()
@@ -1120,7 +1141,7 @@ test('published driver ratings are linked by public driver ID and included in dr
     assert.equal(listing.drivers[0].driverId, receipt.driverId)
     assert.equal(listing.drivers[0].averageRating, 5)
     assert.equal(listing.drivers[0].reviewCount, 1)
-    const unavailable = { ...rating, id: crypto.randomUUID(), driverId: 'AVELOF_DRV_00000000000000000000000000000000' }
+    const unavailable = { ...rating, id: crypto.randomUUID(), driverId: 'AVELOF-DRV-99999' }
     assert.equal((await reviewRequest(DB, 'POST', unavailable)).status, 404)
   } finally { DB.sqlite.close() }
 })

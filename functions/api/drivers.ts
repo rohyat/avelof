@@ -10,8 +10,29 @@ import { deleteRegistrationPhotos, limitedBody, saveRegistrationPhoto, validHote
 import type { HotelEnv } from '../_lib/hotelRegistration.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 
-const listSchema = z.object({ scope: z.enum(['public', 'admin']).default('public'), page: z.coerce.number().int().min(1).max(10000).default(1), id: z.uuidv4().optional(), driverId: z.string().regex(/^AVELOF_DRV_[A-F0-9]{32}$/).optional(), status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all') }).strict()
+const listSchema = z.object({ scope: z.enum(['public', 'admin']).default('public'), page: z.coerce.number().int().min(1).max(10000).default(1), id: z.uuidv4().optional(), driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/).optional(), status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all') }).strict()
 const moderationSchema = hotelModerationSchema.omit({ breakfastPrice: true, dinnerPrice: true })
+const legacyDriverId = (id: string) => `AVELOF_DRV_${id.replaceAll('-', '').toUpperCase()}`
+
+async function assignDriverId(DB: D1Database, row: DriverRow) {
+  await DB.prepare('INSERT INTO driver_reference_numbers (registration_id, legacy_driver_id) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM driver_reference_numbers WHERE registration_id = ?)')
+    .bind(row.id, legacyDriverId(row.id), row.id).run()
+  await DB.prepare("UPDATE driver_registrations SET driver_id = 'AVELOF-DRV-' || printf('%05d', (SELECT number + 10000 FROM driver_reference_numbers WHERE registration_id = ?)) WHERE id = ?")
+    .bind(row.id, row.id).run()
+  return DB.prepare(`SELECT ${driverColumns} FROM driver_registrations WHERE id = ?`).bind(row.id).first<DriverRow>()
+}
+
+async function accessCodeReference(DB: D1Database, row: DriverRow) {
+  const reference = await DB.prepare('SELECT legacy_driver_id FROM driver_reference_numbers WHERE registration_id = ?').bind(row.id).first<{ legacy_driver_id: string }>()
+  return reference?.legacy_driver_id ?? row.driver_id
+}
+
+async function registrationReceipt(DB: D1Database, secret: string, row: DriverRow, status = 200) {
+  const assigned = await assignDriverId(DB, row)
+  if (!assigned || !/^AVELOF-DRV-[0-9]{5,10}$/.test(assigned.driver_id)) return privateReply({ error: 'Driver ID could not be assigned.' }, 503)
+  return privateReply({ saved: true, id: assigned.id, driverId: assigned.driver_id, status: assigned.status, accessCode: await driverAccessCode(secret, await accessCodeReference(DB, assigned)) }, status)
+}
+
 export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUntil }) => {
   if (!['GET', 'POST', 'PATCH'].includes(request.method)) return privateReply({ error: 'Method not allowed.' }, 405)
   if (request.method !== 'GET' && !sameOrigin(request)) return privateReply({ error: 'Origin not allowed.' }, 403)
@@ -54,9 +75,9 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       if (!parsed.success) return privateReply({ error: 'Enter driver ID or phone and private access code.' }, 400)
       const identifier = parsed.data.identifier.toUpperCase()
       const phone = indianPhoneNumber(identifier)
-      if (!phone && !/^AVELOF_DRV_[A-F0-9]{32}$/.test(identifier)) return privateReply({ error: 'Invalid driver ID or phone.' }, 400)
+      if (!phone && !/^AVELOF-DRV-[0-9]{5,10}$/.test(identifier)) return privateReply({ error: 'Invalid driver ID or phone.' }, 400)
       const row = await DB.prepare(`SELECT ${driverColumns} FROM driver_registrations WHERE driver_id = ? OR phone = ?`).bind(identifier, phone || null).first<DriverRow>()
-      if (!row || !equalHashes(await driverAccessCode(env.ENQUIRY_ACCESS_SECRET!, row.driver_id), parsed.data.accessCode)) return privateReply({ error: 'No matching driver and private access code.' }, 404)
+      if (!row || !equalHashes(await driverAccessCode(env.ENQUIRY_ACCESS_SECRET!, await accessCodeReference(DB, row)), parsed.data.accessCode)) return privateReply({ error: 'No matching driver and private access code.' }, 404)
       const { photo, version, ...driver } = adminDriver(row)
       void photo; void version
       return privateReply({ driver })
@@ -85,9 +106,8 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     const photoHashes = await Promise.all(images.map(async (image) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', image)), (byte) => byte.toString(16).padStart(2, '0')).join('')))
     const data = parsed.data
     const payloadHash = await hashText(JSON.stringify({ data, photoHashes }))
-    const receipt = async (row: DriverRow, status = 200) => privateReply({ saved: true, id: row.id, driverId: row.driver_id, status: row.status, accessCode: await driverAccessCode(env.ENQUIRY_ACCESS_SECRET!, row.driver_id) }, status)
     const existing = await DB.prepare(`SELECT ${driverColumns} FROM driver_registrations WHERE id = ? OR phone = ?`).bind(data.id, data.phone).first<DriverRow>()
-    if (existing) return existing.id === data.id && existing.payload_hash === payloadHash ? await receipt(existing) : privateReply({ error: 'Phone or submission ID already registered. Use private status lookup or contact AVELOF.' }, 409)
+    if (existing) return existing.id === data.id && existing.payload_hash === payloadHash ? await registrationReceipt(DB, env.ENQUIRY_ACCESS_SECRET!, existing) : privateReply({ error: 'Phone or submission ID already registered. Use private status lookup or contact AVELOF.' }, 409)
     const uploadId = crypto.randomUUID()
     for (const [index, image] of images.entries()) {
       const key = `drivers/${data.id}/${uploadId}/${index}.jpg`
@@ -98,15 +118,16 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     void publicationConsent; void website
     insertingId = id
     const row = await DB.prepare(`INSERT INTO driver_registrations (id, driver_id, phone, private_json, details_json, photo_keys_json, submitted_price, price, publication_consent, payload_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?) ON CONFLICT DO NOTHING RETURNING ${driverColumns}`)
-      .bind(id, `AVELOF_DRV_${id.replaceAll('-', '').toUpperCase()}`, phone, JSON.stringify({ phone, age, licenceNumber, vehicleNumber }), JSON.stringify(details), JSON.stringify(keys), details.price, details.price, payloadHash).first<DriverRow>()
+      .bind(id, legacyDriverId(id), phone, JSON.stringify({ phone, age, licenceNumber, vehicleNumber }), JSON.stringify(details), JSON.stringify(keys), details.price, details.price, payloadHash).first<DriverRow>()
     if (!row) {
       await deleteRegistrationPhotos(DB, keys); keys = []
       const concurrent = await DB.prepare(`SELECT ${driverColumns} FROM driver_registrations WHERE id = ?`).bind(id).first<DriverRow>()
-      return concurrent?.payload_hash === payloadHash ? await receipt(concurrent) : privateReply({ error: 'Phone or submission ID was just registered.' }, 409)
+      return concurrent?.payload_hash === payloadHash ? await registrationReceipt(DB, env.ENQUIRY_ACCESS_SECRET!, concurrent) : privateReply({ error: 'Phone or submission ID was just registered.' }, 409)
     }
+    const response = await registrationReceipt(DB, env.ENQUIRY_ACCESS_SECRET!, row, 201)
     saved = true
-    queueOwnerPush(env, waitUntil, { title: 'New driver registration', body: 'A driver and vehicle are awaiting approval.', url: '/admin/panel/drivers', tag: `driver-${id}` })
-    return await receipt(row, 201)
+    if (response.ok) queueOwnerPush(env, waitUntil, { title: 'New driver registration', body: 'A driver and vehicle are awaiting approval.', url: '/admin/panel/drivers', tag: `driver-${id}` })
+    return response
   } catch (error) {
     console.error('Driver registration request failed', error)
     if (!saved && keys.length) {

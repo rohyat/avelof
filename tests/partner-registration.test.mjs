@@ -4,7 +4,7 @@ import { chromium } from 'playwright'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
 const id = '00000000-0000-4000-8000-000000000002'
-const driverId = `AVELOF_DRV_${id.replaceAll('-', '').toUpperCase()}`
+const driverId = 'AVELOF-DRV-10001'
 const accessCode = 'b'.repeat(64)
 const driver = {
   id, driverId, fullName: 'Public Driver Name', maskedPhone: '987*****10', vehicleId: 'innova-crysta', age: 30,
@@ -42,7 +42,7 @@ test('partner onboarding and approved listings work separately from customer nav
         saved = JSON.parse(form.get('details'))
         assert.equal(form.getAll('photos').length, 1)
         if (fail) return route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>Vite</title>' })
-        return route.fulfill({ status: 201, json: { saved: true, id: saved.id, driverId: `AVELOF_DRV_${saved.id.replaceAll('-', '').toUpperCase()}`, accessCode, status: 'pending' } })
+        return route.fulfill({ status: 201, json: { saved: true, id: saved.id, driverId, accessCode, status: 'pending' } })
       })
       try {
         await page.goto(`${origin}/register-driver`)

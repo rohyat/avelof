@@ -20,7 +20,7 @@ export const driverSubmissionSchema = driverDetailsSchema.extend({
   publicationConsent: z.literal(true), website: z.string().max(200).default(''),
 }).strict()
 export const publicDriverSchema = driverDetailsSchema.extend({
-  id: z.uuidv4(), driverId: z.string().regex(/^AVELOF_DRV_[A-F0-9]{32}$/),
+  id: z.uuidv4(), driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/),
   vehicleName: text(120), maskedPhone: z.string().regex(/^[0-9*]+$/),
   photo: z.string().regex(/^\/api\/driver-images\/[a-f0-9-]{36}\/0$/),
   averageRating: z.number().min(1).max(5).nullable().default(null), reviewCount: z.number().int().min(0).default(0),
@@ -30,7 +30,7 @@ export const adminDriverSchema = publicDriverSchema.extend({
   version: z.number().int().min(0), ownerNote: z.string(), createdAt: z.string(),
 })
 export const driverReceiptSchema = z.object({
-  saved: z.literal(true), id: z.uuidv4(), driverId: z.string().regex(/^AVELOF_DRV_[A-F0-9]{32}$/),
+  saved: z.literal(true), id: z.uuidv4(), driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/),
   accessCode: z.string().regex(/^[a-f0-9]{64}$/), status: hotelStatusSchema,
 })
 export const ownerDriverSchema = adminDriverSchema.omit({ photo: true, version: true })

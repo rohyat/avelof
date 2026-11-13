@@ -80,9 +80,9 @@ async function publicSummary(row: EnquiryRow, database: D1Database) {
   }
   if (typeof source.carRental === 'string' && rentalCars.some((car) => car.name === source.carRental)) selected.carRental = source.carRental
   if (!selected.carRental && typeof source.carRental === 'string') {
-    const match = /\((AVELOF_DRV_[A-F0-9]{32})\)$/.exec(source.carRental)
+    const match = /\((AVELOF-DRV-[0-9]{5,10}|AVELOF_DRV_[A-F0-9]{32})\)$/.exec(source.carRental)
     if (match) {
-      const driver = await database.prepare("SELECT details_json FROM driver_registrations WHERE driver_id = ? AND status = 'approved'").bind(match[1]).first<{ details_json: string }>()
+      const driver = await database.prepare("SELECT driver_registrations.details_json FROM driver_registrations LEFT JOIN driver_reference_numbers ON driver_reference_numbers.registration_id = driver_registrations.id WHERE (driver_registrations.driver_id = ? OR driver_reference_numbers.legacy_driver_id = ?) AND driver_registrations.status = 'approved'").bind(match[1], match[1]).first<{ details_json: string }>()
       if (driver) {
         const details = driverDetailsSchema.parse(JSON.parse(driver.details_json))
         const vehicle = driverVehicleOptions.find(({ id }) => id === details.vehicleId)
