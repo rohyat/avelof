@@ -14,8 +14,9 @@ Create a production build with `npm run build`. Run the configured linter with `
 ## Image Storage
 
 Catalog images are local files in `public/images/` and are delivered directly by
-Cloudflare Pages. D1 stores customer enquiries, not image binaries. No R2 bucket,
-image-serving database endpoint or new paid media service is required.
+Cloudflare Pages. Customer-submitted hotel and driver photos are private JPEG
+BLOBs in D1 and are served only through approval-aware Functions endpoints. No
+R2 bucket or new paid media service is required.
 
 - `hotels/` has one named JPEG per hotel ID, such as `hotel-royal-imsar.jpg`.
 - `vehicles/` has named model/reference files, such as `swift-dzire.jpg`, `ertiga.jpg` and `innova-crysta.jpg`. Traveller variants share their reference photo rather than duplicating it.

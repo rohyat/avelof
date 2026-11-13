@@ -6,7 +6,7 @@ import { indianPhoneNumber } from '../../src/services/phoneNumbers.ts'
 import { accessConfigured, allowAccessAttempt, equalHashes, hashText, isAdmin, privateReply, sameOrigin } from '../_lib/enquiryAccess.ts'
 import { adminDriver, driverAccessCode, driverColumns, publicDriver } from '../_lib/driverRegistration.ts'
 import type { DriverRow } from '../_lib/driverRegistration.ts'
-import { deleteHotelUploads, limitedBody, validHotelJpeg } from '../_lib/hotelRegistration.ts'
+import { deleteRegistrationPhotos, limitedBody, saveRegistrationPhoto, validHotelJpeg } from '../_lib/hotelRegistration.ts'
 import type { HotelEnv } from '../_lib/hotelRegistration.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 
@@ -60,7 +60,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       void photo; void version
       return privateReply({ driver })
     }
-    if (!env.HOTEL_PHOTOS || !accessConfigured(env)) return privateReply({ error: 'Partner photo storage or private access is not configured.' }, 503)
+    if (!accessConfigured(env)) return privateReply({ error: 'Private partner access is not configured.' }, 503)
     if (!request.headers.get('Content-Type')?.startsWith('multipart/form-data;')) return privateReply({ error: 'A driver form with photos is required.' }, 415)
     if (!await allowAccessAttempt(request, DB, 'driver-submit', 5)) return privateReply({ error: 'Too many registrations. Try again in ten minutes.' }, 429)
     const bytes = await limitedBody(request, hotelUploadLimit)
@@ -91,7 +91,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     for (const [index, image] of images.entries()) {
       const key = `drivers/${data.id}/${uploadId}/${index}.jpg`
       keys.push(key)
-      await env.HOTEL_PHOTOS.put(key, image, { httpMetadata: { contentType: 'image/jpeg' } })
+      await saveRegistrationPhoto(DB, key, image)
     }
     const { id, phone, age, licenceNumber, vehicleNumber, publicationConsent, website, ...details } = data
     void publicationConsent; void website
@@ -99,7 +99,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     const row = await DB.prepare(`INSERT INTO driver_registrations (id, driver_id, phone, private_json, details_json, photo_keys_json, submitted_price, price, publication_consent, payload_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?) ON CONFLICT DO NOTHING RETURNING ${driverColumns}`)
       .bind(id, `AVELOF_DRV_${id.replaceAll('-', '').toUpperCase()}`, phone, JSON.stringify({ phone, age, licenceNumber, vehicleNumber }), JSON.stringify(details), JSON.stringify(keys), details.price, details.price, payloadHash).first<DriverRow>()
     if (!row) {
-      await deleteHotelUploads(env.HOTEL_PHOTOS, keys); keys = []
+      await deleteRegistrationPhotos(DB, keys); keys = []
       const concurrent = await DB.prepare(`SELECT ${driverColumns} FROM driver_registrations WHERE id = ?`).bind(id).first<DriverRow>()
       return concurrent?.payload_hash === payloadHash ? await receipt(concurrent) : privateReply({ error: 'Phone or submission ID was just registered.' }, 409)
     }
@@ -108,12 +108,12 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     return await receipt(row, 201)
   } catch (error) {
     console.error('Driver registration request failed', error)
-    if (!saved && env.HOTEL_PHOTOS && keys.length) {
+    if (!saved && keys.length) {
       try {
         const row = insertingId ? await DB.prepare('SELECT photo_keys_json FROM driver_registrations WHERE id = ?').bind(insertingId).first<{ photo_keys_json: string }>() : null
         const persisted = row ? z.array(z.string()).parse(JSON.parse(row.photo_keys_json)) : []
-        await deleteHotelUploads(env.HOTEL_PHOTOS, keys.filter((key) => !persisted.includes(key)))
-      } catch (cleanupError) { console.error('Driver photo cleanup could not be completed; review R2 storage', cleanupError) }
+        await deleteRegistrationPhotos(DB, keys.filter((key) => !persisted.includes(key)))
+      } catch (cleanupError) { console.error('Driver photo cleanup could not be completed in D1', cleanupError) }
     }
     return privateReply({ error: 'Driver registration could not be confirmed. Retry with the same form.' }, 503)
   }

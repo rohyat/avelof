@@ -58,12 +58,29 @@ function hotelPayload() {
   }
 }
 function hotelBucket() {
-  const objects = new Map()
+  return {}
+}
+function photoCount(DB) {
+  return DB.sqlite.prepare('SELECT count(*) AS total FROM registration_photos').get().total
+}
+function failingPhotoDatabase(DB, failureAt) {
+  let count = 0
   return {
-    objects,
-    async put(key, bytes) { objects.set(key, new Uint8Array(bytes)) },
-    async delete(keys) { for (const key of Array.isArray(keys) ? keys : [keys]) objects.delete(key) },
-    async get(key) { const bytes = objects.get(key); return bytes ? { body: bytes, size: bytes.length } : null },
+    prepare(sql) {
+      const statement = DB.prepare(sql)
+      if (!sql.startsWith('INSERT INTO registration_photos')) return statement
+      return {
+        bind(...values) {
+          const bound = statement.bind(...values)
+          return {
+            async run() {
+              if (++count === failureAt) throw new Error('Synthetic D1 photo failure')
+              return bound.run()
+            },
+          }
+        },
+      }
+    },
   }
 }
 async function hotelRequest(DB, bucket, method, data, options = {}) {
@@ -75,7 +92,7 @@ async function hotelRequest(DB, bucket, method, data, options = {}) {
     for (const image of options.photos ?? [testHotelJpeg]) body.append('photos', new Blob([image], { type: options.photoType ?? 'image/jpeg' }), 'test.jpg')
   } else if (data !== undefined) { headers['Content-Type'] = 'application/json'; body = JSON.stringify(data) }
   const env = {
-    DB, HOTEL_PHOTOS: bucket, ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters',
+    DB, ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters',
     ENQUIRY_ADMIN_CODE_HASH: await hashText('123456789012345678901234567890123456789012345678'),
     ...options.env,
   }
@@ -105,7 +122,7 @@ test('driver registration is private, idempotent and unique by phone, with prote
     assert.equal(receipt.driverId, `AVELOF_DRV_${input.id.replaceAll('-', '').toUpperCase()}`)
     assert.equal(receipt.accessCode, await driverAccessCode('test-secret-with-more-than-thirty-two-characters', receipt.driverId))
     assert.deepEqual(await (await driverRequest(DB, bucket, 'POST', input)).json(), receipt)
-    assert.equal(bucket.objects.size, 1)
+    assert.equal(photoCount(DB), 1)
     assert.equal((await driverRequest(DB, bucket, 'POST', { ...input, id: crypto.randomUUID(), phone: '9876543210' })).status, 409)
     assert.equal((await (await driverRequest(DB, bucket, 'GET')).json()).total, 0)
     assert.equal((await driverRequest(DB, bucket, 'GET', undefined, { query: '?scope=admin' })).status, 401)
@@ -131,7 +148,7 @@ test('driver approval edits rates, excludes private data and hides photos on rej
     const Cookie = login.headers.get('Set-Cookie').split(';')[0]
     const adminHash = await hashText('123456789012345678901234567890123456789012345678')
     const edit = { id: input.id, version: 0, status: 'approved', price: 2900.25, ownerNote: 'Approved after manual review.' }
-    const photo = (index = '0', headers = {}) => onDriverImageRequest({ request: new Request(`https://avelof.test/api/driver-images/${input.id}/${index}`, { headers }), params: { id: input.id, index }, env: { DB, HOTEL_PHOTOS: bucket, ENQUIRY_ACCESS_SECRET: secret, ENQUIRY_ADMIN_CODE_HASH: adminHash } })
+    const photo = (index = '0', headers = {}) => onDriverImageRequest({ request: new Request(`https://avelof.test/api/driver-images/${input.id}/${index}`, { headers }), params: { id: input.id, index }, env: { DB, ENQUIRY_ACCESS_SECRET: secret, ENQUIRY_ADMIN_CODE_HASH: adminHash } })
     assert.equal((await photo()).status, 404)
     assert.equal((await photo('0', { Cookie })).status, 200)
     assert.equal((await driverRequest(DB, bucket, 'PATCH', edit)).status, 401)
@@ -163,10 +180,8 @@ test('driver validation and failed uploads never return success or leave unrefer
   } finally { DB.sqlite.close() }
   const failedDB = database(), failedBucket = hotelBucket()
   try {
-    const put = failedBucket.put
-    failedBucket.put = async (key, bytes) => { await put(key, bytes); throw new Error('Synthetic photo failure') }
-    assert.equal((await driverRequest(failedDB, failedBucket, 'POST', driverPayload())).status, 503)
-    assert.equal(failedBucket.objects.size, 0)
+    assert.equal((await driverRequest(failingPhotoDatabase(failedDB, 1), failedBucket, 'POST', driverPayload())).status, 503)
+    assert.equal(photoCount(failedDB), 0)
     assert.equal(failedDB.sqlite.prepare('SELECT count(*) AS total FROM driver_registrations').get().total, 0)
   } finally { failedDB.sqlite.close() }
 })
@@ -195,7 +210,7 @@ test('concurrent driver submissions save once and queue one notification', async
     const options = { waitUntil: (task) => tasks.push(task), env: { ENQUIRY_VAPID_PUBLIC_KEY: 'test-public-key', ENQUIRY_VAPID_PRIVATE_KEY: 'test-private-key', ENQUIRY_VAPID_SUBJECT: 'mailto:info@avelof.in' } }
     const responses = await Promise.all([driverRequest(DB, bucket, 'POST', input, options), driverRequest(DB, bucket, 'POST', input, options)])
     assert.deepEqual(responses.map((response) => response.status).sort(), [200, 201])
-    assert.equal(bucket.objects.size, 1)
+    assert.equal(photoCount(DB), 1)
     assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM driver_registrations').get().total, 1)
     assert.equal(tasks.length, 1)
     await Promise.all(tasks)
@@ -214,10 +229,10 @@ test('uncertain driver database response preserves saved photos and permits safe
   try {
     const input = driverPayload()
     assert.equal((await driverRequest(uncertain, bucket, 'POST', input)).status, 503)
-    assert.equal(bucket.objects.size, 1)
+    assert.equal(photoCount(DB), 1)
     assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM driver_registrations').get().total, 1)
     assert.equal((await driverRequest(DB, bucket, 'POST', input)).status, 200)
-    assert.equal(bucket.objects.size, 1)
+    assert.equal(photoCount(DB), 1)
   } finally { DB.sqlite.close() }
 })
 test('hotel room-only and meal add-on rates survive approval, including free meals', async () => {
@@ -253,14 +268,14 @@ test('hotel registration persists photos, unique private contact and a stable re
     assert.equal(receipt.status, 'pending')
     assert.equal(receipt.hotelId, `AVELOF_HTL_${input.id.replaceAll('-', '').toUpperCase()}`)
     assert.equal(receipt.accessCode, await hotelAccessCode('test-secret-with-more-than-thirty-two-characters', receipt.hotelId))
-    assert.equal(bucket.objects.size, 5)
+    assert.equal(photoCount(DB), 5)
     const retry = await hotelRequest(DB, bucket, 'POST', input, { photos: Array(5).fill(testHotelJpeg) })
     assert.equal(retry.status, 200)
     assert.deepEqual(await retry.json(), receipt)
-    assert.equal(bucket.objects.size, 5)
+    assert.equal(photoCount(DB), 5)
     const duplicate = await hotelRequest(DB, bucket, 'POST', { ...input, id: crypto.randomUUID(), phone: '9876543210' })
     assert.equal(duplicate.status, 409)
-    assert.equal(bucket.objects.size, 5)
+    assert.equal(photoCount(DB), 5)
     assert.equal((await (await hotelRequest(DB, bucket, 'GET')).json()).total, 0)
     const lookup = await hotelRequest(DB, bucket, 'POST', { identifier: input.phone, accessCode: receipt.accessCode }, { lookup: true })
     assert.equal(lookup.status, 200)
@@ -285,7 +300,7 @@ test('hotel moderation publishes edited prices only with owner auth and hides ph
     assert.equal((await hotelRequest(DB, bucket, 'PATCH', edit)).status, 401)
     const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
     const Cookie = login.headers.get('Set-Cookie').split(';')[0]
-    const photoEnv = { DB, HOTEL_PHOTOS: bucket, ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters', ENQUIRY_ADMIN_CODE_HASH: await hashText('123456789012345678901234567890123456789012345678') }
+    const photoEnv = { DB, ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters', ENQUIRY_ADMIN_CODE_HASH: await hashText('123456789012345678901234567890123456789012345678') }
     const photoRequest = (headers = {}, method = 'GET', index = '0') => onHotelImageRequest({ request: new Request(`https://avelof.test/api/hotel-images/${input.id}/${index}`, { headers, method }), params: { id: input.id, index }, env: photoEnv })
     assert.equal((await photoRequest()).status, 404)
     assert.equal((await photoRequest({ Cookie })).status, 200)
@@ -346,7 +361,7 @@ test('hotel validation enforces dropdowns, consent, pricing and image limits', a
     }
     assert.equal((await hotelRequest(DB, bucket, 'POST', hotelPayload(), { photos: [Buffer.alloc(hotelUploadLimit + 1)] })).status, 413)
     assert.equal((await hotelRequest(DB, bucket, 'POST', hotelPayload(), { headers: { Origin: 'https://other.test' } })).status, 403)
-    assert.equal(bucket.objects.size, 0)
+    assert.equal(photoCount(DB), 0)
     assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM hotel_registrations').get().total, 0)
   } finally { DB.sqlite.close() }
 })
@@ -354,15 +369,13 @@ test('hotel validation enforces dropdowns, consent, pricing and image limits', a
 test('hotel upload failure cleans up only its own images and never confirms storage', async () => {
   const DB = database()
   const bucket = hotelBucket()
-  let count = 0
-  bucket.put = async (key, bytes) => { if (++count === 2) throw new Error('R2 test outage'); bucket.objects.set(key, bytes) }
   try {
-    const response = await hotelRequest(DB, bucket, 'POST', hotelPayload(), { photos: [testHotelJpeg, testHotelJpeg] })
+    const response = await hotelRequest(failingPhotoDatabase(DB, 2), bucket, 'POST', hotelPayload(), { photos: [testHotelJpeg, testHotelJpeg] })
     assert.equal(response.status, 503)
     assert.equal((await response.json()).saved, undefined)
-    assert.equal(bucket.objects.size, 0)
+    assert.equal(photoCount(DB), 0)
     assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM hotel_registrations').get().total, 0)
-    assert.equal((await hotelRequest(DB, undefined, 'POST', hotelPayload())).status, 503)
+    assert.equal((await hotelRequest(undefined, undefined, 'POST', hotelPayload())).status, 503)
   } finally { DB.sqlite.close() }
 })
 test('approved registered hotel selections are preserved in masked enquiry summaries without echoing arbitrary text', async () => {
@@ -397,7 +410,7 @@ test('concurrent hotel retries keep one row, one photo set and one notification'
     const responses = await Promise.all([hotelRequest(DB, bucket, 'POST', input, options), hotelRequest(DB, bucket, 'POST', input, options)])
     assert.deepEqual(responses.map((response) => response.status).sort(), [200, 201])
     assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM hotel_registrations').get().total, 1)
-    assert.equal(bucket.objects.size, 1)
+    assert.equal(photoCount(DB), 1)
     assert.equal(tasks.length, 1)
     await Promise.all(tasks)
   } finally { DB.sqlite.close() }
@@ -421,12 +434,12 @@ test('an uncertain hotel database insert never deletes photos referenced by a sa
     const response = await hotelRequest(uncertainDB, bucket, 'POST', input)
     assert.equal(response.status, 503)
     assert.equal((await response.json()).saved, undefined)
-    assert.equal(bucket.objects.size, 1)
+    assert.equal(photoCount(DB), 1)
     assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM hotel_registrations').get().total, 1)
     const retry = await hotelRequest(DB, bucket, 'POST', input)
     assert.equal(retry.status, 200)
     assert.equal((await retry.json()).saved, true)
-    assert.equal(bucket.objects.size, 1)
+    assert.equal(photoCount(DB), 1)
   } finally { DB.sqlite.close() }
 })
 

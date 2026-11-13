@@ -3,7 +3,7 @@ import { hotelModerationSchema, hotelSubmissionSchema } from '../../src/services
 import { hotelPhotoCount, hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
 import { accessConfigured, allowAccessAttempt, hashText, isAdmin, privateReply, sameOrigin } from '../_lib/enquiryAccess.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
-import { adminHotel, deleteHotelUploads, hotelAccessCode, hotelColumns, limitedBody, publicHotel, validHotelJpeg } from '../_lib/hotelRegistration.ts'
+import { adminHotel, deleteRegistrationPhotos, hotelAccessCode, hotelColumns, limitedBody, publicHotel, saveRegistrationPhoto, validHotelJpeg } from '../_lib/hotelRegistration.ts'
 import type { HotelEnv, HotelRow } from '../_lib/hotelRegistration.ts'
 
 const listSchema = z.object({
@@ -52,7 +52,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       if (!row) return privateReply({ error: 'This hotel changed. Refresh before updating it.' }, 409)
       return privateReply({ hotel: adminHotel(row) })
     }
-    if (!env.HOTEL_PHOTOS || !accessConfigured(env)) return privateReply({ error: 'Hotel photo storage or private access is not configured.' }, 503)
+    if (!accessConfigured(env)) return privateReply({ error: 'Hotel private access is not configured.' }, 503)
     if (!request.headers.get('Content-Type')?.startsWith('multipart/form-data;')) return privateReply({ error: 'A hotel form with photos is required.' }, 415)
     if (!await allowAccessAttempt(request, DB, 'hotel-submit', 5)) return privateReply({ error: 'Too many submissions. Try again in ten minutes.' }, 429, { 'Retry-After': '600' })
     const bytes = await limitedBody(request, hotelUploadLimit)
@@ -87,7 +87,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     for (const [index, image] of images.entries()) {
       const key = `hotels/${data.id}/${uploadId}/${index}.jpg`
       uploadedKeys.push(key)
-      await env.HOTEL_PHOTOS.put(key, image, { httpMetadata: { contentType: 'image/jpeg' } })
+      await saveRegistrationPhoto(DB, key, image)
     }
     const hotelId = `AVELOF_HTL_${data.id.replaceAll('-', '').toUpperCase()}`
     const { id, phone, contactName, publicationConsent, website, ...publicDetails } = data
@@ -97,7 +97,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     const row = await DB.prepare(`INSERT INTO hotel_registrations (id, hotel_id, phone, contact_name, details_json, photo_keys_json, submitted_price, price, publication_consent, payload_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?) ON CONFLICT DO NOTHING RETURNING ${hotelColumns}`)
       .bind(id, hotelId, phone, contactName, JSON.stringify(publicDetails), JSON.stringify(uploadedKeys), data.price, data.price, payloadHash).first<HotelRow>()
     if (!row) {
-      await deleteHotelUploads(env.HOTEL_PHOTOS, uploadedKeys)
+      await deleteRegistrationPhotos(DB, uploadedKeys)
       uploadedKeys = []
       const concurrent = await DB.prepare(`SELECT ${hotelColumns} FROM hotel_registrations WHERE id = ?`).bind(id).first<HotelRow>()
       return concurrent?.payload_hash === payloadHash ? await receipt(concurrent) : privateReply({ error: 'This phone number or submission ID was just registered. Use private hotel status lookup.' }, 409)
@@ -107,14 +107,14 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     return await receipt(row, 201)
   } catch (error) {
     console.error('Hotel registration request failed', error)
-    if (!savedToDatabase && env.HOTEL_PHOTOS && uploadedKeys.length) {
+    if (!savedToDatabase && uploadedKeys.length) {
       try {
         const persisted = insertingId ? await DB.prepare('SELECT photo_keys_json FROM hotel_registrations WHERE id = ?').bind(insertingId).first<{ photo_keys_json: string }>() : null
         const persistedKeys = persisted ? z.array(z.string()).parse(JSON.parse(persisted.photo_keys_json)) : []
         const unreferenced = uploadedKeys.filter((key) => !persistedKeys.includes(key))
-        await deleteHotelUploads(env.HOTEL_PHOTOS, unreferenced)
+        await deleteRegistrationPhotos(DB, unreferenced)
       }
-      catch (cleanupError) { console.error('Hotel registration left unreferenced uploads; review R2 storage', cleanupError) }
+      catch (cleanupError) { console.error('Hotel registration left unreferenced D1 photos', cleanupError) }
     }
     return privateReply({ error: 'Hotel registration could not be confirmed. Please retry with the same form.' }, 503)
   }

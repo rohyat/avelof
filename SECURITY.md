@@ -154,8 +154,8 @@ limited, same-origin and POST-only; responses are private/no-store. Access codes
 are shown only on a successful matching submission receipt, never publicly or
 in URL/query parameters. The browser does not persist them.
 
-Photos live in private production/preview R2 buckets. A same-origin image
-function checks approval or the signed admin session before reading each object,
+Photos live as private BLOBs in the server-side D1 database. A same-origin image
+function checks approval or the signed admin session before reading each photo,
 and uses image/jpeg, nosniff and no-store so rejecting a hotel prevents new public
 reads. The client strips original metadata by canvas re-encoding; the server
 checks JPEG framing, size and bounded dimensions. Treat all submitted text and
@@ -171,10 +171,10 @@ IDs, phone constraints and content hashes handle retries and concurrent inserts.
 Admin price/status edits require signed sessions, same-origin requests and
 version checks. Notifications contain no private owner details.
 
-D1 and R2 writes are not atomic. Failed requests remove only unreferenced
-uploads; if a database result is uncertain, preserve objects rather than risk
-deleting saved photos. Monitor logged cleanup failures and periodically reconcile
-R2 keys against database references. Rejection removes public access but does
+D1 registration and photo writes use separate statements. Failed requests remove
+only unreferenced photos; if a registration result is uncertain, preserve photos
+rather than risk deleting saved data. Monitor logged cleanup failures and
+periodically reconcile D1 photo keys against registration references. Rejection removes public access but does
 not delete private data; include hotel contact details and photos in retention
 procedures. No automatic retention cleanup or phone OTP service is included.
 
@@ -241,7 +241,7 @@ visitors not to enter personal, payment or booking information.
 
 ## Driver registrations
 
-Driver records use server-side D1 and the existing private R2 photo binding.
+Driver records and private portrait BLOBs use server-side D1.
 After explicit consent and approval, the driver's full legal name, masked phone,
 portrait and reviewed vehicle listing are public. Age, full phone, licence and
 vehicle registration stay owner-only. A driver-scoped HMAC code plus ID or phone
@@ -251,7 +251,7 @@ are no-store. Unique phones, bounded single-image uploads, rate limits,
 idempotent saves and versioned moderation follow hotel registration protections.
 Neither identity nor licence validity is automatically verified. Confirm
 identity, portrait ownership and consent before publication. Include driver
-records and their R2 objects in the same retention and orphan-upload audit
+records and their D1 photos in the same retention and orphan-photo audit
 procedures as hotels.
 
 ## Verification

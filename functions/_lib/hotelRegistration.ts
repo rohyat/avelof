@@ -4,7 +4,7 @@ import { hotelPhotoCount, hotelPhotoDimension, hotelPhotoLimit } from '../../src
 import { customerAccessCode } from './enquiryAccess.ts'
 import type { AccessEnv } from './enquiryAccess.ts'
 
-export interface HotelEnv extends AccessEnv { HOTEL_PHOTOS?: R2Bucket }
+export interface HotelEnv extends AccessEnv {}
 export interface HotelRow {
   id: string; hotel_id: string; phone: string; contact_name: string;
   details_json: string; photo_keys_json: string; submitted_price: number; price: number;
@@ -63,8 +63,17 @@ export function validHotelJpeg(bytes: Uint8Array) {
   return false
 }
 
-export async function deleteHotelUploads(bucket: R2Bucket, keys: string[]) {
+export async function saveRegistrationPhoto(DB: D1Database, key: string, image: Uint8Array) {
+  const content = new Uint8Array(image).buffer
+  await DB.prepare('INSERT INTO registration_photos (photo_key, content) VALUES (?, ?)').bind(key, content).run()
+}
+
+export async function deleteRegistrationPhotos(DB: D1Database, keys: string[]) {
   if (!keys.length) return
-  try { await bucket.delete(keys) }
-  catch (error) { console.error('Hotel photo cleanup failed', error); throw error }
+  try {
+    for (const key of keys) await DB.prepare('DELETE FROM registration_photos WHERE photo_key = ?').bind(key).run()
+  } catch (error) {
+    console.error('Registration photo cleanup failed', error)
+    throw error
+  }
 }
