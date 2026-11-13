@@ -89,6 +89,10 @@ img { display: block; max-width: 100%; }
 .button-mini { min-height: 36px; gap: 8px; padding: 0 11px; border-color: #d7ddd4; color: var(--forest); background: transparent; font-size: 10px; }
 .button-mini:hover { color: #fff; background: var(--forest); border-color: var(--forest); }
 .icon-button { width: 40px; height: 40px; display: inline-grid; place-items: center; padding: 0; border: 0; color: var(--forest); background: transparent; }
+.whatsapp-float { position: fixed; right: 24px; bottom: 24px; z-index: 18; display: inline-flex; align-items: center; gap: 9px; min-height: 52px; padding: 0 17px; border-radius: 999px; color: #fff; background: #1f9d55; box-shadow: 0 10px 24px rgba(20, 67, 45, .22); font-size: 12px; font-weight: 700; transition: background .2s ease, box-shadow .2s ease, transform .2s ease; }
+.whatsapp-float:hover { color: #fff; background: #188548; box-shadow: 0 13px 28px rgba(20, 67, 45, .28); transform: translateY(-2px); }
+.whatsapp-float:focus-visible { outline-color: #1f9d55; }
+@media (max-width: 560px) { .whatsapp-float { right: 16px; bottom: 16px; width: 52px; min-height: 52px; justify-content: center; padding: 0; } .whatsapp-float span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
 
 .eyebrow { margin: 0 0 15px; color: var(--copper); font-size: 9px; font-weight: 700; letter-spacing: 1.7px; line-height: 1.4; text-transform: uppercase; }
 h1, h2, h3, p { margin-top: 0; }
@@ -1019,7 +1023,7 @@ body.enquiry-open { overflow: hidden; }
   .trip-planner { padding: 20px 15px 17px; }
   .planner-heading { align-items: flex-start; flex-direction: column; gap: 9px; }
   .planner-heading h3 { font-size: 24px; }
-  .trip-dates { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .trip-dates { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .planner-swipe-rail { grid-auto-columns: minmax(210px, 82%); gap: 9px; margin-right: -15px; padding-right: 15px; }
   .planner-swipe-hint { display: inline; }
   .trip-length { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 8px; padding: 10px 0 0; border-top: 1px solid #dce5e5; border-left: 0; }
@@ -1031,10 +1035,6 @@ body.enquiry-open { overflow: hidden; }
   .departure-label { font-size: 9px; }
   .planner-footer { align-items: stretch; flex-direction: column; gap: 13px; }
   .planner-footer .button { width: 100%; }
-}
-
-@media (max-width: 360px) {
-  .trip-dates { grid-template-columns: minmax(0, 1fr); }
 }
 
 .places-hero { min-height: 350px; }

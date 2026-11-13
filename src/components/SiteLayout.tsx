@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { Menu, MessageCircle, X } from 'lucide-react'
 import { business } from '../config'
 import { hotels, rentalCars, tourPackages } from '../data/catalog'
 import BookingModal from './BookingModal'
 import OfferBanner from './OfferBanner'
+import { createWhatsAppUrl } from '../services/bookingService'
 import type { BookingKind } from '../types'
 
 export interface SiteContext {
@@ -137,6 +138,7 @@ export default function SiteLayout() {
         </nav>
       </header>
       <main><Outlet context={{ openBooking } satisfies SiteContext} /></main>
+      <a className="whatsapp-float" href={createWhatsAppUrl('Hello AVELOF, I would like help planning my Kashmir journey.')} target="_blank" rel="noreferrer" aria-label="Chat with AVELOF on WhatsApp" title="Chat with AVELOF on WhatsApp"><MessageCircle size={25} strokeWidth={2.2} /><span>Chat with us</span></a>
       <footer className="site-footer">
         <div className="footer-main">
           <div className="footer-brand"><Link className="brand brand-light" to="/"><span className="brand-mark">A</span><span>AVELOF<small>YOUR KASHMIR EXPERIENCE</small></span></Link><p>Your stay. Your journey.<br />Your Kashmir experience.</p></div>
