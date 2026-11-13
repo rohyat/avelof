@@ -5,10 +5,9 @@ import { z } from 'zod'
 import NumberStepper from '../components/NumberStepper'
 import PartnerPhotos from '../components/PartnerPhotos'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
-import { business } from '../config'
 import { driverDistricts, driverVehicleNumberPattern, driverVehicleOptions, normalizeDriverVehicleNumber } from '../data/driverRegistration'
 import { hotelStatusLabels } from '../data/hotelRegistration'
-import { driverReceiptSchema, driverSubmissionSchema, ownerDriverSchema } from '../services/driverSchema'
+import { driverReceiptSchema, driverStatusResultSchema, driverSubmissionSchema } from '../services/driverSchema'
 import type { AdminDriver } from '../services/driverSchema'
 import { HotelError, hotelErrorText } from '../services/hotelService'
 import { hotelStatusSchema } from '../services/hotelSchema'
@@ -51,7 +50,7 @@ export default function DriverRegistrationPage() {
     <Link className="text-link" to="/partners">Partner with AVELOF</Link>
     <div className="enquiry-access-heading"><div><p className="eyebrow">Driver partners</p><h1>Register as a driver</h1><p>After approval, your full name, portrait, vehicle details and vehicle registration appear in our driver directory. Your phone and driving-licence numbers are masked; age and full contact details remain private.</p></div></div>
     <p><Link to="/driver-status">Already registered? Check driver status</Link></p>
-    {receipt ? <section className="review-ready" role="status"><h2>Your driver registration has been saved.</h2><p>{hotelStatusLabels[receipt.status]}. Not a confirmed listing or booking.</p><dl className="hotel-receipt"><dt>Driver ID</dt><dd>{receipt.driverId}</dd><dt>Private access code</dt><dd>{receipt.accessCode}</dd></dl><p>Save both values now. Do not share your private code. Contact <a href={`mailto:${business.email}`}>{business.email}</a> if you lose it.</p><Link to="/driver-status" className="button button-dark">Check driver status</Link></section> : <form className="review-submission-form" onSubmit={submit}>
+    {receipt ? <section className="review-ready" role="status"><h2>Your driver registration has been saved.</h2><p>{hotelStatusLabels[receipt.status]}. Not a confirmed listing or booking.</p><dl className="hotel-receipt"><dt>Driver ID</dt><dd>{receipt.driverId}</dd><dt>Status access code</dt><dd>{receipt.accessCode}</dd></dl><p>Your status code uses the first four letters of your name and the last four digits of your registered phone number.</p><Link to="/driver-status" className="button button-dark">Check driver status</Link></section> : <form className="review-submission-form" onSubmit={submit}>
       <fieldset className="hotel-form-fields" disabled={busy}>
         <label>Full legal name<input name="fullName" maxLength={100} required autoComplete="name" /></label>
         <NumberStepper label="Age (minimum 18)" name="age" min={18} max={100} />
@@ -72,7 +71,7 @@ export default function DriverRegistrationPage() {
 }
 
 export function DriverStatusPage() {
-  const [driver, setDriver] = useState<z.infer<typeof ownerDriverSchema> | null>(null)
+  const [driver, setDriver] = useState<z.infer<typeof driverStatusResultSchema> | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -84,9 +83,9 @@ export function DriverStatusPage() {
     catch (failure) { setError(hotelErrorText(failure)) } finally { setBusy(false) }
   }
   return <section className="enquiry-access-page page-width"><Link to="/partners">Partner with AVELOF</Link><h1>Check driver status</h1>
-    <form className="review-submission-form" onSubmit={submit}><label>Driver ID or phone number<input name="identifier" maxLength={80} required autoComplete="off" /></label><label>Private access code<input name="accessCode" type="password" minLength={64} maxLength={64} required autoComplete="off" /></label><button className="button button-dark" disabled={busy}>Check status</button></form>
+    <form className="review-submission-form" onSubmit={submit}><label>Driver ID or phone number<input name="identifier" maxLength={80} required autoComplete="off" /></label><label>Status access code<input name="accessCode" minLength={5} maxLength={12} required autoComplete="off" /></label><button className="button button-dark" disabled={busy}>Check status</button></form>
     {error && <p className="enquiry-error" role="alert">{error}</p>}
-    {driver && <section className="admin-review-record hotel-owner-status"><h2>{driver.fullName}</h2><p>{driver.vehicleName} · {driver.location} · {driver.seats} seats</p><p className="hotel-identifier">{driver.driverId}</p><p role="status">{hotelStatusLabels[driver.status]}</p>{driver.ownerNote && <p>AVELOF note: {driver.ownerNote}</p>}{driver.status === 'approved' ? <Link to="/drivers">View driver listing</Link> : <p>Not publicly listed. Contact AVELOF for changes.</p>}</section>}
+    {driver && <section className="admin-review-record hotel-owner-status"><h2>{driver.fullName}</h2><p>{driver.vehicleName} · {driver.location} · {driver.seats} seats</p><p className="hotel-identifier">{driver.driverId}</p><p role="status">{hotelStatusLabels[driver.status]}</p>{driver.status === 'approved' ? <Link to="/drivers">View driver listing</Link> : <p>Not publicly listed. Contact AVELOF for changes.</p>}</section>}
   </section>
 }
 function DriverRecord({ driver, disabled, save }: { driver: AdminDriver; disabled: boolean; save: (driver: AdminDriver, status: HotelStatus, price: number, note: string, vehicleNumber: string) => Promise<void> }) {

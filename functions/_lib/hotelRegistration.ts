@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { hotelDetailsSchema } from '../../src/services/hotelSchema.ts'
 import { hotelPhotoCount, hotelPhotoDimension, hotelPhotoLimit } from '../../src/data/hotelRegistration.ts'
-import { customerAccessCode } from './enquiryAccess.ts'
+import { partnerStatusAccessCode } from '../../src/services/partnerAccessCode.ts'
 import type { AccessEnv } from './enquiryAccess.ts'
 
 export interface HotelEnv extends AccessEnv {}
@@ -24,7 +24,8 @@ export function publicHotel(row: HotelRow) {
 export function adminHotel(row: HotelRow) {
   return { ...publicHotel(row), contactName: row.contact_name, phone: row.phone, submittedPrice: row.submitted_price, status: row.status, version: row.version, ownerNote: row.owner_note, createdAt: row.created_at, updatedAt: row.updated_at }
 }
-export const hotelAccessCode = (secret: string, hotelId: string) => customerAccessCode(secret, `hotel:${hotelId}`)
+export const hotelAccessCode = (row: Pick<HotelRow, 'phone' | 'details_json'>) =>
+  partnerStatusAccessCode(hotelDetailsSchema.parse(JSON.parse(row.details_json)).name, row.phone)
 
 export async function limitedBody(request: Request, limit: number) {
   if (Number(request.headers.get('Content-Length')) > limit) return null

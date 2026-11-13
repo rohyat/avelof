@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
-import { adminDriverSchema, driverReceiptSchema, ownerDriverSchema, publicDriverSchema } from './driverSchema'
+import { adminDriverSchema, driverReceiptSchema, driverStatusResultSchema, publicDriverSchema } from './driverSchema'
 import type { DriverSubmission, PublicDriver } from './driverSchema'
 import type { HotelStatus } from './hotelSchema'
 import { HotelError, hotelErrorText, requestHotel } from './hotelService'
@@ -18,7 +18,7 @@ export async function saveDriver(data: DriverSubmission, photo: Blob) {
   return receipt
 }
 export async function lookupDriver(identifier: string, accessCode: string) {
-  return z.object({ driver: ownerDriverSchema }).parse(await requestHotel('/api/drivers', 'POST', { identifier, accessCode })).driver
+  return z.object({ driver: driverStatusResultSchema }).parse(await requestHotel('/api/drivers', 'POST', { identifier, accessCode })).driver
 }
 export async function loadAdminDrivers(page: number, status: HotelStatus | 'all', signal?: AbortSignal) {
   return adminList.parse(await requestHotel(`/api/drivers?${new URLSearchParams({ scope: 'admin', page: String(page), status })}`, 'GET', undefined, signal))

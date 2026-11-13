@@ -7,7 +7,7 @@ import { hotelPhotoLimit } from '../src/data/hotelRegistration.ts'
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
 const id = '00000000-0000-4000-8000-000000000001'
 const hotelId = `AVELOF_HTL_${id.replaceAll('-', '').toUpperCase()}`
-const accessCode = 'a'.repeat(64)
+const accessCode = 'VALL3210'
 const hotel = {
   id, hotelId, name: 'Valley Partner Hotel', contactName: 'Private Partner', phone: '9876543210',
   location: 'Gulmarg', category: 'Premium', description: 'A mountain hotel with comfortable rooms and local hospitality.',
@@ -134,25 +134,26 @@ test('hotel registration, private lookup and moderation integrate with public st
         assert.equal(await page.getByRole('button', { name: 'Submit hotel for approval' }).isEnabled(), true)
       } finally { await page.close() }
     })
-    await context.test('private lookup sends the code in the body, not the URL, and shows rejection notes', async () => {
+    await context.test('status lookup sends the code in the body and excludes private hotel details', async () => {
       const page = await browser.newPage()
       let requested
       await page.route('**/api/hotel-status', (route) => {
         requested = route.request()
-        const { photos, version, ...owner } = hotel
-        void photos; void version
-        return route.fulfill({ json: { hotel: { ...owner, status: 'rejected', ownerNote: 'Please update property photos.' } } })
+        const { photos, contactName, phone, submittedPrice, version, ownerNote, createdAt, updatedAt, ...statusHotel } = hotel
+        void photos; void contactName; void phone; void submittedPrice; void version; void ownerNote; void createdAt; void updatedAt
+        return route.fulfill({ json: { hotel: { ...statusHotel, status: 'rejected' } } })
       })
       try {
         await page.goto(`${origin}/hotel-status`)
         await page.getByLabel('Hotel ID or phone number').fill(hotel.phone)
-        await page.getByLabel('Private access code').fill(accessCode)
+        await page.getByLabel('Status access code').fill(accessCode)
         await page.getByRole('button', { name: 'Check status' }).click()
         await page.getByRole('region', { name: 'Hotel submission status' }).waitFor()
         assert.deepEqual(requested.postDataJSON(), { identifier: hotel.phone, accessCode })
         assert.equal(requested.url().includes(accessCode), false)
         assert.equal(page.url().includes(accessCode), false)
-        assert.ok((await page.locator('.hotel-owner-status').innerText()).includes('Please update property photos.'))
+        assert.equal((await page.locator('.hotel-owner-status').innerText()).includes(hotel.phone), false)
+        assert.equal((await page.locator('.hotel-owner-status').innerText()).includes(hotel.contactName), false)
       } finally { await page.close() }
     })
     await context.test('owner can review photos, edit the price and approve a hotel', async () => {

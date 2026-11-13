@@ -5,7 +5,7 @@ import { chromium } from 'playwright'
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
 const id = '00000000-0000-4000-8000-000000000002'
 const driverId = 'AVELOF-DRV-10001'
-const accessCode = 'b'.repeat(64)
+const accessCode = 'PUBL3210'
 const driver = {
   id, driverId, fullName: 'Public Driver Name', maskedPhone: '987*****10', vehicleId: 'innova-crysta', age: 30,
   phone: '9876543210', licenceNumber: 'JK01 123456789', vehicleNumber: 'JK01AB-1234',
@@ -99,8 +99,8 @@ test('partner onboarding and approved listings work separately from customer nav
         }
         if (request.method() === 'POST') {
           lookup = request
-          const { photo, version, ...owner } = current
-          void photo; void version
+          const { photo, version, age, phone, licenceNumber, ownerNote, createdAt, averageRating, reviewCount, ...owner } = current
+          void photo; void version; void age; void phone; void licenceNumber; void ownerNote; void createdAt; void averageRating; void reviewCount
           return route.fulfill({ json: { driver: owner } })
         }
         return route.fulfill({ json: listing([current]) })
@@ -117,7 +117,7 @@ test('partner onboarding and approved listings work separately from customer nav
         assert.deepEqual(update, { id, version: 0, status: 'approved', price: 2900.25, ownerNote: 'Reviewed and approved.', vehicleNumber: driver.vehicleNumber })
         await page.goto(`${origin}/driver-status`)
         await page.getByLabel('Driver ID or phone number').fill(driver.phone)
-        await page.getByLabel('Private access code').fill(accessCode)
+        await page.getByLabel('Status access code').fill(accessCode)
         await page.getByRole('button', { name: 'Check status' }).click()
         await page.locator('.hotel-owner-status').waitFor()
         assert.deepEqual(lookup.postDataJSON(), { identifier: driver.phone, accessCode })

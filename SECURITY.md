@@ -148,11 +148,12 @@ These browser protections reduce risk; they are not a guarantee against leaks.
 
 Hotel details share the existing server-side D1 binding. Original phone numbers
 are normalised to a unique Indian national number; phone/contact names stay
-private. Status lookup requires both a hotel ID or phone and a deterministic
-HMAC access code scoped separately from customer enquiry codes. It is rate
-limited, same-origin and POST-only; responses are private/no-store. Access codes
-are shown only on a successful matching submission receipt, never publicly or
-in URL/query parameters. The browser does not persist them.
+private. Status lookup uses a memorable code formed from the first four
+alphanumeric hotel-name characters and last four registered-phone digits. This
+is a convenience lookup rather than strong authentication, so its same-origin,
+POST-only, rate-limited response contains only publication status and public
+listing fields. It never returns full phone/contact data, owner notes, photos,
+or internal moderation fields.
 
 Photos live as private BLOBs in the server-side D1 database. A same-origin image
 function checks approval or the signed admin session before reading each photo,
@@ -250,8 +251,12 @@ Driver records and private portrait BLOBs use server-side D1.
 After explicit consent and approval, the driver's full legal name, masked phone,
 masked driving-licence number, vehicle registration, portrait and reviewed vehicle
 listing are public. Age, full phone and full licence stay owner-only. A recorded
-directory-credential consent flag gates the additional public fields. A driver-scoped HMAC code plus ID or phone
-is required for private POST status lookup. Admin reads/updates and pending
+directory-credential consent flag gates the additional public fields. Driver
+status lookup uses the first four alphanumeric name characters plus the last
+four registered-phone digits. Because that code is memorable rather than
+secret, the response is limited to publication status and public listing fields;
+it never returns age, full phone, full licence, owner notes or pending photos.
+Admin reads/updates and pending
 portrait access require the existing owner session; public portrait responses
 are no-store. Unique phones, bounded single-image uploads, rate limits,
 idempotent saves and versioned moderation follow hotel registration protections.

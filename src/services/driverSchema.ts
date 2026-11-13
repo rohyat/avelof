@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { driverDistricts, driverVehicleIds, driverVehicleNumberPattern, normalizeDriverVehicleNumber } from '../data/driverRegistration.ts'
 import { hotelPriceSchema, hotelStatusSchema } from './hotelSchema.ts'
 import { indianPhoneNumber } from './phoneNumbers.ts'
+import { partnerStatusAccessCodePattern } from './partnerAccessCode.ts'
 const text = (max: number) => z.string().trim().min(1).max(max)
 export const driverDetailsSchema = z.object({
   fullName: text(100), vehicleId: z.enum(driverVehicleIds),
@@ -33,11 +34,13 @@ export const adminDriverSchema = publicDriverSchema.extend({
   ...driverPrivateSchema.shape, status: hotelStatusSchema,
   version: z.number().int().min(0), ownerNote: z.string(), createdAt: z.string(),
 })
+export const driverStatusResultSchema = publicDriverSchema.omit({ photo: true, averageRating: true, reviewCount: true }).extend({
+  status: hotelStatusSchema,
+})
 export const driverReceiptSchema = z.object({
   saved: z.literal(true), id: z.uuidv4(), driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/),
-  accessCode: z.string().regex(/^[a-f0-9]{64}$/), status: hotelStatusSchema,
+  accessCode: z.string().regex(partnerStatusAccessCodePattern), status: hotelStatusSchema,
 })
-export const ownerDriverSchema = adminDriverSchema.omit({ photo: true, version: true })
 export type DriverSubmission = z.infer<typeof driverSubmissionSchema>
 export type PublicDriver = z.infer<typeof publicDriverSchema>
 export type AdminDriver = z.infer<typeof adminDriverSchema>

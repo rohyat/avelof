@@ -83,7 +83,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     }))
     const payloadHash = await hashText(JSON.stringify({ data, photoHashes }))
     const existing = await DB.prepare(`SELECT ${hotelColumns} FROM hotel_registrations WHERE id = ? OR phone = ?`).bind(data.id, data.phone).first<HotelRow>()
-    const receipt = async (row: HotelRow, status = 200) => privateReply({ saved: true, id: row.id, hotelId: row.hotel_id, status: row.status, accessCode: await hotelAccessCode(env.ENQUIRY_ACCESS_SECRET!, row.hotel_id) }, status)
+    const receipt = async (row: HotelRow, status = 200) => privateReply({ saved: true, id: row.id, hotelId: row.hotel_id, status: row.status, accessCode: hotelAccessCode(row) }, status)
     if (existing) return existing.id === data.id && existing.payload_hash === payloadHash ? await receipt(existing) : privateReply({ error: 'This phone number or submission ID is already registered. Use private hotel status lookup or contact AVELOF.' }, 409)
     const uploadId = crypto.randomUUID()
     for (const [index, image] of images.entries()) {

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { useEffect, useState } from 'react'
-import { adminHotelSchema, hotelReceiptSchema, publicHotelSchema } from './hotelSchema'
+import { adminHotelSchema, hotelReceiptSchema, hotelStatusResultSchema, publicHotelSchema } from './hotelSchema'
 import { hotelPhotoCount, hotelPhotoDimension, hotelPhotoLimit } from '../data/hotelRegistration'
 import type { HotelSubmission, HotelStatus, PublicHotel } from './hotelSchema'
 import type { Hotel } from '../types'
@@ -8,8 +8,7 @@ import type { Hotel } from '../types'
 const pagination = { total: z.number().int().min(0), page: z.number().int().min(1), pageSize: z.literal(25) }
 const publicList = z.object({ ...pagination, hotels: z.array(publicHotelSchema) })
 const adminList = z.object({ ...pagination, hotels: z.array(adminHotelSchema) })
-const ownerHotelSchema = adminHotelSchema.omit({ photos: true, version: true })
-export type OwnerHotel = z.infer<typeof ownerHotelSchema>
+export type OwnerHotel = z.infer<typeof hotelStatusResultSchema>
 export type HotelReceipt = z.infer<typeof hotelReceiptSchema>
 
 export class HotelError extends Error {
@@ -47,7 +46,7 @@ export async function saveHotel(details: HotelSubmission, photos: Blob[]) {
   return receipt
 }
 export async function lookupHotel(identifier: string, accessCode: string) {
-  return z.object({ hotel: ownerHotelSchema }).parse(await requestHotel('/api/hotel-status', 'POST', { identifier, accessCode })).hotel
+  return z.object({ hotel: hotelStatusResultSchema }).parse(await requestHotel('/api/hotel-status', 'POST', { identifier, accessCode })).hotel
 }
 export async function loadAdminHotels(page: number, status: HotelStatus | 'all', signal?: AbortSignal) {
   return adminList.parse(await requestHotel(`/api/hotels?${new URLSearchParams({ scope: 'admin', page: String(page), status })}`, 'GET', undefined, signal))

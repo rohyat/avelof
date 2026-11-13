@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, RefreshCw } from 'lucide-react'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import NumberStepper from '../components/NumberStepper'
-import { business } from '../config'
 import { heatingOptions, hotelAmenities, hotelCategories, hotelCategoryLabels, hotelHighlightOptions, hotelRoomTypes, hotelStatusLabels, hotelTaxOptions, registrationLocations } from '../data/hotelRegistration'
 import { hotelPriceSchema, hotelStatusSchema, hotelSubmissionSchema } from '../services/hotelSchema'
 import type { AdminHotel, HotelStatus } from '../services/hotelSchema'
@@ -82,8 +81,8 @@ export default function HotelRegistrationPage() {
     <p><Link className="text-link" to="/hotel-status">Already registered? Check your hotel status <ArrowRight size={16} /></Link></p>
     {receipt ? <section className="review-ready" role="status">
       <h2>Your hotel registration has been saved.</h2><p>Status: {hotelStatusLabels[receipt.status]}. This is not a confirmed listing or booking.</p>
-      <dl className="hotel-receipt"><div><dt>Hotel ID</dt><dd>{receipt.hotelId}</dd></div><div><dt>Private access code</dt><dd>{receipt.accessCode}</dd></div></dl>
-      <p>Save both values now. Use your hotel ID or registered phone number with this private code to check your status. Do not share the code publicly. If you lose it, contact <a href={`mailto:${business.email}`}>{business.email}</a>.</p>
+      <dl className="hotel-receipt"><div><dt>Hotel ID</dt><dd>{receipt.hotelId}</dd></div><div><dt>Status access code</dt><dd>{receipt.accessCode}</dd></div></dl>
+      <p>Your status code uses the first four letters of the hotel name and the last four digits of the registered phone number.</p>
       <Link className="button button-dark" to="/hotel-status">Check hotel status <ArrowRight size={16} /></Link>
     </section> : <form className="review-submission-form hotel-registration-form" onSubmit={submit} aria-busy={busy}>
       <fieldset disabled={busy} className="hotel-form-fields">
@@ -132,22 +131,21 @@ export function HotelStatusPage() {
   }
   return <section className="enquiry-access-page page-width">
     <Link className="text-link" to="/register-hotel"><ArrowLeft size={16} /> Hotel registration</Link>
-    <div className="enquiry-access-heading"><div><p className="eyebrow">Private owner lookup</p><h1>Check your hotel status</h1><p>Enter your hotel ID or registered phone and the private access code received after submission.</p></div></div>
+    <div className="enquiry-access-heading"><div><p className="eyebrow">Registration lookup</p><h1>Check your hotel status</h1><p>Enter your hotel ID or registered phone and the status access code received after submission.</p></div></div>
     <form className="review-submission-form" onSubmit={submit}>
       <label>Hotel ID or phone number<input name="identifier" maxLength={80} required autoComplete="off" /></label>
-      <label>Private access code<input name="accessCode" type="password" maxLength={64} minLength={64} required autoComplete="off" /></label>
+      <label>Status access code<input name="accessCode" maxLength={12} minLength={5} required autoComplete="off" /></label>
       <button type="submit" className="button button-dark" disabled={busy}>{busy ? 'Checking...' : 'Check status'}</button>
     </form>
     {error && <p className="enquiry-error" role="alert">{error}</p>}
     {hotel && <section className="admin-review-record hotel-owner-status" aria-label="Hotel submission status">
       <h2>{hotel.name}</h2><p className="hotel-identifier">{hotel.hotelId}</p><p role="status">{hotelStatusLabels[hotel.status]}</p>
       <p>{hotel.location} · {hotelCategoryLabels[hotel.category]}</p><p>{hotel.description}</p>
-      <p>Submitted rate: INR {hotel.submittedPrice.toLocaleString('en-IN')}. {hotel.status === 'approved' ? 'Published' : 'Current reviewed'} rate: INR {hotel.price.toLocaleString('en-IN')} per room per night for 2 adults.</p>
+      <p>{hotel.status === 'approved' ? 'Published' : 'Current'} rate: INR {hotel.price.toLocaleString('en-IN')} per room per night for 2 adults.</p>
       <p>{hotel.mealPlan} · {hotel.taxDetails}</p>
       {hotel.breakfastPrice !== undefined && <p>Optional breakfast: INR {hotel.breakfastPrice}; optional dinner: INR {hotel.dinnerPrice}, per room for 2 adults.</p>}
       <p>Heating: {hotel.heating}. Amenities: {hotel.amenities.join(', ') || 'None selected'}.</p>
       <ul>{hotel.highlights.map((point) => <li key={point}>{point}</li>)}</ul>
-      {hotel.ownerNote && <p><strong>AVELOF note:</strong> {hotel.ownerNote}</p>}
       {hotel.status === 'approved' ? <Link className="text-link" to={`/hotels/${hotel.id}`}>View approved listing <ArrowRight size={16} /></Link> : <p>This property is not publicly listed. Contact AVELOF for changes or questions.</p>}
     </section>}
   </section>

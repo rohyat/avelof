@@ -120,7 +120,8 @@ test('driver registration is private, idempotent and unique by phone, with prote
     const receipt = await response.json()
     assert.equal(receipt.status, 'pending')
     assert.equal(receipt.driverId, 'AVELOF-DRV-10001')
-    assert.equal(receipt.accessCode, await driverAccessCode('test-secret-with-more-than-thirty-two-characters', `AVELOF_DRV_${input.id.replaceAll('-', '').toUpperCase()}`))
+    const storedDriver = DB.sqlite.prepare('SELECT phone, details_json FROM driver_registrations WHERE id = ?').get(input.id)
+    assert.equal(receipt.accessCode, driverAccessCode(storedDriver))
     const stored = DB.sqlite.prepare('SELECT details_json, submitted_price, price FROM driver_registrations WHERE id = ?').get(input.id)
     assert.equal(JSON.parse(stored.details_json).price, undefined)
     assert.equal(stored.submitted_price, 1)
@@ -138,11 +139,15 @@ test('driver registration is private, idempotent and unique by phone, with prote
       assert.equal(lookup.status, 200)
       const owner = (await lookup.json()).driver
       assert.equal(owner.fullName, input.fullName)
-      assert.equal(owner.phone, '9876543210')
+      assert.equal(owner.maskedPhone, '987*****10')
+      assert.equal(owner.phone, undefined)
+      assert.equal(owner.age, undefined)
+      assert.equal(owner.licenceNumber, undefined)
+      assert.equal(owner.ownerNote, undefined)
       assert.equal(owner.photo, undefined)
       assert.equal(owner.accessCode, undefined)
     }
-    assert.equal((await driverRequest(DB, bucket, 'POST', { identifier: receipt.driverId, accessCode: '0'.repeat(64) }, { lookup: true })).status, 404)
+    assert.equal((await driverRequest(DB, bucket, 'POST', { identifier: receipt.driverId, accessCode: 'WRNG0000' }, { lookup: true })).status, 404)
   } finally { DB.sqlite.close() }
 })
 test('short driving licence numbers retain only masked edge characters', () => {
@@ -307,7 +312,8 @@ test('hotel registration persists photos, unique private contact and a stable re
     assert.equal(receipt.id, input.id.toLowerCase())
     assert.equal(receipt.status, 'pending')
     assert.equal(receipt.hotelId, `AVELOF_HTL_${input.id.replaceAll('-', '').toUpperCase()}`)
-    assert.equal(receipt.accessCode, await hotelAccessCode('test-secret-with-more-than-thirty-two-characters', receipt.hotelId))
+    const storedHotel = DB.sqlite.prepare('SELECT phone, details_json FROM hotel_registrations WHERE id = ?').get(receipt.id)
+    assert.equal(receipt.accessCode, hotelAccessCode(storedHotel))
     assert.equal(photoCount(DB), 5)
     const retry = await hotelRequest(DB, bucket, 'POST', input, { photos: Array(5).fill(testHotelJpeg) })
     assert.equal(retry.status, 200)
@@ -321,11 +327,14 @@ test('hotel registration persists photos, unique private contact and a stable re
     assert.equal(lookup.status, 200)
     const owner = (await lookup.json()).hotel
     assert.equal(owner.status, 'pending')
-    assert.equal(owner.phone, '9876543210')
+    assert.equal(owner.phone, undefined)
+    assert.equal(owner.contactName, undefined)
+    assert.equal(owner.submittedPrice, undefined)
+    assert.equal(owner.ownerNote, undefined)
     assert.equal(owner.photos, undefined)
     assert.equal(owner.accessCode, undefined)
     assert.equal(owner.payload_hash, undefined)
-    assert.equal((await hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: '0'.repeat(64) }, { lookup: true })).status, 404)
+    assert.equal((await hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: 'WRNG0000' }, { lookup: true })).status, 404)
     assert.equal((await hotelRequest(DB, bucket, 'GET', undefined, { query: '?scope=admin' })).status, 401)
   } finally { DB.sqlite.close() }
 })
@@ -369,7 +378,9 @@ test('hotel moderation publishes edited prices only with owner auth and hides ph
     const owner = (await (await hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: receipt.accessCode }, { lookup: true })).json()).hotel
     assert.equal(owner.status, 'rejected')
     assert.equal(owner.price, edit.price)
-    assert.equal(owner.ownerNote, 'Please contact us.')
+    assert.equal(owner.ownerNote, undefined)
+    assert.equal(owner.phone, undefined)
+    assert.equal(owner.contactName, undefined)
   } finally { DB.sqlite.close() }
 })
 

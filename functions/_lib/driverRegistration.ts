@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { driverDetailsSchema, driverPrivateSchema, driverVehicleNumberSchema } from '../../src/services/driverSchema.ts'
 import { driverVehicleOptions } from '../../src/data/driverRegistration.ts'
 import { rentalCars } from '../../src/data/catalog.ts'
-import { customerAccessCode } from './enquiryAccess.ts'
+import { partnerStatusAccessCode } from '../../src/services/partnerAccessCode.ts'
 export interface DriverRow {
   id: string; driver_id: string; phone: string; private_json: string; details_json: string;
   photo_keys_json: string; submitted_price: number; price: number; status: 'pending' | 'approved' | 'rejected';
@@ -35,4 +35,5 @@ export function publicDriver(row: DriverRow) {
 export function adminDriver(row: DriverRow) {
   return { ...publicDriver(row), ...driverPrivateSchema.parse(JSON.parse(row.private_json)), status: row.status, version: row.version, ownerNote: row.owner_note, createdAt: row.created_at }
 }
-export const driverAccessCode = (secret: string, id: string) => customerAccessCode(secret, `driver:${id}`)
+export const driverAccessCode = (row: Pick<DriverRow, 'phone' | 'details_json'>) =>
+  partnerStatusAccessCode(driverDetailsSchema.parse(JSON.parse(row.details_json)).fullName, row.phone)

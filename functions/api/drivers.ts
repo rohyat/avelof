@@ -24,15 +24,10 @@ async function assignDriverId(DB: D1Database, row: DriverRow) {
   return DB.prepare(`SELECT ${driverColumns} FROM driver_registrations WHERE id = ?`).bind(row.id).first<DriverRow>()
 }
 
-async function accessCodeReference(DB: D1Database, row: DriverRow) {
-  const reference = await DB.prepare('SELECT legacy_driver_id FROM driver_reference_numbers WHERE registration_id = ?').bind(row.id).first<{ legacy_driver_id: string }>()
-  return reference?.legacy_driver_id ?? row.driver_id
-}
-
-async function registrationReceipt(DB: D1Database, secret: string, row: DriverRow, status = 200) {
+async function registrationReceipt(DB: D1Database, row: DriverRow, status = 200) {
   const assigned = await assignDriverId(DB, row)
   if (!assigned || !/^AVELOF-DRV-[0-9]{5,10}$/.test(assigned.driver_id)) return privateReply({ error: 'Driver ID could not be assigned.' }, 503)
-  return privateReply({ saved: true, id: assigned.id, driverId: assigned.driver_id, status: assigned.status, accessCode: await driverAccessCode(secret, await accessCodeReference(DB, assigned)) }, status)
+  return privateReply({ saved: true, id: assigned.id, driverId: assigned.driver_id, status: assigned.status, accessCode: driverAccessCode(assigned) }, status)
 }
 
 export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUntil }) => {
@@ -71,18 +66,17 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
         const row = await DB.prepare(`UPDATE driver_registrations SET status = ?, price = ?, owner_note = ?, private_json = json_set(private_json, '$.vehicleNumber', ?), version = version + 1 WHERE id = ? AND version = ? RETURNING ${driverColumns}`).bind(status, price, ownerNote, vehicleNumber, id, version).first<DriverRow>()
         return row ? privateReply({ driver: adminDriver(row) }) : privateReply({ error: 'This driver changed. Refresh before updating.' }, 409)
       }
-      if (!accessConfigured(env)) return privateReply({ error: 'Private driver access is unavailable.' }, 503)
       if (!await allowAccessAttempt(request, DB, 'driver-lookup', 10)) return privateReply({ error: 'Too many attempts. Try again in ten minutes.' }, 429)
       const parsed = hotelLookupSchema.safeParse(input)
-      if (!parsed.success) return privateReply({ error: 'Enter driver ID or phone and private access code.' }, 400)
+      if (!parsed.success) return privateReply({ error: 'Enter driver ID or phone and status access code.' }, 400)
       const identifier = parsed.data.identifier.toUpperCase()
       const phone = indianPhoneNumber(identifier)
       if (!phone && !/^AVELOF-DRV-[0-9]{5,10}$/.test(identifier)) return privateReply({ error: 'Invalid driver ID or phone.' }, 400)
       const row = await DB.prepare(`SELECT ${driverColumns} FROM driver_registrations WHERE driver_id = ? OR phone = ?`).bind(identifier, phone || null).first<DriverRow>()
-      if (!row || !equalHashes(await driverAccessCode(env.ENQUIRY_ACCESS_SECRET!, await accessCodeReference(DB, row)), parsed.data.accessCode)) return privateReply({ error: 'No matching driver and private access code.' }, 404)
-      const { photo, version, ...driver } = adminDriver(row)
-      void photo; void version
-      return privateReply({ driver })
+      if (!row || !equalHashes(driverAccessCode(row), parsed.data.accessCode)) return privateReply({ error: 'No matching driver and access code.' }, 404)
+      const { photo, averageRating, reviewCount, ...driver } = publicDriver(row)
+      void photo; void averageRating; void reviewCount
+      return privateReply({ driver: { ...driver, status: row.status } })
     }
     if (!accessConfigured(env)) return privateReply({ error: 'Private partner access is not configured.' }, 503)
     if (!request.headers.get('Content-Type')?.startsWith('multipart/form-data;')) return privateReply({ error: 'A driver form with photos is required.' }, 415)
@@ -109,7 +103,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     const data = parsed.data
     const payloadHash = await hashText(JSON.stringify({ data, photoHashes }))
     const existing = await DB.prepare(`SELECT ${driverColumns} FROM driver_registrations WHERE id = ? OR phone = ?`).bind(data.id, data.phone).first<DriverRow>()
-    if (existing) return existing.id === data.id && existing.payload_hash === payloadHash ? await registrationReceipt(DB, env.ENQUIRY_ACCESS_SECRET!, existing) : privateReply({ error: 'Phone or submission ID already registered. Use private status lookup or contact AVELOF.' }, 409)
+    if (existing) return existing.id === data.id && existing.payload_hash === payloadHash ? await registrationReceipt(DB, existing) : privateReply({ error: 'Phone or submission ID already registered. Use private status lookup or contact AVELOF.' }, 409)
     const uploadId = crypto.randomUUID()
     for (const [index, image] of images.entries()) {
       const key = `drivers/${data.id}/${uploadId}/${index}.jpg`
@@ -124,9 +118,9 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     if (!row) {
       await deleteRegistrationPhotos(DB, keys); keys = []
       const concurrent = await DB.prepare(`SELECT ${driverColumns} FROM driver_registrations WHERE id = ?`).bind(id).first<DriverRow>()
-      return concurrent?.payload_hash === payloadHash ? await registrationReceipt(DB, env.ENQUIRY_ACCESS_SECRET!, concurrent) : privateReply({ error: 'Phone or submission ID was just registered.' }, 409)
+      return concurrent?.payload_hash === payloadHash ? await registrationReceipt(DB, concurrent) : privateReply({ error: 'Phone or submission ID was just registered.' }, 409)
     }
-    const response = await registrationReceipt(DB, env.ENQUIRY_ACCESS_SECRET!, row, 201)
+    const response = await registrationReceipt(DB, row, 201)
     saved = true
     if (response.ok) queueOwnerPush(env, waitUntil, { title: 'New driver registration', body: 'A driver and vehicle are awaiting approval.', url: '/admin/panel/drivers', tag: `driver-${id}` })
     return response

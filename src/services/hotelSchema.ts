@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { heatingOptions, hotelAmenities, hotelCategories, hotelMealPlans, hotelPhotoCount, hotelTaxOptions, registrationLocations } from '../data/hotelRegistration.ts'
 import { indianPhoneNumber } from './phoneNumbers.ts'
+import { partnerStatusAccessCodePattern } from './partnerAccessCode.ts'
 
 const text = (max: number) => z.string().trim().min(1).max(max)
 export const hotelStatusSchema = z.enum(['pending', 'approved', 'rejected'])
@@ -34,9 +35,12 @@ export const adminHotelSchema = publicHotelSchema.extend({
   status: hotelStatusSchema, version: z.number().int().min(0),
   ownerNote: z.string(), createdAt: z.string(), updatedAt: z.string(),
 })
+export const hotelStatusResultSchema = publicHotelSchema.omit({ photos: true, averageRating: true, reviewCount: true }).extend({
+  status: hotelStatusSchema,
+})
 export const hotelReceiptSchema = z.object({
   saved: z.literal(true), id: z.uuidv4(), hotelId: z.string(),
-  accessCode: z.string().regex(/^[a-f0-9]{64}$/), status: hotelStatusSchema,
+  accessCode: z.string().regex(partnerStatusAccessCodePattern), status: hotelStatusSchema,
 })
 export const hotelModerationSchema = z.object({
   id: z.uuidv4().toLowerCase(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
@@ -44,7 +48,7 @@ export const hotelModerationSchema = z.object({
   breakfastPrice: mealPriceSchema.optional(), dinnerPrice: mealPriceSchema.optional(),
 }).strict()
 export const hotelLookupSchema = z.object({
-  identifier: text(80), accessCode: z.string().trim().regex(/^[a-f0-9]{64}$/),
+  identifier: text(80), accessCode: z.string().trim().toUpperCase().regex(partnerStatusAccessCodePattern),
 }).strict()
 export type HotelSubmission = z.infer<typeof hotelSubmissionSchema>
 export type PublicHotel = z.infer<typeof publicHotelSchema>
