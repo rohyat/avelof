@@ -3,7 +3,7 @@
   "name": "AVELOF Kashmir Travel",
   "short_name": "AVELOF",
   "description": "Thoughtfully planned Kashmir journeys, stays and transport.",
-  "start_url": "/admin/panel",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",

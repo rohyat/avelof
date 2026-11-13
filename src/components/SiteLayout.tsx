@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { MouseEvent } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom'
 import { Menu, MessageCircle, X } from 'lucide-react'
 import { business } from '../config'
@@ -24,6 +25,11 @@ interface SavedScrollPosition {
   x: number
   y: number
   savedAt: number
+}
+
+interface InstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
 function readScrollPosition(key: string): SavedScrollPosition | null {
@@ -55,6 +61,16 @@ export default function SiteLayout() {
   const location = useLocation()
   const navigationType = useNavigationType()
   const previousLocation = useRef({ pathname: location.pathname, hash: location.hash })
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
+
+  useEffect(() => {
+    const handleInstallPrompt = (event: Event) => {
+      event.preventDefault()
+      setInstallPrompt(event as InstallPromptEvent)
+    }
+    window.addEventListener('beforeinstallprompt', handleInstallPrompt)
+    return () => window.removeEventListener('beforeinstallprompt', handleInstallPrompt)
+  }, [])
 
   useLayoutEffect(() => {
     window.history.scrollRestoration = 'manual'
@@ -126,6 +142,15 @@ export default function SiteLayout() {
 
   const openBooking = (kind: BookingKind, selectedItem?: string) => setBooking({ kind, item: selectedItem })
   const closeMenu = () => setMenuOpen(false)
+  const downloadApp = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!installPrompt) return
+    event.preventDefault()
+    void (async () => {
+      await installPrompt.prompt()
+      await installPrompt.userChoice
+      setInstallPrompt(null)
+    })()
+  }
 
   return (
     <>
@@ -143,7 +168,7 @@ export default function SiteLayout() {
         <div className="footer-main">
           <div className="footer-brand"><Link className="brand brand-light" to="/"><span className="brand-mark">A</span><span>AVELOF<small>YOUR KASHMIR EXPERIENCE</small></span></Link><p>Your stay. Your journey.<br />Your Kashmir experience.</p></div>
           <div><h3>Explore</h3><Link to="/tour-packages">Tour packages</Link><Link to="/car-rentals">Car rentals</Link><Link to="/drivers">Our drivers</Link><Link to="/hotels">Hotels & stays</Link><Link to="/destinations">Destinations</Link><Link to="/partners">Partner with AVELOF</Link></div>
-          <div><h3>AVELOF</h3><Link to="/about">About & Contact</Link><Link to="/reviews">Reviews</Link><Link to="/my-enquiries">Check bookings</Link><a href={business.instagram} target="_blank" rel="noreferrer">Instagram</a></div>
+          <div><h3>AVELOF</h3><Link to="/about">About & Contact</Link><Link to="/reviews">Reviews</Link><Link to="/my-enquiries">Check bookings</Link><a href={business.instagram} target="_blank" rel="noreferrer">Instagram</a><a href="/" onClick={downloadApp}>Download app</a></div>
           <div><h3>Email our team</h3><a href={`mailto:${business.email}`}>{business.email}</a><span>Kashmir, India</span></div>
         </div>
         <div className="footer-bottom"><span>© {currentYear} AVELOF. All journeys begin with a conversation.</span><a href={business.website}>avelof.in</a></div>
