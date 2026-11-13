@@ -10,7 +10,7 @@ const driver = {
   id, driverId, fullName: 'Public Driver Name', maskedPhone: '987*****10', vehicleId: 'innova-crysta', age: 30,
   phone: '9876543210', licenceNumber: 'JK01 123456789', vehicleNumber: 'JK01AB-1234',
   vehicleName: 'Toyota Innova Crysta', location: 'Srinagar', seats: 6,
-  price: 3200, submittedPrice: 3500, status: 'pending', version: 0,
+  price: 3200, status: 'pending', version: 0,
   ownerNote: '', createdAt: '2026-11-13T10:00:00Z', photo: `/api/driver-images/${id}/0`,
   averageRating: 4.5, reviewCount: 2,
 }
@@ -53,6 +53,7 @@ test('partner onboarding and approved listings work separately from customer nav
         assert.equal(await page.getByLabel('Taxes').count(), 0)
         assert.equal(await page.getByLabel('Luggage capacity').count(), 0)
         assert.equal(await page.getByText('Trips offered (select at least one)').count(), 0)
+        assert.equal(await page.getByLabel('Proposed daily rate (INR)').count(), 0)
         const vehicleNumber = page.getByRole('textbox', { name: 'Vehicle registration number' })
         await vehicleNumber.fill('JK01AB1234')
         await page.getByRole('alert').filter({ hasText: 'Use format JK13B-1444 or JK01AB-1485.' }).waitFor()
@@ -65,7 +66,6 @@ test('partner onboarding and approved listings work separately from customer nav
           'Age (minimum 18)': '30', 'Phone number': driver.phone,
           'Driving licence number': driver.licenceNumber, 'Vehicle registration number': driver.vehicleNumber,
           'Passenger seats (excluding driver)': '6',
-          'Proposed daily rate (INR)': '3500',
         }
         for (const [label, value] of Object.entries(fields)) await page.getByRole('textbox', { name: label }).fill(value)
         await page.getByRole('combobox', { name: 'Vehicle' }).selectOption('innova-crysta')
@@ -82,6 +82,7 @@ test('partner onboarding and approved listings work separately from customer nav
         assert.equal(saved.id, firstId)
         assert.equal(saved.age, 30)
         assert.equal(saved.vehicleId, 'innova-crysta')
+        assert.equal(saved.price, undefined)
         assert.ok((await page.locator('.hotel-receipt').innerText()).includes(accessCode))
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       } finally { await page.close() }
@@ -108,7 +109,7 @@ test('partner onboarding and approved listings work separately from customer nav
       try {
         await page.goto(`${origin}/admin/panel/drivers`)
         await page.getByRole('heading', { name: `${driver.fullName} · ${driver.vehicleName}` }).waitFor()
-        await page.getByLabel('Reviewed daily rate (INR)', { exact: true }).fill('2900.25')
+        await page.getByLabel('Daily rate (INR)', { exact: true }).fill('2900.25')
         await page.getByLabel('Driver listing status').selectOption('approved')
         await page.getByLabel('Note to driver').fill('Reviewed and approved.')
         await page.getByRole('button', { name: 'Save driver price and status' }).click()
@@ -125,9 +126,9 @@ test('partner onboarding and approved listings work separately from customer nav
     })
     await context.test('approved vehicle and optional hotel meals reach booking selectors without private driver data', async () => {
       const page = await browser.newPage()
-      const { age, phone, licenceNumber, submittedPrice, status, version, ownerNote, createdAt, ...publicDriverBase } = driver
+      const { age, phone, licenceNumber, status, version, ownerNote, createdAt, ...publicDriverBase } = driver
       const publicDriver = { ...publicDriverBase, maskedLicenceNumber: 'JK0********89' }
-      void age; void phone; void licenceNumber; void submittedPrice; void status; void version; void ownerNote; void createdAt
+      void age; void phone; void licenceNumber; void status; void version; void ownerNote; void createdAt
       const hotel = {
         id, hotelId: `AVELOF_HTL_${id.replaceAll('-', '').toUpperCase()}`, name: 'Meal Partner Hotel',
         location: 'Gulmarg', category: 'Premium', description: 'A comfortable mountain hotel with optional breakfast and dinner.',

@@ -33,7 +33,7 @@ export default function DriverRegistrationPage() {
       fullName: fields.get('fullName'), phone: fields.get('phone'),
       age: Number(fields.get('age')), licenceNumber: fields.get('licenceNumber'), vehicleNumber: fields.get('vehicleNumber'),
       vehicleId: fields.get('vehicleId'), location: fields.get('location'),
-      seats: Number(fields.get('seats')), price: Number(fields.get('price')),
+      seats: Number(fields.get('seats')),
       publicationConsent: fields.has('publicationConsent'), website: fields.get('website') ?? '',
     }
     setError('')
@@ -61,7 +61,6 @@ export default function DriverRegistrationPage() {
         <label>Vehicle<select name="vehicleId" required>{driverVehicleOptions.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.label}</option>)}</select></label>
         <label>District<select name="location">{driverDistricts.map((district) => <option key={district}>{district}</option>)}</select></label>
         <NumberStepper label="Passenger seats (excluding driver)" name="seats" min={1} max={60} />
-        <NumberStepper label="Proposed daily rate (INR)" name="price" min={1} step={100} currency />
         <PartnerPhotos onChange={(next, loading) => { photoVersion.current++; setPhotos(next); setProcessing(loading) }} />
         <label className="enquiry-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
         <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I consent to publishing my full name, masked phone number, masked driving-licence number, driver portrait, vehicle registration, vehicle, base location and passenger seats after AVELOF approval. My age, full phone number and full driving-licence number stay private.</span></label>
@@ -87,15 +86,15 @@ export function DriverStatusPage() {
   return <section className="enquiry-access-page page-width"><Link to="/partners">Partner with AVELOF</Link><h1>Check driver status</h1>
     <form className="review-submission-form" onSubmit={submit}><label>Driver ID or phone number<input name="identifier" maxLength={80} required autoComplete="off" /></label><label>Private access code<input name="accessCode" type="password" minLength={64} maxLength={64} required autoComplete="off" /></label><button className="button button-dark" disabled={busy}>Check status</button></form>
     {error && <p className="enquiry-error" role="alert">{error}</p>}
-    {driver && <section className="admin-review-record hotel-owner-status"><h2>{driver.fullName}</h2><p>{driver.vehicleName} · {driver.location} · {driver.seats} seats</p><p className="hotel-identifier">{driver.driverId}</p><p role="status">{hotelStatusLabels[driver.status]}</p><p>Submitted daily rate: INR {driver.submittedPrice}; reviewed rate: INR {driver.price}.</p>{driver.ownerNote && <p>AVELOF note: {driver.ownerNote}</p>}{driver.status === 'approved' ? <Link to="/drivers">View driver listing</Link> : <p>Not publicly listed. Contact AVELOF for changes.</p>}</section>}
+    {driver && <section className="admin-review-record hotel-owner-status"><h2>{driver.fullName}</h2><p>{driver.vehicleName} · {driver.location} · {driver.seats} seats</p><p className="hotel-identifier">{driver.driverId}</p><p role="status">{hotelStatusLabels[driver.status]}</p>{driver.ownerNote && <p>AVELOF note: {driver.ownerNote}</p>}{driver.status === 'approved' ? <Link to="/drivers">View driver listing</Link> : <p>Not publicly listed. Contact AVELOF for changes.</p>}</section>}
   </section>
 }
 function DriverRecord({ driver, disabled, save }: { driver: AdminDriver; disabled: boolean; save: (driver: AdminDriver, status: HotelStatus, price: number, note: string, vehicleNumber: string) => Promise<void> }) {
   const [status, setStatus] = useState<HotelStatus>(driver.status)
   async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const fields = new FormData(event.currentTarget); await save(driver, status, Number(fields.get('price')), String(fields.get('ownerNote')), String(fields.get('vehicleNumber'))) }
-  return <article className="admin-review-record"><h2>{driver.fullName} · {driver.vehicleName}</h2><p className="hotel-identifier">{driver.driverId} · {hotelStatusLabels[driver.status]}</p><p>Private: age {driver.age}, phone {driver.phone}, licence {driver.licenceNumber}, vehicle registration {driver.vehicleNumber}</p><p>Public listing: {driver.fullName} · {driver.maskedPhone} · {driver.location} · {driver.seats} passenger seats</p><p>Submitted daily rate: INR {driver.submittedPrice}</p><div className="hotel-photo-grid"><a href={driver.photo} target="_blank" rel="noreferrer"><img src={driver.photo} alt={`Portrait of ${driver.fullName}`} /></a></div>
+  return <article className="admin-review-record"><h2>{driver.fullName} · {driver.vehicleName}</h2><p className="hotel-identifier">{driver.driverId} · {hotelStatusLabels[driver.status]}</p><p>Private: age {driver.age}, phone {driver.phone}, licence {driver.licenceNumber}, vehicle registration {driver.vehicleNumber}</p><p>Public listing: {driver.fullName} · {driver.maskedPhone} · {driver.location} · {driver.seats} passenger seats</p><div className="hotel-photo-grid"><a href={driver.photo} target="_blank" rel="noreferrer"><img src={driver.photo} alt={`Portrait of ${driver.fullName}`} /></a></div>
     <form onSubmit={submit} className="review-submission-form"><fieldset className="hotel-form-fields" disabled={disabled}>
-      <NumberStepper label="Reviewed daily rate (INR)" name="price" min={1} step={100} defaultValue={driver.price} currency />
+      <NumberStepper label="Daily rate (INR)" name="price" min={1} step={100} defaultValue={driver.price} currency />
       <label>Vehicle registration number<input name="vehicleNumber" required defaultValue={driver.vehicleNumber} pattern="JK[0-9]{2}[A-Za-z]{1,2}-[0-9]{4}" placeholder="JK13B-1444 or JK01AB-1485" title="Use JK13B-1444 or JK01AB-1485 format." onBlur={(event) => { event.currentTarget.value = normalizeDriverVehicleNumber(event.currentTarget.value) }} /></label>
       <label>Driver listing status<select value={status} onChange={(event) => setStatus(hotelStatusSchema.parse(event.target.value))}><option value="pending">Awaiting approval</option><option value="approved">Approve and publish</option><option value="rejected">Reject / hide</option></select></label>
       <label className="review-text-field">Note to driver<textarea name="ownerNote" maxLength={1000} defaultValue={driver.ownerNote} /></label><button className="button button-dark">Save driver price and status</button>

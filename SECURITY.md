@@ -255,6 +255,7 @@ is required for private POST status lookup. Admin reads/updates and pending
 portrait access require the existing owner session; public portrait responses
 are no-store. Unique phones, bounded single-image uploads, rate limits,
 idempotent saves and versioned moderation follow hotel registration protections.
+Drivers do not submit a daily rate; the owner must set a positive rate before approval.
 New vehicle registrations must use the normalized `JK13B-1444` or
 `JK01AB-1485` pattern; invalid legacy values remain private until corrected by an admin.
 The public directory displays the stable sequential `AVELOF-DRV-10001` ID format and approved

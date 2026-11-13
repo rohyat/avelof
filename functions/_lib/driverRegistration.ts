@@ -33,6 +33,6 @@ export function publicDriver(row: DriverRow) {
     price: row.price, photo: `/api/driver-images/${row.id}/0`, averageRating: row.average_rating ?? null, reviewCount: row.review_count ?? 0 }
 }
 export function adminDriver(row: DriverRow) {
-  return { ...publicDriver(row), ...driverPrivateSchema.parse(JSON.parse(row.private_json)), submittedPrice: row.submitted_price, status: row.status, version: row.version, ownerNote: row.owner_note, createdAt: row.created_at }
+  return { ...publicDriver(row), ...driverPrivateSchema.parse(JSON.parse(row.private_json)), status: row.status, version: row.version, ownerNote: row.owner_note, createdAt: row.created_at }
 }
 export const driverAccessCode = (secret: string, id: string) => customerAccessCode(secret, `driver:${id}`)

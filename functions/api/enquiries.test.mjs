@@ -107,7 +107,7 @@ function driverPayload() {
     id: crypto.randomUUID(), fullName: 'Test Public Driver',
     age: 30, phone: '+91 9876543210', licenceNumber: 'JK01 123456789', vehicleNumber: 'JK01AB-1234',
     vehicleId: 'innova-crysta', location: 'Srinagar', seats: 6,
-    price: 3200, publicationConsent: true, website: '',
+    publicationConsent: true, website: '',
   }
 }
 const driverRequest = (DB, bucket, method, data, options = {}) => hotelRequest(DB, bucket, method, data, { ...options, handler: onDriverRequest })
@@ -121,6 +121,10 @@ test('driver registration is private, idempotent and unique by phone, with prote
     assert.equal(receipt.status, 'pending')
     assert.equal(receipt.driverId, 'AVELOF-DRV-10001')
     assert.equal(receipt.accessCode, await driverAccessCode('test-secret-with-more-than-thirty-two-characters', `AVELOF_DRV_${input.id.replaceAll('-', '').toUpperCase()}`))
+    const stored = DB.sqlite.prepare('SELECT details_json, submitted_price, price FROM driver_registrations WHERE id = ?').get(input.id)
+    assert.equal(JSON.parse(stored.details_json).price, undefined)
+    assert.equal(stored.submitted_price, 1)
+    assert.equal(stored.price, 1)
     assert.deepEqual(await (await driverRequest(DB, bucket, 'POST', input)).json(), receipt)
     assert.equal(photoCount(DB), 1)
     assert.equal((await driverRequest(DB, bucket, 'POST', { ...input, id: crypto.randomUUID(), phone: '9876543210' })).status, 409)
@@ -181,6 +185,7 @@ test('driver approval edits rates, excludes private data and hides photos on rej
     assert.equal((await photo('0', { Cookie })).status, 200)
     assert.equal((await driverRequest(DB, bucket, 'PATCH', edit)).status, 401)
     assert.equal((await driverRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie, Origin: 'https://elsewhere.test' } })).status, 403)
+    assert.equal((await driverRequest(DB, bucket, 'PATCH', { ...edit, price: 1 }, { headers: { Cookie } })).status, 400)
     assert.equal((await driverRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })).status, 200)
     assert.equal((await driverRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })).status, 409)
     const driver = (await (await driverRequest(DB, bucket, 'GET')).json()).drivers[0]

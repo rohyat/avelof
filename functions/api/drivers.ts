@@ -11,7 +11,9 @@ import type { HotelEnv } from '../_lib/hotelRegistration.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 
 const listSchema = z.object({ scope: z.enum(['public', 'admin']).default('public'), page: z.coerce.number().int().min(1).max(10000).default(1), id: z.uuidv4().optional(), driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/).optional(), status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all') }).strict()
+const unpricedDriverRate = 1
 const moderationSchema = hotelModerationSchema.omit({ breakfastPrice: true, dinnerPrice: true }).extend({ vehicleNumber: driverVehicleNumberSchema })
+  .refine(({ price, status }) => status !== 'approved' || price > unpricedDriverRate, { path: ['price'], message: 'Set the daily rate before approval.' })
 const legacyDriverId = (id: string) => `AVELOF_DRV_${id.replaceAll('-', '').toUpperCase()}`
 
 async function assignDriverId(DB: D1Database, row: DriverRow) {
@@ -118,7 +120,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     void publicationConsent; void website
     insertingId = id
     const row = await DB.prepare(`INSERT INTO driver_registrations (id, driver_id, phone, private_json, details_json, photo_keys_json, submitted_price, price, publication_consent, payload_hash, directory_credentials_consent, directory_credentials_consented_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 1, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ON CONFLICT DO NOTHING RETURNING ${driverColumns}`)
-      .bind(id, legacyDriverId(id), phone, JSON.stringify({ phone, age, licenceNumber, vehicleNumber }), JSON.stringify(details), JSON.stringify(keys), details.price, details.price, payloadHash).first<DriverRow>()
+      .bind(id, legacyDriverId(id), phone, JSON.stringify({ phone, age, licenceNumber, vehicleNumber }), JSON.stringify(details), JSON.stringify(keys), unpricedDriverRate, unpricedDriverRate, payloadHash).first<DriverRow>()
     if (!row) {
       await deleteRegistrationPhotos(DB, keys); keys = []
       const concurrent = await DB.prepare(`SELECT ${driverColumns} FROM driver_registrations WHERE id = ?`).bind(id).first<DriverRow>()
