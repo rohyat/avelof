@@ -184,7 +184,10 @@ Review submissions are untrusted user-generated content. Anyone may submit and,
 after explicit publication consent and a successful D1 write, a review is
 published immediately. A booking ID or prior booking confirmation is not
 required. Public responses select display name, booking ID, rating, title/text,
-experience category and review/publication date. Full stored booking IDs are
+experience category, optional driver ID and review/publication date. Driver
+ratings are accepted only for an approved public driver ID and are included in
+that driver's public aggregate. A driver rating may contain stars without a
+comment. Full stored booking IDs are
 displayed below names on published reviews, including existing imported entries.
 The form's publication consent explicitly includes an optional booking ID.
 Payload hashes, consent storage and customer enquiry records are never returned
@@ -249,6 +252,8 @@ is required for private POST status lookup. Admin reads/updates and pending
 portrait access require the existing owner session; public portrait responses
 are no-store. Unique phones, bounded single-image uploads, rate limits,
 idempotent saves and versioned moderation follow hotel registration protections.
+The public directory displays the stable `AVELOF_DRV_...` ID and approved
+driver review aggregate but does not publish the reviewed or submitted rate.
 Neither identity nor licence validity is automatically verified. Confirm
 identity, portrait ownership and consent before publication. Include driver
 records and their D1 photos in the same retention and orphan-photo audit

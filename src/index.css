@@ -393,22 +393,30 @@ body.enquiry-open { overflow: hidden; }
 .number-stepper:focus-within { outline: 2px solid var(--forest); outline-offset: 2px; }
 .driver-directory { padding-block: 36px 64px; }
 .driver-directory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 20px; }
-.driver-directory-card { display: grid; grid-template-columns: minmax(110px, 36%) 1fr; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 8px 26px rgb(34 54 46 / 7%); }
-.driver-directory-photo { width: 100%; height: 100%; min-height: 250px; object-fit: cover; background: #edf2ef; }
+.driver-directory-card { display: grid; grid-template-columns: 174px 1fr; align-items: start; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 8px 26px rgb(34 54 46 / 7%); }
+.driver-directory-photo { width: 142px; height: 142px; margin: 18px 0 18px 18px; object-fit: cover; border-radius: 9px; background: #edf2ef; }
 .driver-detail-photo { display: block; width: min(100%, 300px); max-height: 340px; margin-block: 18px; object-fit: cover; border-radius: 10px; }
 .driver-directory-details { display: grid; align-content: start; gap: 10px; padding: 18px; min-width: 0; }
 .driver-directory-details .eyebrow, .driver-directory-details h2, .driver-directory-details p { margin: 0; }
 .driver-directory-details h2 { font-family: var(--serif); font-size: 1.35rem; }
+.driver-directory-id { color: #586a60; font-family: monospace; font-size: .75rem; overflow-wrap: anywhere; }
+.driver-directory-rating { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); font-size: .82rem; }
+.driver-directory-rating .review-stars { margin: 0; }
 .driver-directory-vehicle { font-weight: 700; }
 .driver-directory-facts { display: grid; gap: 6px; color: var(--muted); font-size: .9rem; }
 .driver-directory-facts span { display: flex; align-items: center; gap: 7px; }
 .driver-directory-phone { color: var(--muted); font-size: .9rem; }
-.driver-directory-price { font-weight: 700; color: var(--forest); }
-.driver-directory-price small { font-weight: 400; color: var(--muted); }
+.driver-review-identity { overflow-wrap: anywhere; }
+.driver-review-summary { display: flex; align-items: center; gap: 22px; margin: 28px 0 34px; padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.driver-review-summary img { width: 132px; height: 132px; flex: 0 0 132px; object-fit: cover; border-radius: 9px; background: #edf2ef; }
+.driver-review-summary .review-stars { margin: 5px 0 9px; }
+.driver-review-summary h2, .driver-review-summary p { margin: 0; }
 @media (max-width: 520px) {
-  .driver-directory-card { grid-template-columns: 96px 1fr; }
-  .driver-directory-photo { min-height: 200px; }
+  .driver-directory-card { grid-template-columns: 116px 1fr; }
+  .driver-directory-photo { width: 88px; height: 88px; margin: 14px 0 14px 14px; }
   .driver-directory-details { padding: 14px; }
+  .driver-review-summary { align-items: flex-start; gap: 15px; padding: 16px; }
+  .driver-review-summary img { width: 88px; height: 88px; flex-basis: 88px; }
 }
 .hotel-card-highlights li { padding-block: 3px; }
 @media (max-width: 640px) {

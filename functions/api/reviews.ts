@@ -18,20 +18,22 @@ interface ReviewRow {
   published_at: string | null
   submission_source: 'guest_submission' | 'owner_provided'
   review_month: string | null
+  driver_id: string | null
   payload_hash?: string
 }
 
-const columns = 'id, reviewer_name, booking_id, experience, rating, title, review_text, status, version, created_at, published_at, submission_source, review_month'
+const columns = 'id, reviewer_name, booking_id, experience, rating, title, review_text, status, version, created_at, published_at, submission_source, review_month, driver_id'
 const listSchema = z.object({
   scope: z.enum(['public', 'admin']).default('public'),
   page: z.coerce.number().int().min(1).max(10000).default(1),
   status: z.union([z.literal('all'), reviewStatusSchema]).default('pending'),
+  driverId: z.string().regex(/^AVELOF_DRV_[A-F0-9]{32}$/).optional(),
 }).strict()
 const moderationSchema = z.object({ id: z.uuidv4(), status: reviewStatusSchema, version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
 const deletionSchema = z.object({ id: z.uuidv4(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
 
 function publicReview(row: ReviewRow) {
-  return { id: row.id, reviewerName: row.reviewer_name, bookingId: row.booking_id, experience: row.experience, rating: row.rating, title: row.title, reviewText: row.review_text, publishedAt: row.published_at, reviewMonth: row.review_month }
+  return { id: row.id, reviewerName: row.reviewer_name, bookingId: row.booking_id, experience: row.experience, rating: row.rating, title: row.title, reviewText: row.review_text, publishedAt: row.published_at, reviewMonth: row.review_month, driverId: row.driver_id }
 }
 
 function adminReview(row: ReviewRow) {
@@ -61,11 +63,11 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env, waitUn
     if (request.method === 'GET') {
       const parsed = listSchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
       if (!parsed.success) return privateReply({ error: 'Invalid review filters.' }, 400)
-      const { scope, page, status } = parsed.data
+      const { scope, page, status, driverId } = parsed.data
       if (scope === 'admin' && !await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
       const admin = scope === 'admin'
-      const where = admin ? "WHERE (? = 'all' OR status = ?)" : "WHERE status = 'published'"
-      const values = admin ? [status, status] : []
+      const where = admin ? "WHERE (? = 'all' OR status = ?) AND (? IS NULL OR driver_id = ?)" : "WHERE status = 'published' AND (? IS NULL OR driver_id = ?)"
+      const values = admin ? [status, status, driverId ?? null, driverId ?? null] : [driverId ?? null, driverId ?? null]
       const totals = await env.DB.prepare(`SELECT count(*) AS total, avg(rating) AS averageRating FROM reviews ${where}`).bind(...values).first<{ total: number; averageRating: number | null }>()
       const result = await env.DB.prepare(`SELECT ${columns} FROM reviews ${where} ORDER BY ${admin ? 'created_at DESC' : "COALESCE(review_month, substr(published_at, 1, 7)) DESC, published_at DESC"}, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<ReviewRow>()
       return privateReply({ reviews: result.results.map(admin ? adminReview : publicReview), total: totals?.total ?? 0, averageRating: totals?.averageRating ?? null, page, pageSize: 25 })
@@ -95,15 +97,19 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env, waitUn
     }
     const parsed = reviewSubmissionSchema.safeParse(input)
     if (!parsed.success || parsed.data.website) return privateReply({ error: 'Check your review details and consent.' }, 400)
-    const { id, reviewerName, bookingId, experience, rating, title, reviewText } = parsed.data
-    const payloadHash = await hashText(JSON.stringify({ reviewerName, bookingId, experience, rating, title, reviewText, publicationConsent: true }))
+    const { id, reviewerName, bookingId, experience, rating, title, reviewText, driverId } = parsed.data
+    if (driverId) {
+      const driver = await env.DB.prepare("SELECT driver_id FROM driver_registrations WHERE driver_id = ? AND status = 'approved'").bind(driverId).first<{ driver_id: string }>()
+      if (!driver) return privateReply({ error: 'This driver is not available for public reviews.' }, 404)
+    }
+    const payloadHash = await hashText(JSON.stringify({ reviewerName, bookingId, experience, rating, title, reviewText, ...(driverId ? { driverId } : {}), publicationConsent: true }))
     const existing = await env.DB.prepare('SELECT status, payload_hash FROM reviews WHERE id = ?').bind(id).first<ReviewRow>()
     if (existing) return existing.payload_hash === payloadHash
       ? privateReply({ saved: true, id, status: existing.status })
       : privateReply({ error: 'This submission ID has already been used. Start a new review.' }, 409)
     if (!await allowAccessAttempt(request, env.DB, 'review-submit', 3)) return privateReply({ error: 'Too many reviews. Please try again in ten minutes.' }, 429, { 'Retry-After': '600' })
-    const inserted = await env.DB.prepare("INSERT INTO reviews (id, reviewer_name, booking_id, experience, rating, title, review_text, publication_consent, payload_hash, status, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 'published', strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ON CONFLICT (id) DO NOTHING")
-      .bind(id, reviewerName, bookingId, experience, rating, title, reviewText, payloadHash).run()
+    const inserted = await env.DB.prepare("INSERT INTO reviews (id, reviewer_name, booking_id, experience, rating, title, review_text, driver_id, publication_consent, payload_hash, status, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 'published', strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ON CONFLICT (id) DO NOTHING")
+      .bind(id, reviewerName, bookingId, experience, rating, title, reviewText, driverId || null, payloadHash).run()
     const saved = await env.DB.prepare('SELECT status, payload_hash FROM reviews WHERE id = ?').bind(id).first<ReviewRow>()
     if (!saved || saved.payload_hash !== payloadHash) return privateReply({ error: 'Review could not be saved with this ID.' }, 409)
     if (Number(inserted.meta?.changes ?? 0) > 0) queueOwnerPush(env, waitUntil, {

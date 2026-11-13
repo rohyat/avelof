@@ -8,6 +8,7 @@ import HotelRegistrationPage, { AdminHotelsPage, HotelStatusPage } from './pages
 import PartnersPage from './pages/PartnersPage'
 import DriverRegistrationPage, { AdminDriversPage, DriverStatusPage } from './pages/DriverRegistrationPage'
 import DriversPage from './pages/DriversPage'
+import DriverReviewsPage from './pages/DriverReviewsPage'
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="car-rentals" element={<CollectionPage />} />
         <Route path="car-rentals/:slug" element={<DetailPage />} />
         <Route path="drivers" element={<DriversPage />} />
+        <Route path="drivers/:driverId/reviews" element={<DriverReviewsPage />} />
         <Route path="hotels" element={<CollectionPage />} />
         <Route path="hotels/:slug" element={<DetailPage />} />
         <Route path="register-hotel" element={<HotelRegistrationPage />} />

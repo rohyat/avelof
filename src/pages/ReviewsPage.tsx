@@ -3,35 +3,24 @@ import type { FormEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, RefreshCw, Star, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import ReviewCarousel from '../components/ReviewCarousel'
+import ReviewCard from '../components/ReviewCard'
+import ReviewStars from '../components/ReviewStars'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import { deleteReview as deleteReviewRequest, loadAdminReviews, loadPublicReviews, moderateReview, ReviewError, saveReview } from '../services/reviewService'
 import { reviewSubmissionSchema } from '../services/reviewSchema'
-import type { AdminReview, PublicReview, ReviewStatus } from '../services/reviewSchema'
+import type { AdminReview, ReviewStatus } from '../services/reviewSchema'
 
 const experienceOptions = ['General experience', 'Deluxe', 'Premium', 'Luxury', 'Custom package', 'Hotel stay', 'Cab rental']
 const moderationLabels = { pending: 'Awaiting approval', published: 'Published', rejected: 'Hidden' }
-
-function reviewError(error: unknown) {
-  return error instanceof ReviewError ? error.message : 'We could not confirm the review request. Please try again.'
-}
-
-function Stars({ rating }: { rating: number }) {
-  return <div className="review-stars" aria-label={`${rating} out of 5 stars`}>{Array.from({ length: 5 }, (_, index) => <Star className={index < rating ? '' : 'review-empty-star'} key={index} aria-hidden="true" />)}</div>
-}
 
 function reviewMonthLabel(value: string) {
   return new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}-01T00:00:00Z`))
 }
 
-function ReviewCard({ review }: { review: PublicReview }) {
-  return <article id={`guest-review-${review.id}`} className="review-card">
-    <div className="review-card-head"><div className="review-card-identity"><strong>{review.reviewerName}</strong>{review.bookingId && <span className="review-booking-id">Booking ID: {review.bookingId}</span>}</div><span className="review-source-label">Guest review</span></div>
-    <Stars rating={review.rating} />
-    {review.title && <h3 className="review-card-title">{review.title}</h3>}
-    <blockquote>{review.reviewText}</blockquote>
-    <div className="review-card-footer"><span>{review.experience}</span><small><time dateTime={review.reviewMonth || review.publishedAt}>{review.reviewMonth ? `Reviewed ${reviewMonthLabel(review.reviewMonth)}` : `Published ${new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium' }).format(new Date(review.publishedAt))}`}</time></small></div>
-  </article>
+function reviewError(error: unknown) {
+  return error instanceof ReviewError ? error.message : 'We could not confirm the review request. Please try again.'
 }
+
 
 export default function ReviewsPage() {
   const [rating, setRating] = useState('')
@@ -192,7 +181,7 @@ export function AdminReviewsPage() {
       {error && <p className="enquiry-error" role="alert">{error}</p>}
       <div className="admin-review-list">{listing?.reviews.map((review) => <article className="admin-review-record" key={review.id}>
         <div className="admin-review-heading"><strong>{review.reviewerName}</strong><span className="enquiry-status">{moderationLabels[review.status]}</span></div>
-        <Stars rating={review.rating} />
+        <ReviewStars rating={review.rating} />
         <p className="privacy-note">{review.experience} · {new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium' }).format(new Date(review.createdAt))}</p>
         {review.reviewMonth && <p className="privacy-note">Original review month: {reviewMonthLabel(review.reviewMonth)}</p>}
         {review.title && <h2>{review.title}</h2>}<p className="admin-review-text">{review.reviewText}</p>

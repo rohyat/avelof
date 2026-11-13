@@ -1,10 +1,9 @@
-import { Link, useOutletContext } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { ArrowRight, MapPin, Users } from 'lucide-react'
-import type { SiteContext } from '../components/SiteLayout'
-import { driverSelectionValue, useRegisteredDrivers } from '../services/driverService'
+import ReviewStars from '../components/ReviewStars'
+import { useRegisteredDrivers } from '../services/driverService'
 
 export default function DriversPage() {
-  const { openBooking } = useOutletContext<SiteContext>()
   const drivers = useRegisteredDrivers(true)
   return <>
     <section className="page-hero"><div className="page-width">
@@ -22,11 +21,12 @@ export default function DriversPage() {
         <div className="driver-directory-details">
           <p className="eyebrow">AVELOF-approved driver</p>
           <h2>{driver.driverDisplayName}</h2>
+          <p className="driver-directory-id">{driver.registeredDriverId}</p>
+          <div className="driver-directory-rating"><ReviewStars rating={driver.driverAverageRating ?? 0} label={driver.driverAverageRating ? `${driver.driverAverageRating.toFixed(1)} out of 5 stars from ${driver.driverReviewCount} reviews` : 'No driver ratings yet'} /><span>{driver.driverAverageRating ? `${driver.driverAverageRating.toFixed(1)} · ${driver.driverReviewCount} ${driver.driverReviewCount === 1 ? 'review' : 'reviews'}` : 'No ratings yet'}</span></div>
           <p className="driver-directory-vehicle">{driver.name}</p>
           <p className="driver-directory-facts"><span><MapPin size={15} />{driver.location}</span><span><Users size={15} />{driver.seats} passenger seats</span></p>
           <p className="driver-directory-phone">Phone: {driver.maskedPhone}</p>
-          <p className="driver-directory-price">INR {driver.price.toLocaleString('en-IN')} <small>per day</small></p>
-          <button type="button" className="button button-dark" onClick={() => openBooking('car', driverSelectionValue(driver))}>Enquire about this driver <ArrowRight size={16} /></button>
+          <Link className="button button-dark" to={`/drivers/${encodeURIComponent(driver.registeredDriverId!)}/reviews`}>View reviews about this driver <ArrowRight size={16} /></Link>
         </div>
       </article>)}</div>
     </section>

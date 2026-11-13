@@ -51,6 +51,8 @@ export interface RentalCar extends CatalogBase {
   driverDisplayName?: string
   driverPhoto?: string
   maskedPhone?: string
+  driverAverageRating?: number | null
+  driverReviewCount?: number
   taxDetails?: string
   priceOnEnquiry?: boolean
   photoCredit?: { author: string; source: string; license: string; licenseUrl: string }

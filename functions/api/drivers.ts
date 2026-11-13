@@ -10,7 +10,7 @@ import { deleteRegistrationPhotos, limitedBody, saveRegistrationPhoto, validHote
 import type { HotelEnv } from '../_lib/hotelRegistration.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 
-const listSchema = z.object({ scope: z.enum(['public', 'admin']).default('public'), page: z.coerce.number().int().min(1).max(10000).default(1), id: z.uuidv4().optional(), status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all') }).strict()
+const listSchema = z.object({ scope: z.enum(['public', 'admin']).default('public'), page: z.coerce.number().int().min(1).max(10000).default(1), id: z.uuidv4().optional(), driverId: z.string().regex(/^AVELOF_DRV_[A-F0-9]{32}$/).optional(), status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all') }).strict()
 const moderationSchema = hotelModerationSchema.omit({ breakfastPrice: true, dinnerPrice: true })
 export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUntil }) => {
   if (!['GET', 'POST', 'PATCH'].includes(request.method)) return privateReply({ error: 'Method not allowed.' }, 405)
@@ -24,13 +24,14 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     if (request.method === 'GET') {
       const parsed = listSchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
       if (!parsed.success) return privateReply({ error: 'Invalid driver filters.' }, 400)
-      const { scope, page, status, id } = parsed.data
+      const { scope, page, status, id, driverId } = parsed.data
       const admin = scope === 'admin'
       if (admin && !await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
-      const where = admin ? "WHERE (? = 'all' OR status = ?) AND (? IS NULL OR id = ?)" : "WHERE status = 'approved' AND (? IS NULL OR id = ?)"
-      const values = admin ? [status, status, id ?? null, id ?? null] : [id ?? null, id ?? null]
+      const where = admin ? "WHERE (? = 'all' OR status = ?) AND (? IS NULL OR id = ?) AND (? IS NULL OR driver_id = ?)" : "WHERE status = 'approved' AND (? IS NULL OR id = ?) AND (? IS NULL OR driver_id = ?)"
+      const values = admin ? [status, status, id ?? null, id ?? null, driverId ?? null, driverId ?? null] : [id ?? null, id ?? null, driverId ?? null, driverId ?? null]
       const total = await DB.prepare(`SELECT count(*) AS total FROM driver_registrations ${where}`).bind(...values).first<{ total: number }>()
-      const rows = await DB.prepare(`SELECT ${driverColumns} FROM driver_registrations ${where} ORDER BY created_at DESC, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<DriverRow>()
+      const listingColumns = admin ? driverColumns : `${driverColumns}, (SELECT avg(rating) FROM reviews WHERE reviews.driver_id = driver_registrations.driver_id AND reviews.status = 'published') AS average_rating, (SELECT count(*) FROM reviews WHERE reviews.driver_id = driver_registrations.driver_id AND reviews.status = 'published') AS review_count`
+      const rows = await DB.prepare(`SELECT ${listingColumns} FROM driver_registrations ${where} ORDER BY created_at DESC, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<DriverRow>()
       return privateReply({ drivers: rows.results.map(admin ? adminDriver : publicDriver), total: total?.total ?? 0, page, pageSize: 25 })
     }
     if (request.method === 'PATCH' || request.headers.get('Content-Type')?.split(';')[0] === 'application/json') {

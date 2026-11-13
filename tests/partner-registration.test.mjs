@@ -12,6 +12,7 @@ const driver = {
   vehicleName: 'Toyota Innova Crysta', location: 'Srinagar', seats: 6,
   price: 3200, submittedPrice: 3500, status: 'pending', version: 0,
   ownerNote: '', createdAt: '2026-11-13T10:00:00Z', photo: `/api/driver-images/${id}/0`,
+  averageRating: 4.5, reviewCount: 2,
 }
 const listing = (drivers) => ({ drivers, total: drivers.length, page: 1, pageSize: 25 })
 const jpeg = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAf/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAB//2Q==', 'base64')
@@ -125,14 +126,38 @@ test('partner onboarding and approved listings work separately from customer nav
       }
       await page.route('**/api/drivers*', (route) => route.fulfill({ json: listing([publicDriver]) }))
       await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [hotel], total: 1, page: 1, pageSize: 25 } }))
+      let driverReview
+      await page.route('**/api/reviews*', (route) => {
+        if (route.request().method() === 'POST') {
+          driverReview = route.request().postDataJSON()
+          return route.fulfill({ status: 201, json: { saved: true, id: driverReview.id, status: 'published' } })
+        }
+        return route.fulfill({ json: { reviews: [], total: 0, averageRating: null, page: 1, pageSize: 25 } })
+      })
       try {
         await page.goto(`${origin}/drivers`)
         assert.equal(await page.locator('.driver-directory-card-demo').count(), 0)
         const directoryCard = page.locator('.driver-directory-card').filter({ hasText: driver.fullName })
         await directoryCard.waitFor()
         assert.ok((await directoryCard.innerText()).includes(driver.maskedPhone))
+        assert.ok((await directoryCard.innerText()).includes(driverId))
+        assert.ok((await directoryCard.innerText()).includes('4.5 · 2 reviews'))
+        assert.equal(await directoryCard.locator('.driver-directory-price').count(), 0)
+        assert.equal((await directoryCard.innerText()).includes('3,200'), false)
         assert.equal(await directoryCard.locator('.driver-directory-photo').getAttribute('src'), driver.photo)
+        const portraitBox = await directoryCard.locator('.driver-directory-photo').boundingBox()
+        assert.equal(Math.round(portraitBox.width), Math.round(portraitBox.height))
         assert.equal((await directoryCard.innerText()).includes(driver.phone), false)
+        await directoryCard.getByRole('link', { name: 'View reviews about this driver' }).click()
+        await page.getByRole('heading', { name: driver.fullName, exact: true }).waitFor()
+        await page.getByRole('textbox', { name: 'Display name', exact: true }).fill('Driver Guest')
+        await page.getByLabel('5 stars').check({ force: true })
+        await page.getByRole('checkbox', { name: /consent to immediate publication/ }).check()
+        await page.getByRole('button', { name: 'Submit driver rating' }).click()
+        await page.getByRole('heading', { name: 'Thank you. Your driver rating has been saved.' }).waitFor()
+        assert.equal(driverReview.driverId, driverId)
+        assert.equal(driverReview.rating, 5)
+        assert.equal(driverReview.reviewText, '')
         await page.goto(`${origin}/car-rentals`)
         const car = page.locator('.catalog-card').filter({ hasText: driver.fullName })
         await car.waitFor()

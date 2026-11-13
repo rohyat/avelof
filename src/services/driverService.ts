@@ -39,10 +39,15 @@ function catalogDriver(driver: PublicDriver): RentalCar {
   if (!vehicle) throw new Error('Registered driver vehicle is missing from the vehicle catalog.')
   return { kind: 'car', id: driver.id, registeredDriverId: driver.driverId, driverDisplayName: driver.fullName,
     driverPhoto: driver.photo, maskedPhone: driver.maskedPhone, name: driver.vehicleName, category: driver.vehicleName,
+    driverAverageRating: driver.averageRating, driverReviewCount: driver.reviewCount,
     location: driver.location, seats: driver.seats, price: driver.price,
     image: vehicle.image, gallery: vehicle.gallery,
     description: `${driver.fullName} · ${driver.location}`,
     luggage: 'Confirm with AVELOF', ac: true, tripTypes: [], conditions: [] }
+}
+export async function loadPublicDriverByDisplayId(driverId: string, signal?: AbortSignal) {
+  const listing = publicList.parse(await requestHotel(`/api/drivers?${new URLSearchParams({ driverId })}`, 'GET', undefined, signal))
+  return listing.drivers[0] ?? null
 }
 export function useRegisteredDrivers(enabled: boolean, id?: string) {
   const key = enabled ? id ?? 'all' : ''

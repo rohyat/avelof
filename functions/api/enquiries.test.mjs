@@ -15,7 +15,7 @@ import { onRequest as onDriverImageRequest } from './driver-images/[id]/[index].
 import { driverAccessCode } from '../_lib/driverRegistration.ts'
 import { onRequest as onHotelStatusRequest } from './hotel-status.ts'
 import { onRequest as onHotelImageRequest } from './hotel-images/[id]/[index].ts'
-import { hotelAccessCode, validHotelJpeg } from '../_lib/hotelRegistration.ts'
+import { hotelAccessCode, registrationPhotoBytes, validHotelJpeg } from '../_lib/hotelRegistration.ts'
 import { hotelPhotoLimit, hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 import { adminCookie, correctAdminUsername, createAdminSession, customerAccessCode, hashText, isAdmin, phoneCandidates, verifyAdminPassword } from '../_lib/enquiryAccess.ts'
@@ -168,6 +168,11 @@ test('driver approval edits rates, excludes private data and hides photos on rej
     assert.equal((await photo()).status, 404)
     assert.equal((await (await driverRequest(DB, bucket, 'GET')).json()).total, 0)
   } finally { DB.sqlite.close() }
+})
+test('D1 numeric BLOB arrays are restored to exact JPEG response bytes', () => {
+  const restored = registrationPhotoBytes(Array.from(testHotelJpeg))
+  assert.deepEqual(restored, new Uint8Array(testHotelJpeg))
+  assert.equal(validHotelJpeg(restored), true)
 })
 test('driver validation and failed uploads never return success or leave unreferenced photos', async () => {
   const DB = database(), bucket = hotelBucket()
@@ -1082,6 +1087,35 @@ test('anyone can publish a consented review without booking confirmation; retrie
     assert.equal((await reviewRequest(DB, 'GET', undefined, { query: '?scope=admin' })).status, 401)
     assert.equal((await reviewRequest(DB, 'PATCH', { id: input.id, status: 'published', version: 0 })).status, 401)
     assert.equal((await reviewRequest(DB, 'DELETE', { id: input.id, version: 0 })).status, 401)
+  } finally { DB.sqlite.close() }
+})
+
+test('published driver ratings are linked by public driver ID and included in driver summaries', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    const driver = driverPayload()
+    const receipt = await (await driverRequest(DB, bucket, 'POST', driver)).json()
+    DB.sqlite.prepare("UPDATE driver_registrations SET status = 'approved' WHERE id = ?").run(driver.id)
+    const rating = {
+      ...reviewPayload(),
+      experience: 'Driver experience',
+      driverId: receipt.driverId,
+      rating: 5,
+      title: '',
+      reviewText: '',
+    }
+    assert.equal((await reviewRequest(DB, 'POST', rating)).status, 201)
+    const filtered = await (await reviewRequest(DB, 'GET', undefined, { query: `?driverId=${receipt.driverId}` })).json()
+    assert.equal(filtered.total, 1)
+    assert.equal(filtered.averageRating, 5)
+    assert.equal(filtered.reviews[0].driverId, receipt.driverId)
+    assert.equal(filtered.reviews[0].reviewText, '')
+    const listing = await (await driverRequest(DB, bucket, 'GET')).json()
+    assert.equal(listing.drivers[0].driverId, receipt.driverId)
+    assert.equal(listing.drivers[0].averageRating, 5)
+    assert.equal(listing.drivers[0].reviewCount, 1)
+    const unavailable = { ...rating, id: crypto.randomUUID(), driverId: 'AVELOF_DRV_00000000000000000000000000000000' }
+    assert.equal((await reviewRequest(DB, 'POST', unavailable)).status, 404)
   } finally { DB.sqlite.close() }
 })
 

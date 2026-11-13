@@ -31,8 +31,9 @@ export async function saveReview(submission: ReviewSubmission) {
   return receipt
 }
 
-export async function loadPublicReviews(page: number, signal?: AbortSignal) {
-  return publicList.parse(await requestReviews(`?page=${page}`, 'GET', undefined, signal))
+export async function loadPublicReviews(page: number, signal?: AbortSignal, driverId?: string) {
+  const query = new URLSearchParams({ page: String(page), ...(driverId ? { driverId } : {}) })
+  return publicList.parse(await requestReviews(`?${query}`, 'GET', undefined, signal))
 }
 
 export async function loadAdminReviews(page: number, status: ReviewStatus | 'all', signal?: AbortSignal) {

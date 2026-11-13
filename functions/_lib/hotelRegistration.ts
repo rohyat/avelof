@@ -63,6 +63,13 @@ export function validHotelJpeg(bytes: Uint8Array) {
   return false
 }
 
+export function registrationPhotoBytes(content: unknown) {
+  if (content instanceof ArrayBuffer) return new Uint8Array(content)
+  if (ArrayBuffer.isView(content)) return new Uint8Array(content.buffer, content.byteOffset, content.byteLength)
+  if (Array.isArray(content) && content.every((byte) => Number.isInteger(byte) && byte >= 0 && byte <= 255)) return new Uint8Array(content)
+  throw new TypeError('Registration photo content is not a valid byte sequence.')
+}
+
 export async function saveRegistrationPhoto(DB: D1Database, key: string, image: Uint8Array) {
   const content = new Uint8Array(image).buffer
   await DB.prepare('INSERT INTO registration_photos (photo_key, content) VALUES (?, ?)').bind(key, content).run()
