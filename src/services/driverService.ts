@@ -26,6 +26,9 @@ export async function loadAdminDrivers(page: number, status: HotelStatus | 'all'
 export async function moderateDriver(id: string, version: number, status: HotelStatus, price: number, ownerNote: string, vehicleNumber: string) {
   return z.object({ driver: adminDriverSchema }).parse(await requestHotel('/api/drivers', 'PATCH', { id, version, status, price, ownerNote, vehicleNumber })).driver
 }
+export async function deleteDriver(id: string, version: number) {
+  return z.object({ deleted: z.literal(true), id: z.uuidv4() }).parse(await requestHotel('/api/drivers', 'DELETE', { id, version }))
+}
 export async function loadPublicDrivers(signal?: AbortSignal, id?: string) {
   const drivers: PublicDriver[] = []
   for (let page = 1; ; page++) {

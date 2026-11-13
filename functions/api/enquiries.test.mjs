@@ -384,6 +384,38 @@ test('hotel moderation publishes edited prices only with owner auth and hides ph
   } finally { DB.sqlite.close() }
 })
 
+test('admin can permanently delete hotel and driver registrations with their photos and linked reviews', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    const hotel = hotelPayload()
+    const driver = driverPayload()
+    const hotelReceipt = await (await hotelRequest(DB, bucket, 'POST', hotel, { photos: [testHotelJpeg, testHotelJpeg] })).json()
+    const driverReceipt = await (await driverRequest(DB, bucket, 'POST', driver)).json()
+    DB.sqlite.prepare("INSERT INTO reviews (id, reviewer_name, experience, rating, review_text, publication_consent, payload_hash, status, hotel_id) VALUES (?, 'Guest', 'Hotel stay', 5, 'Hotel review', 1, 'hotel-review', 'published', ?)").run(crypto.randomUUID(), hotelReceipt.hotelId)
+    DB.sqlite.prepare("INSERT INTO reviews (id, reviewer_name, experience, rating, review_text, publication_consent, payload_hash, status, driver_id) VALUES (?, 'Guest', 'Driver trip', 5, 'Driver review', 1, 'driver-review', 'published', ?)").run(crypto.randomUUID(), driverReceipt.driverId)
+    assert.equal(photoCount(DB), 3)
+
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    const hotelDeletion = { id: hotel.id, version: 0 }
+    assert.equal((await hotelRequest(DB, bucket, 'DELETE', hotelDeletion)).status, 401)
+    assert.equal((await hotelRequest(DB, bucket, 'DELETE', hotelDeletion, { headers: { Cookie, Origin: 'https://other.test' } })).status, 403)
+    assert.equal((await hotelRequest(DB, bucket, 'DELETE', { ...hotelDeletion, version: 1 }, { headers: { Cookie } })).status, 409)
+    assert.deepEqual(await (await hotelRequest(DB, bucket, 'DELETE', hotelDeletion, { headers: { Cookie } })).json(), { deleted: true, id: hotel.id })
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM hotel_registrations').get().total, 0)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM reviews WHERE hotel_id = ?').get(hotelReceipt.hotelId).total, 0)
+    assert.equal(photoCount(DB), 1)
+
+    const driverDeletion = { id: driver.id, version: 0 }
+    assert.deepEqual(await (await driverRequest(DB, bucket, 'DELETE', driverDeletion, { headers: { Cookie } })).json(), { deleted: true, id: driver.id })
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM driver_registrations').get().total, 0)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM driver_reference_numbers').get().total, 0)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM reviews WHERE driver_id = ?').get(driverReceipt.driverId).total, 0)
+    assert.equal(photoCount(DB), 0)
+    assert.equal((await driverRequest(DB, bucket, 'DELETE', driverDeletion, { headers: { Cookie } })).status, 409)
+  } finally { DB.sqlite.close() }
+})
+
 test('hotel JPEG validation accepts 1920px and 1 MB boundaries but rejects larger images', () => {
   const frame = testHotelJpeg.indexOf(Buffer.from([0xff, 0xc0]))
   assert.ok(frame > 0)

@@ -54,6 +54,9 @@ export async function loadAdminHotels(page: number, status: HotelStatus | 'all',
 export async function moderateHotel(id: string, version: number, status: HotelStatus, price: number, ownerNote: string, breakfastPrice?: number, dinnerPrice?: number) {
   return z.object({ hotel: adminHotelSchema }).parse(await requestHotel('/api/hotels', 'PATCH', { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice })).hotel
 }
+export async function deleteHotel(id: string, version: number) {
+  return z.object({ deleted: z.literal(true), id: z.uuidv4() }).parse(await requestHotel('/api/hotels', 'DELETE', { id, version }))
+}
 export async function loadPublicHotels(signal?: AbortSignal, id?: string) {
   const hotels: PublicHotel[] = []
   let page = 1

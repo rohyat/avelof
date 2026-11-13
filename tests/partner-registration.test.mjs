@@ -89,9 +89,14 @@ test('partner onboarding and approved listings work separately from customer nav
     })
     await context.test('owner can approve driver and private lookup uses POST body credentials', async () => {
       const page = await browser.newPage()
-      let current = driver, update, lookup
+      let current = driver, update, lookup, deletion
       await page.route('**/api/drivers*', (route) => {
         const request = route.request()
+        if (request.method() === 'DELETE') {
+          deletion = request.postDataJSON()
+          current = null
+          return route.fulfill({ json: { deleted: true, id } })
+        }
         if (request.method() === 'PATCH') {
           update = request.postDataJSON()
           current = { ...driver, ...update, version: 1 }
@@ -103,7 +108,7 @@ test('partner onboarding and approved listings work separately from customer nav
           void photo; void version; void age; void phone; void licenceNumber; void ownerNote; void createdAt; void averageRating; void reviewCount
           return route.fulfill({ json: { driver: owner } })
         }
-        return route.fulfill({ json: listing([current]) })
+        return route.fulfill({ json: listing(current ? [current] : []) })
       })
       await page.route('**/api/push*', (route) => route.fulfill({ status: 503, json: { error: 'Push is not configured.' } }))
       try {
@@ -122,6 +127,11 @@ test('partner onboarding and approved listings work separately from customer nav
         await page.locator('.hotel-owner-status').waitFor()
         assert.deepEqual(lookup.postDataJSON(), { identifier: driver.phone, accessCode })
         assert.equal(lookup.url().includes(accessCode), false)
+        await page.goto(`${origin}/admin/panel/drivers`)
+        page.once('dialog', (dialog) => dialog.accept())
+        await page.getByRole('button', { name: 'Delete driver registration' }).click()
+        await page.getByRole('status').filter({ hasText: 'Driver registration permanently deleted.' }).waitFor()
+        assert.deepEqual(deletion, { id, version: 1 })
       } finally { await page.close() }
     })
     await context.test('approved vehicle and optional hotel meals reach booking selectors without private driver data', async () => {

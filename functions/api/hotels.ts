@@ -13,9 +13,10 @@ const listSchema = z.object({
   hotelId: z.string().regex(/^AVELOF_HTL_[A-F0-9]{32}$/).optional(),
   status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all'),
 }).strict()
+const deletionSchema = z.object({ id: z.uuidv4().toLowerCase(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
 
 export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUntil }) => {
-  if (!['GET', 'POST', 'PATCH'].includes(request.method)) return privateReply({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST, PATCH' })
+  if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) return privateReply({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST, PATCH, DELETE' })
   if (request.method !== 'GET' && !sameOrigin(request)) return privateReply({ error: 'Origin not allowed.' }, 403)
   if (!env.DB) return privateReply({ error: 'Hotel registration storage is unavailable.' }, 503)
   const DB = env.DB
@@ -36,13 +37,20 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       const rows = await DB.prepare(`SELECT ${listingColumns} FROM hotel_registrations ${where} ORDER BY created_at DESC, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<HotelRow>()
       return privateReply({ hotels: rows.results.map(admin ? adminHotel : publicHotel), total: total?.total ?? 0, page, pageSize: 25 })
     }
-    if (request.method === 'PATCH') {
+    if (request.method === 'PATCH' || request.method === 'DELETE') {
       if (!await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
       if (request.headers.get('Content-Type')?.split(';')[0] !== 'application/json') return privateReply({ error: 'JSON required.' }, 415)
       const body = await limitedBody(request, 12000)
       if (body === null) return privateReply({ error: 'Hotel update too large.' }, 413)
       let input: unknown
       try { input = JSON.parse(new TextDecoder().decode(body)) } catch { return privateReply({ error: 'Invalid hotel update.' }, 400) }
+      if (request.method === 'DELETE') {
+        const parsed = deletionSchema.safeParse(input)
+        if (!parsed.success) return privateReply({ error: 'Invalid hotel deletion.' }, 400)
+        const deleted = await DB.prepare('DELETE FROM hotel_registrations WHERE id = ? AND version = ? RETURNING id').bind(parsed.data.id, parsed.data.version).first<{ id: string }>()
+        if (!deleted) return privateReply({ error: 'This hotel changed or is no longer available. Refresh before deleting it.' }, 409)
+        return privateReply({ deleted: true, id: deleted.id })
+      }
       const parsed = hotelModerationSchema.safeParse(input)
       if (!parsed.success || (parsed.data.breakfastPrice === undefined) !== (parsed.data.dinnerPrice === undefined)) return privateReply({ error: 'Check the hotel price and moderation details. Supply both meal prices together.' }, 400)
       const { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice } = parsed.data

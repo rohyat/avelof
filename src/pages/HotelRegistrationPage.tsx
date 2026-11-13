@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, RefreshCw, Trash2 } from 'lucide-react'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import NumberStepper from '../components/NumberStepper'
 import { heatingOptions, hotelAmenities, hotelCategories, hotelCategoryLabels, hotelHighlightOptions, hotelRoomTypes, hotelStatusLabels, hotelTaxOptions, registrationLocations } from '../data/hotelRegistration'
 import { hotelPriceSchema, hotelStatusSchema, hotelSubmissionSchema } from '../services/hotelSchema'
 import type { AdminHotel, HotelStatus } from '../services/hotelSchema'
-import { compressHotelPhotos, hotelErrorText, HotelError, loadAdminHotels, lookupHotel, moderateHotel, saveHotel } from '../services/hotelService'
+import { compressHotelPhotos, deleteHotel, hotelErrorText, HotelError, loadAdminHotels, lookupHotel, moderateHotel, saveHotel } from '../services/hotelService'
 import type { HotelReceipt, OwnerHotel } from '../services/hotelService'
 
 function PhotoPreview({ photo, index }: { photo: Blob; index: number }) {
@@ -151,7 +151,7 @@ export function HotelStatusPage() {
   </section>
 }
 
-function AdminHotelRecord({ hotel, disabled, onSave }: { hotel: AdminHotel; disabled: boolean; onSave: (hotel: AdminHotel, status: HotelStatus, price: number, note: string, breakfast?: number, dinner?: number) => Promise<void> }) {
+function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminHotel; disabled: boolean; onSave: (hotel: AdminHotel, status: HotelStatus, price: number, note: string, breakfast?: number, dinner?: number) => Promise<void>; onDelete: (hotel: AdminHotel) => Promise<void> }) {
   const [note, setNote] = useState(hotel.ownerNote)
   const [status, setStatus] = useState<HotelStatus>(hotel.status)
   const [error, setError] = useState('')
@@ -182,6 +182,7 @@ function AdminHotelRecord({ hotel, disabled, onSave }: { hotel: AdminHotel; disa
         <button type="submit" className="button button-dark"><Check size={16} /> Save price and status</button>
       </fieldset>
     </form>
+    <button type="button" className="button admin-record-delete" disabled={disabled} onClick={() => void onDelete(hotel)}><Trash2 size={16} /> Delete hotel registration</button>
   </article>
 }
 
@@ -216,6 +217,18 @@ export function AdminHotelsPage() {
       else setError(hotelErrorText(failure))
     } finally { setSaving(false); inFlight.current = false }
   }
+  async function remove(hotel: AdminHotel) {
+    if (inFlight.current || !window.confirm(`Permanently delete ${hotel.name}, its photos and linked reviews? This cannot be undone.`)) return
+    inFlight.current = true; setSaving(true); setError(''); setNotice('')
+    try {
+      await deleteHotel(hotel.id, hotel.version)
+      setNotice('Hotel registration permanently deleted.')
+      refresh(listing?.hotels.length === 1 && filters.page > 1 ? filters.page - 1 : filters.page)
+    } catch (failure) {
+      if (failure instanceof HotelError && failure.status === 401) { setSignedOut(true); setListing(null) }
+      else setError(hotelErrorText(failure))
+    } finally { setSaving(false); inFlight.current = false }
+  }
   return <section className="enquiry-access-page page-width">
     <Link className="text-link" to="/admin/panel"><ArrowLeft size={16} /> Owner dashboard</Link>
     <div className="enquiry-access-heading"><div><p className="eyebrow">AVELOF owner access</p><h1>Hotel registrations</h1></div></div>
@@ -227,7 +240,7 @@ export function AdminHotelsPage() {
       {loading && <p role="status">Loading hotels...</p>}
       {notice && <p role="status">{notice}</p>}
       {error && <p className="enquiry-error" role="alert">{error}</p>}
-      <div className="admin-review-list">{listing?.hotels.map((hotel) => <AdminHotelRecord key={`${hotel.id}-${hotel.version}`} hotel={hotel} disabled={loading || saving} onSave={save} />)}</div>
+      <div className="admin-review-list">{listing?.hotels.map((hotel) => <AdminHotelRecord key={`${hotel.id}-${hotel.version}`} hotel={hotel} disabled={loading || saving} onSave={save} onDelete={remove} />)}</div>
       {!loading && !error && !listing?.total && <p>No hotels in this view.</p>}
       {listing && <div className="admin-enquiry-pagination"><span>Page {filters.page} · {listing.total} hotels</span><button className="button button-outline" disabled={loading || saving || filters.page === 1} onClick={() => refresh(filters.page - 1)}>Previous</button><button className="button button-outline" disabled={loading || saving || filters.page * 25 >= listing.total} onClick={() => refresh(filters.page + 1)}>Next</button></div>}
     </>}

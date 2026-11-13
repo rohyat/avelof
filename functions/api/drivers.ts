@@ -14,6 +14,7 @@ const listSchema = z.object({ scope: z.enum(['public', 'admin']).default('public
 const unpricedDriverRate = 1
 const moderationSchema = hotelModerationSchema.omit({ breakfastPrice: true, dinnerPrice: true }).extend({ vehicleNumber: driverVehicleNumberSchema })
   .refine(({ price, status }) => status !== 'approved' || price > unpricedDriverRate, { path: ['price'], message: 'Set the daily rate before approval.' })
+const deletionSchema = z.object({ id: z.uuidv4(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
 const legacyDriverId = (id: string) => `AVELOF_DRV_${id.replaceAll('-', '').toUpperCase()}`
 
 async function assignDriverId(DB: D1Database, row: DriverRow) {
@@ -31,7 +32,7 @@ async function registrationReceipt(DB: D1Database, row: DriverRow, status = 200)
 }
 
 export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUntil }) => {
-  if (!['GET', 'POST', 'PATCH'].includes(request.method)) return privateReply({ error: 'Method not allowed.' }, 405)
+  if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) return privateReply({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST, PATCH, DELETE' })
   if (request.method !== 'GET' && !sameOrigin(request)) return privateReply({ error: 'Origin not allowed.' }, 403)
   if (!env.DB) return privateReply({ error: 'Driver storage is unavailable.' }, 503)
   const DB = env.DB
@@ -52,13 +53,20 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       const rows = await DB.prepare(`SELECT ${listingColumns} FROM driver_registrations ${where} ORDER BY created_at DESC, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<DriverRow>()
       return privateReply({ drivers: rows.results.map(admin ? adminDriver : publicDriver), total: total?.total ?? 0, page, pageSize: 25 })
     }
-    if (request.method === 'PATCH' || request.headers.get('Content-Type')?.split(';')[0] === 'application/json') {
-      if (request.method === 'PATCH' && !await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
+    if (request.method === 'PATCH' || request.method === 'DELETE' || request.headers.get('Content-Type')?.split(';')[0] === 'application/json') {
+      if ((request.method === 'PATCH' || request.method === 'DELETE') && !await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
       if (request.headers.get('Content-Type')?.split(';')[0] !== 'application/json') return privateReply({ error: 'JSON required.' }, 415)
       const bytes = await limitedBody(request, 12000)
       if (bytes === null) return privateReply({ error: 'Request too large.' }, 413)
       let input: unknown
       try { input = JSON.parse(new TextDecoder().decode(bytes)) } catch { return privateReply({ error: 'Invalid driver request.' }, 400) }
+      if (request.method === 'DELETE') {
+        const parsed = deletionSchema.safeParse(input)
+        if (!parsed.success) return privateReply({ error: 'Invalid driver deletion.' }, 400)
+        const deleted = await DB.prepare('DELETE FROM driver_registrations WHERE id = ? AND version = ? RETURNING id').bind(parsed.data.id, parsed.data.version).first<{ id: string }>()
+        if (!deleted) return privateReply({ error: 'This driver changed or is no longer available. Refresh before deleting it.' }, 409)
+        return privateReply({ deleted: true, id: deleted.id })
+      }
       if (request.method === 'PATCH') {
         const parsed = moderationSchema.safeParse(input)
         if (!parsed.success) return privateReply({ error: 'Check driver price, vehicle registration and status.' }, 400)

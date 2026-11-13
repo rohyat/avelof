@@ -158,15 +158,20 @@ test('hotel registration, private lookup and moderation integrate with public st
     })
     await context.test('owner can review photos, edit the price and approve a hotel', async () => {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
-      let update
+      let update, deletion
       let current = hotel
       await page.route('**/api/hotels*', (route) => {
+        if (route.request().method() === 'DELETE') {
+          deletion = route.request().postDataJSON()
+          current = null
+          return route.fulfill({ json: { deleted: true, id } })
+        }
         if (route.request().method() === 'PATCH') {
           update = route.request().postDataJSON()
           current = { ...hotel, ...update, version: 1 }
           return route.fulfill({ json: { hotel: current } })
         }
-        return route.fulfill({ json: list([current]) })
+        return route.fulfill({ json: list(current ? [current] : []) })
       })
       await page.route('**/api/push*', (route) => route.fulfill({ status: 503, json: { error: 'Push is not configured.' } }))
       try {
@@ -179,22 +184,31 @@ test('hotel registration, private lookup and moderation integrate with public st
         await page.getByRole('button', { name: 'Save price and status' }).click()
         await page.getByRole('status').filter({ hasText: 'Hotel price and status saved.' }).waitFor()
         assert.deepEqual(update, { id, version: 0, status: 'approved', price: 3900.25, ownerNote: 'Approved at the agreed rate.' })
+        page.once('dialog', (dialog) => dialog.accept())
+        await page.getByRole('button', { name: 'Delete hotel registration' }).click()
+        await page.getByRole('status').filter({ hasText: 'Hotel registration permanently deleted.' }).waitFor()
+        assert.deepEqual(deletion, { id, version: 1 })
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       } finally { await page.close() }
     })
     await context.test('approved hotels appear with highlights, real photos and the correct booking rate', async () => {
       const page = await browser.newPage()
-      await page.route('**/api/hotels*', (route) => route.fulfill({ json: list([publicHotel()]) }))
+      const photos = [0, 1, 2].map((index) => `/api/hotel-images/${id}/${index}`)
+      await page.route('**/api/hotels*', (route) => route.fulfill({ json: list([{ ...publicHotel(), photos }]) }))
       try {
         await page.goto(`${origin}/hotels`)
         const card = page.locator('.catalog-card').filter({ hasText: hotel.name })
         await card.waitFor()
+        const cardPhotos = card.getByRole('region', { name: `${hotel.name} hotel photos` })
+        assert.equal(await cardPhotos.getAttribute('data-photo-count'), '3')
+        await page.waitForFunction(({ hotelIdValue, hotelName }) => document.querySelector(`[aria-label="${hotelName} hotel photos"] img`)?.getAttribute('src') === `/api/hotel-images/${hotelIdValue}/1`, { hotelIdValue: id, hotelName: hotel.name })
         assert.ok((await card.innerText()).includes('Mountain views'))
         assert.ok((await card.innerText()).includes('Hotel-provided photo'))
         assert.equal((await card.innerText()).includes(hotel.phone), false)
         assert.equal((await card.innerText()).includes('Before offer'), false)
         await card.getByRole('link', { name: hotel.name, exact: true }).click()
         await page.getByRole('heading', { name: hotel.name, exact: true }).waitFor()
+        assert.equal(await page.getByRole('region', { name: `${hotel.name} hotel photos` }).getAttribute('data-photo-count'), '3')
         assert.ok((await page.locator('.detail-aside').innerText()).includes('Breakfast included'))
         await page.locator('.detail-heading').getByRole('button', { name: 'Book Now' }).click()
         await page.locator('.selected-hotel-field').waitFor()

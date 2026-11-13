@@ -137,6 +137,7 @@ h1 em, h2 em { color: inherit; font-weight: 500; }
 .catalog-card { min-width: 0; display: flex; flex-direction: column; background: #fff; border: 1px solid rgba(37,60,48,.08); transition: transform .25s ease, box-shadow .25s ease; }
 .catalog-card:hover { transform: translateY(-4px); box-shadow: 0 15px 32px rgba(34,52,43,.1); }
 .catalog-image { position: relative; height: 235px; display: block; overflow: hidden; background: #d5ddd6; }
+.catalog-photo-rotation { width: 100%; height: 100%; }
 .catalog-image img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s ease; }
 .catalog-card:hover .catalog-image img { transform: scale(1.04); }
 .image-tag { position: absolute; top: 14px; left: 14px; padding: 7px 10px; color: var(--forest); background: rgba(250,249,245,.94); font-size: 8px; font-weight: 700; letter-spacing: .75px; text-transform: uppercase; }
@@ -305,6 +306,8 @@ body.enquiry-open { overflow: hidden; }
 .detail-gallery img { width: 100%; height: 100%; object-fit: cover; }
 .detail-gallery .gallery-main { grid-row: span 2; }
 .hotel-detail-photo > img { width: 100%; aspect-ratio: 16 / 7; min-height: 240px; max-height: 430px; object-fit: cover; }
+.hotel-photo-carousel { overflow: hidden; }
+.hotel-photo-carousel img { width: 100%; aspect-ratio: 16 / 7; min-height: 240px; max-height: 430px; object-fit: cover; }
 .detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) 295px; align-items: start; gap: 9%; padding-block: 54px 90px; }
 .detail-body { min-width: 0; }
 .detail-section { padding: 0 0 36px; margin-bottom: 34px; border-bottom: 1px solid var(--line); }
