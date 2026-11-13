@@ -17,7 +17,14 @@ export default function DriversPage() {
       {!drivers.loading && !drivers.error && !drivers.cars.length && <div className="empty-state"><h2>Driver listings are coming soon.</h2><p>Our team reviews each driver before they appear here.</p><Link className="button button-outline" to="/car-rentals">Explore vehicles</Link></div>}
       <div className="driver-directory-grid">
         {drivers.cars.map((driver) => <article className="driver-directory-card" key={driver.id}>
-        <img className="driver-directory-photo" src={driver.driverPhoto} alt={`Portrait of ${driver.driverDisplayName}`} loading="lazy" />
+        <div className="driver-directory-portrait">
+          <img className="driver-directory-photo" src={driver.driverPhoto} alt={`Portrait of ${driver.driverDisplayName}`} loading="lazy" />
+          <div className="driver-directory-credentials">
+            <p>Phone: {driver.maskedPhone}</p>
+            {driver.vehicleNumber && <p>Vehicle registration: {driver.vehicleNumber}</p>}
+            {driver.maskedLicenceNumber && <p>Driving licence: {driver.maskedLicenceNumber}</p>}
+          </div>
+        </div>
         <div className="driver-directory-details">
           <p className="eyebrow">AVELOF-approved driver</p>
           <h2>{driver.driverDisplayName}</h2>
@@ -25,9 +32,6 @@ export default function DriversPage() {
           <div className="driver-directory-rating"><ReviewStars rating={driver.driverAverageRating ?? 0} label={driver.driverAverageRating ? `${driver.driverAverageRating.toFixed(1)} out of 5 stars from ${driver.driverReviewCount} reviews` : 'No driver ratings yet'} /><span>{driver.driverAverageRating ? `${driver.driverAverageRating.toFixed(1)} · ${driver.driverReviewCount} ${driver.driverReviewCount === 1 ? 'review' : 'reviews'}` : 'No ratings yet'}</span></div>
           <p className="driver-directory-vehicle">{driver.name}</p>
           <p className="driver-directory-facts"><span><MapPin size={15} />{driver.location}</span><span><Users size={15} />{driver.seats} passenger seats</span></p>
-          <p className="driver-directory-phone">Phone: {driver.maskedPhone}</p>
-          {driver.vehicleNumber && <p className="driver-directory-phone">Vehicle registration: {driver.vehicleNumber}</p>}
-          {driver.maskedLicenceNumber && <p className="driver-directory-phone">Driving licence: {driver.maskedLicenceNumber}</p>}
           <Link className="button button-dark" to={`/drivers/${encodeURIComponent(driver.registeredDriverId!)}/reviews`}>View reviews <ArrowRight size={16} /></Link>
         </div>
       </article>)}</div>

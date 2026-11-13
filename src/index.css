@@ -395,9 +395,12 @@ body.enquiry-open { overflow: hidden; }
 .review-submission-form .number-stepper input { border: 0; min-width: 0; text-align: center; }
 .number-stepper:focus-within { outline: 2px solid var(--forest); outline-offset: 2px; }
 .driver-directory { padding-block: 36px 64px; }
-.driver-directory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 20px; }
-.driver-directory-card { display: grid; grid-template-columns: 174px 1fr; align-items: start; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 8px 26px rgb(34 54 46 / 7%); }
-.driver-directory-photo { width: 142px; height: 142px; margin: 18px 0 18px 18px; object-fit: cover; border-radius: 9px; background: #edf2ef; }
+.driver-directory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); justify-items: center; gap: 20px; }
+.driver-directory-card { width: 100%; max-width: 820px; display: grid; grid-template-columns: 174px 1fr; align-items: start; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 8px 26px rgb(34 54 46 / 7%); }
+.driver-directory-portrait { display: grid; align-content: start; gap: 12px; padding: 18px 0 18px 18px; min-width: 0; }
+.driver-directory-photo { width: 142px; height: 142px; object-fit: cover; border-radius: 9px; background: #edf2ef; }
+.driver-directory-credentials { display: grid; gap: 7px; color: var(--muted); font-size: .78rem; line-height: 1.45; overflow-wrap: anywhere; }
+.driver-directory-credentials p { margin: 0; }
 .driver-detail-photo { display: block; width: min(100%, 300px); max-height: 340px; margin-block: 18px; object-fit: cover; border-radius: 10px; }
 .driver-directory-details { display: grid; align-content: start; gap: 10px; padding: 18px; min-width: 0; }
 .driver-directory-details .eyebrow, .driver-directory-details h2, .driver-directory-details p { margin: 0; }
@@ -408,15 +411,16 @@ body.enquiry-open { overflow: hidden; }
 .driver-directory-vehicle { font-weight: 700; }
 .driver-directory-facts { display: grid; gap: 6px; color: var(--muted); font-size: .9rem; }
 .driver-directory-facts span { display: flex; align-items: center; gap: 7px; }
-.driver-directory-phone { color: var(--muted); font-size: .9rem; }
 .driver-review-identity { overflow-wrap: anywhere; }
 .driver-review-summary { display: flex; align-items: center; gap: 22px; margin: 28px 0 34px; padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .driver-review-summary img { width: 132px; height: 132px; flex: 0 0 132px; object-fit: cover; border-radius: 9px; background: #edf2ef; }
 .driver-review-summary .review-stars { margin: 5px 0 9px; }
 .driver-review-summary h2, .driver-review-summary p { margin: 0; }
 @media (max-width: 520px) {
-  .driver-directory-card { grid-template-columns: 116px 1fr; }
-  .driver-directory-photo { width: 88px; height: 88px; margin: 14px 0 14px 14px; }
+  .driver-directory-card { grid-template-columns: 1fr; }
+  .driver-directory-portrait { grid-template-columns: 88px 1fr; align-items: start; padding: 14px 14px 0; }
+  .driver-directory-photo { width: 88px; height: 88px; }
+  .driver-directory-credentials { font-size: .76rem; }
   .driver-directory-details { padding: 14px; }
   .driver-review-summary { align-items: flex-start; gap: 15px; padding: 16px; }
   .driver-review-summary img { width: 88px; height: 88px; flex-basis: 88px; }
