@@ -180,7 +180,7 @@ export const ownerProvidedGuestReviews: OwnerProvidedGuestReview[] = [
 
 export const destinations: Destination[] = [
   {
-    id: 'srinagar', name: 'Srinagar', aliases: [], image: suppliedPhotos.dalLake, photoIsUserProvided: true,
+    id: 'srinagar', name: 'Srinagar', aliases: [], image: photos.lake,
     additionalPhotos: [{ image: suppliedPhotos.tulipGarden, alt: 'Tulip Garden in Srinagar' }, { image: suppliedPhotos.hazratbal, alt: 'Hazratbal Dargah in Srinagar' }], count: 'Lake & heritage',
     distance: '0 km (city base)', travelTime: '15-60 min within the city', maxDriveHours: 1,
     detail: 'Lake mornings, Mughal gardens and old-city lanes make Srinagar a relaxed starting point for the valley.',

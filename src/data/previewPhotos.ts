@@ -16,7 +16,6 @@ export const previewPhotos = {
 
 export const providedDestinationPhotos = {
   homeHero: '/images/destinations/homepage-background.jpg',
-  dalLake: '/images/destinations/dal-lake-srinagar.jpg',
   pahalgam: '/images/destinations/pahalgam-user.jpg',
   gulmarg: '/images/destinations/gulmarg-user.jpg',
   gurez: '/images/destinations/gurez-valley-user.jpg',

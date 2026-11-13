@@ -125,7 +125,7 @@ test('review carousel preserves layout and supports accessible automatic and man
         await page.clock.install()
         await page.goto(`${origin}/destinations`)
         const destinationPhotos = [
-          ['Srinagar', 'dal-lake-srinagar.jpg'],
+          ['Srinagar', 'srinagar-preview.webp'],
           ['Gulmarg', 'gulmarg-user.jpg'],
           ['Pahalgam', 'pahalgam-user.jpg'],
           ['Sonamarg', 'sonamarg-user.jpg'],
