@@ -16,14 +16,14 @@ export const reviewSubmissionSchema = z.object({
 export type ReviewSubmission = z.infer<typeof reviewSubmissionSchema>
 
 export const publicReviewSchema = z.object({
-  id: z.uuidv4(), reviewerName: z.string(), experience: z.string(),
+  id: z.uuidv4(), reviewerName: z.string(), bookingId: z.string(), experience: z.string(),
   rating: z.number().int().min(1).max(5), title: z.string(), reviewText: z.string(),
   publishedAt: z.string(),
   reviewMonth: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).nullable().default(null),
 })
 
 export const adminReviewSchema = publicReviewSchema.omit({ publishedAt: true }).extend({
-  bookingId: z.string(), status: reviewStatusSchema, version: z.number().int().min(0),
+  status: reviewStatusSchema, version: z.number().int().min(0),
   createdAt: z.string(), publishedAt: z.string().nullable(),
   submissionSource: z.enum(['guest_submission', 'owner_provided']).default('guest_submission'),
 })

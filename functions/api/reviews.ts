@@ -31,11 +31,11 @@ const moderationSchema = z.object({ id: z.uuidv4(), status: reviewStatusSchema, 
 const deletionSchema = z.object({ id: z.uuidv4(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
 
 function publicReview(row: ReviewRow) {
-  return { id: row.id, reviewerName: row.reviewer_name, experience: row.experience, rating: row.rating, title: row.title, reviewText: row.review_text, publishedAt: row.published_at, reviewMonth: row.review_month }
+  return { id: row.id, reviewerName: row.reviewer_name, bookingId: row.booking_id, experience: row.experience, rating: row.rating, title: row.title, reviewText: row.review_text, publishedAt: row.published_at, reviewMonth: row.review_month }
 }
 
 function adminReview(row: ReviewRow) {
-  return { ...publicReview(row), bookingId: row.booking_id, status: row.status, version: row.version, createdAt: row.created_at, submissionSource: row.submission_source }
+  return { ...publicReview(row), status: row.status, version: row.version, createdAt: row.created_at, submissionSource: row.submission_source }
 }
 
 async function readBody(request: Request) {

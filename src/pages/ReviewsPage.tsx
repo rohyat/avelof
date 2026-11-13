@@ -25,7 +25,7 @@ function reviewMonthLabel(value: string) {
 
 function ReviewCard({ review }: { review: PublicReview }) {
   return <article id={`guest-review-${review.id}`} className="review-card">
-    <div className="review-card-head"><strong>{review.reviewerName}</strong><span className="review-source-label">Guest review</span></div>
+    <div className="review-card-head"><div className="review-card-identity"><strong>{review.reviewerName}</strong>{review.bookingId && <span className="review-booking-id">Booking ID: {review.bookingId}</span>}</div><span className="review-source-label">Guest review</span></div>
     <Stars rating={review.rating} />
     {review.title && <h3 className="review-card-title">{review.title}</h3>}
     <blockquote>{review.reviewText}</blockquote>
@@ -116,13 +116,13 @@ export default function ReviewsPage() {
         <div><p className="eyebrow">All perspectives welcome</p><h2 id="review-form-title">Tell us about your experience.</h2><p>No booking ID or prior booking confirmation is required. Reviews appear after submission. Do not include phone numbers, addresses or payment information.</p></div>
         {saved ? <div className="review-ready" role="status"><h3>Thank you. Your review has been saved.</h3><p>{saved === 'published' ? 'Your review is published and now appears in Guest reviews.' : saved === 'pending' ? 'Your review is not currently public. Please contact AVELOF for help.' : 'Your submission is not currently published.'}</p><button className="text-link" type="button" onClick={() => { setSaved(null); setRating(''); pending.current = null }}>Write another review <ArrowRight size={16} /></button></div> : <form className="review-submission-form" onSubmit={submit} aria-busy={submitting}>
           <label>Display name<input name="reviewerName" autoComplete="nickname" maxLength={80} required placeholder="Name to publish" /></label>
-          <label>Booking ID (optional, private)<input name="bookingId" autoComplete="off" maxLength={80} placeholder="Optional booking reference" /></label>
+          <label>Booking ID (optional, shown publicly)<input name="bookingId" autoComplete="off" maxLength={80} placeholder="Optional booking reference" /></label>
           <label>Experience<select name="experience" defaultValue="General experience">{experienceOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
           <label>Review title (optional)<input name="title" maxLength={120} /></label>
           <fieldset className="review-rating"><legend>Your rating</legend><div className="review-star-options">{Array.from({ length: 5 }, (_, index) => { const value = String(index + 1); return <label className={Number(rating) >= Number(value) ? 'is-selected' : ''} key={value}><input aria-label={`${value} star${value === '1' ? '' : 's'}`} type="radio" name="rating" value={value} checked={rating === value} onChange={(event) => setRating(event.target.value)} required /><Star aria-hidden="true" /></label> })}</div></fieldset>
           <label className="review-text-field">Your review<textarea name="reviewText" rows={5} minLength={20} maxLength={1600} required placeholder="Share your honest experience." /></label>
           <label className="enquiry-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
-          <label className="review-consent"><input type="checkbox" name="publicationConsent" required /><span>I confirm this is my own experience and consent to immediate publication of my display name, rating and review. My booking ID will remain private.</span></label>
+          <label className="review-consent"><input type="checkbox" name="publicationConsent" required /><span>I confirm this is my own experience and consent to immediate publication of my display name, rating, review and booking ID, if provided.</span></label>
           {submitError && <p className="enquiry-error review-text-field" role="alert">{submitError}</p>}
           <button className="button button-dark" type="submit" disabled={submitting}>{submitting ? 'Saving review...' : 'Submit review'} <ArrowRight size={16} /></button>
         </form>}
@@ -196,7 +196,7 @@ export function AdminReviewsPage() {
         <p className="privacy-note">{review.experience} · {new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium' }).format(new Date(review.createdAt))}</p>
         {review.reviewMonth && <p className="privacy-note">Original review month: {reviewMonthLabel(review.reviewMonth)}</p>}
         {review.title && <h2>{review.title}</h2>}<p className="admin-review-text">{review.reviewText}</p>
-        <p className="privacy-note">Private booking ID: {review.bookingId || 'Not provided'}. Source: {review.submissionSource === 'owner_provided' ? 'Owner-provided guest review' : 'Website guest submission'}. Not independently verified.</p>
+        <p className="privacy-note">Booking ID (shown with published reviews): {review.bookingId || 'Not provided'}. Source: {review.submissionSource === 'owner_provided' ? 'Owner-provided guest review' : 'Website guest submission'}. Not independently verified.</p>
         <div className="admin-review-actions">{review.status !== 'published' && <button className="button button-dark" disabled={Boolean(savingId) || loading} onClick={() => moderate(review, 'published')}><Check size={16} /> {savingId === review.id ? 'Saving...' : 'Publish review'}</button>}{review.status !== 'rejected' && <button className="button confirmation-close" disabled={Boolean(savingId) || loading} onClick={() => moderate(review, 'rejected')}>Hide review</button>}{review.status !== 'pending' && <button className="text-link" disabled={Boolean(savingId) || loading} onClick={() => moderate(review, 'pending')}>Return to pending</button>}<button className="button admin-record-delete" disabled={Boolean(savingId) || loading} onClick={() => removeReview(review)}><Trash2 size={16} /> {savingId === review.id ? 'Deleting...' : 'Delete review'}</button></div>
       </article>)}</div>
       {!loading && !error && !listing?.reviews.length && <p className="review-empty">No reviews in this view.</p>}

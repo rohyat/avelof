@@ -367,6 +367,8 @@ body.enquiry-open { overflow: hidden; }
 .review-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(32,58,58,.09); }
 .review-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 17px; }
 .review-card-head strong { color: var(--ink); font-size: 14px; font-weight: 700; line-height: 1.4; }
+.review-card-identity { display: grid; gap: 4px; min-width: 0; max-width: 100%; }
+.review-booking-id { color: #586a60; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .review-source-label { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid #c8ded1; border-radius: 3px; color: #22563c; background: #eef6f0; font-size: 9px; font-weight: 700; white-space: nowrap; }
 .review-stars { display: flex; gap: 4px; margin-bottom: 13px; color: #a87537; }
 .review-stars svg { width: 16px; height: 16px; fill: currentColor; stroke-width: 0; }

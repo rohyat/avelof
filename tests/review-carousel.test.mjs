@@ -7,7 +7,7 @@ import { ownerGuestReviewMonths, ownerProvidedGuestReviews } from '../src/data/c
 const origin = process.env.AVELOF_REVIEW_TEST_URL || 'http://localhost:8792'
 const reviews = ownerProvidedGuestReviews.map((review, index) => ({
   id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
-  reviewerName: review.name, experience: review.packageName, rating: review.rating,
+  reviewerName: review.name, bookingId: index === 0 ? 'b'.repeat(80) : index === 1 ? '' : review.bookingId, experience: review.packageName, rating: review.rating,
   title: review.reviewTitle, reviewText: review.reviewText,
   publishedAt: '2026-11-10T12:00:00.000Z', reviewMonth: ownerGuestReviewMonths[review.id],
 }))
@@ -36,6 +36,16 @@ test('review carousel preserves layout and supports accessible automatic and man
       try {
         await page.goto(`${origin}/reviews`)
         await page.locator('.review-card').nth(9).waitFor()
+        for (const [index, review] of reviews.entries()) {
+          const card = page.locator('.review-card').nth(index)
+          assert.equal(await card.locator('.review-booking-id').count(), review.bookingId ? 1 : 0)
+          if (review.bookingId) {
+            assert.equal(await card.locator('.review-booking-id').textContent(), `Booking ID: ${review.bookingId}`)
+            const name = await card.locator('strong').boundingBox()
+            const booking = await card.locator('.review-booking-id').boundingBox()
+            assert.ok(booking.y >= name.y + name.height, 'Booking ID should be below the reviewer name')
+          }
+        }
         assert.equal(await page.locator('.review-carousel-controls').isVisible(), false)
         assert.ok(await page.evaluate(() => document.querySelector('.review-invite-top').compareDocumentPosition(document.querySelector('.review-feed-heading')) & Node.DOCUMENT_POSITION_FOLLOWING))
         for (const width of [900, 768, 640, 390, 320]) {
@@ -72,7 +82,7 @@ test('review carousel preserves layout and supports accessible automatic and man
           submitted = route.request().postDataJSON()
           return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ saved: true, id: submitted.id, status: 'published' }) })
         }
-        const published = submitted ? [{ id: submitted.id, reviewerName: submitted.reviewerName, experience: submitted.experience, rating: submitted.rating, title: submitted.title, reviewText: submitted.reviewText, publishedAt: '2026-11-11T12:00:00.000Z', reviewMonth: null }, ...reviews] : reviews
+        const published = submitted ? [{ id: submitted.id, reviewerName: submitted.reviewerName, bookingId: submitted.bookingId, experience: submitted.experience, rating: submitted.rating, title: submitted.title, reviewText: submitted.reviewText, publishedAt: '2026-11-11T12:00:00.000Z', reviewMonth: null }, ...reviews] : reviews
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ reviews: published, total: published.length, averageRating: 5, page: 1, pageSize: 25 }) })
       })
       try {
@@ -80,6 +90,8 @@ test('review carousel preserves layout and supports accessible automatic and man
         await page.locator('.review-card').nth(9).waitFor()
         await page.getByRole('link', { name: 'Write a review' }).click()
         await page.locator('input[name="reviewerName"]').fill('Fresh Guest')
+        await page.getByLabel('Booking ID (optional, shown publicly)').fill('AVELOF_PRM_00123-ab')
+        assert.ok((await page.locator('.review-consent').innerText()).includes('booking ID, if provided'))
         await page.locator('input[name="title"]').fill('A lovely journey')
         await page.locator('input[name="rating"][value="5"]').check({ force: true })
         await page.locator('textarea[name="reviewText"]').fill('The local team made our journey easy and welcoming.')
@@ -89,6 +101,7 @@ test('review carousel preserves layout and supports accessible automatic and man
         const card = page.locator(`#guest-review-${submitted.id}`)
         await card.waitFor()
         assert.ok((await card.innerText()).includes('Fresh Guest'))
+        assert.equal(await card.locator('.review-booking-id').textContent(), 'Booking ID: AVELOF_PRM_00123-ab')
         assert.ok((await card.boundingBox()).y < 500)
       } finally { await page.close() }
     })

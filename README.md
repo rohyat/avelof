@@ -262,8 +262,10 @@ does not verify a guest's identity or stay.
 Sign in at `/admin/panel`, then open the Reviews section, or visit
 `/admin/panel/reviews` with an active owner session. The owner can hide or restore
 reviews and permanently delete them. Changes require the existing signed admin
-cookie and version checks. Review consent permits publishing the display name and
-review, not the optional booking ID. Remove reviews containing private details.
+cookie and version checks. Review consent permits publishing the display name,
+rating, review and optional booking ID. Published cards show the full stored
+booking ID directly below the name, including existing imported reviews; cards
+without an ID omit that line. Remove reviews containing private contact or payment details.
 
 The public feed and average rating include only published database reviews.
 Published cards are labelled Guest review, not independently verified stays.
@@ -276,7 +278,7 @@ reviews use the same validation rules.
 
 `ownerProvidedGuestReviews` and `ownerGuestReviewMonths` in `src/data/catalog.ts`
 are the approved import source, not a second frontend review feed. Original
-names, ratings, titles, texts, package labels and private booking references are
+names, ratings, titles, texts, package labels and booking references are
 preserved. Migration `0007_review_sources.sql` adds owner-provided provenance
 and stable unique source keys. This records the owner's attestation and approval,
 not independent stay verification or evidence of a direct guest-form submission.
@@ -303,7 +305,8 @@ rows, including reviews later hidden through moderation. Remove temporary SQL
 after importing. Establish publication rights before approving more source
 reviews. If consent is withdrawn, hide/remove the database row and remove it
 from the approved source before importing again. `npm run import:reviews --
---check-client` verifies that private source references are not in built assets.
+--check-client` verifies that source references are not bundled in built assets;
+booking IDs are served at runtime only for published reviews.
 
 Apply migrations `0006_reviews.sql` through `0009_review_deletion_tombstones.sql`
 in local, production and preview databases before deployment. Migration 0009

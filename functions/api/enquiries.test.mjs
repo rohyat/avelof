@@ -665,7 +665,7 @@ test('anyone can publish a consented review without booking confirmation; retrie
     const data = await listing.json()
     assert.equal(data.reviews.length, 1)
     assert.equal(data.reviews[0].reviewText, input.reviewText)
-    assert.equal(data.reviews[0].bookingId, undefined)
+    assert.equal(data.reviews[0].bookingId, '')
     assert.equal(data.total, 1)
     assert.equal(data.averageRating, 4)
     assert.equal((await reviewRequest(DB, 'GET', undefined, { query: '?scope=admin' })).status, 401)
@@ -674,7 +674,7 @@ test('anyone can publish a consented review without booking confirmation; retrie
   } finally { DB.sqlite.close() }
 })
 
-test('owner can hide and restore an immediate review without exposing its booking ID or marking it verified', async () => {
+test('owner can hide and restore a review with its full public booking ID without marking it verified', async () => {
   const DB = database()
   try {
     const input = { ...reviewPayload(), bookingId: 'AVELOF_PRM_12345', rating: 1 }
@@ -690,7 +690,7 @@ test('owner can hide and restore an immediate review without exposing its bookin
     assert.equal(listing.total, 1)
     assert.equal(listing.averageRating, 1)
     assert.equal(listing.reviews[0].reviewText, input.reviewText)
-    assert.equal(listing.reviews[0].bookingId, undefined)
+    assert.equal(listing.reviews[0].bookingId, input.bookingId)
     assert.equal(listing.reviews[0].payload_hash, undefined)
     assert.equal(listing.reviews[0].verified, undefined)
     assert.equal((await reviewRequest(DB, 'PATCH', { id: input.id, status: 'rejected', version: 0 }, { headers: { Cookie } })).status, 200)
@@ -772,7 +772,7 @@ test('owner-approved reviews import into D1 unchanged, remain private where need
     assert.equal(data.averageRating, 5)
     assert.deepEqual(data.reviews.map((review) => review.reviewMonth), ['2025-12', '2025-12', '2025-06', '2025-06', '2025-03', '2025-03', '2025-03', '2025-03', '2025-01', '2025-01'])
     for (const review of data.reviews) {
-      assert.equal(review.bookingId, undefined)
+      assert.equal(review.bookingId, ownerProvidedGuestReviews.find((original) => original.name === review.reviewerName).bookingId)
       assert.equal(review.payload_hash, undefined)
       assert.equal(review.verified, undefined)
       assert.equal(review.source_key, undefined)
