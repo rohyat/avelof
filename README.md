@@ -368,6 +368,12 @@ replace curated package stays or change published package prices. The custom pla
 shows a combined vehicle and selected-stay estimate, updated for each night's room
 and meals. Adults and children aged 5 years and above are entered alongside dates
 in the first step; entered children count toward room capacity and vehicle seats.
+The five planner steps are Date, Places, Vehicle, Hotels and Contact details.
+Completed steps are clickable for direct editing; current/future steps cannot
+skip validation, and navigation is disabled while saving or after receipt.
+Only dates and guest counts appear first; destination selection is a separate
+second step. Back navigation preserves selections, and hotel-detail return restores
+the current step, including plans saved with the previous four-step layout.
 The guest fields explain that children below 5 years are complimentary. The planner suggests
 the smallest suitable vehicle (lowest daily rate when capacities match), allows
 larger choices, and blocks vehicles that do not fit. Groups beyond a single listed

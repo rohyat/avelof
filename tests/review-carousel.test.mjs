@@ -284,6 +284,26 @@ test('review carousel preserves layout and supports accessible automatic and man
           assert.equal(layout.clippedText, false, `Tile labels should fit at ${width}px`)
           assert.equal(layout.rowCount, 3, `Tiles should form three balanced rows at ${width}px`)
         }
+        for (const [width, height] of [[320, 640], [360, 740], [390, 844], [446, 699], [430, 932]]) {
+          await page.setViewportSize({ width, height })
+          await page.evaluate(() => { window.scrollTo({ top: 0, behavior: 'instant' }); return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))) })
+          const firstView = await page.locator('.home-shortcut-grid').evaluate((grid) => {
+            const tiles = [...grid.querySelectorAll('.home-shortcut-link')].map((tile) => tile.getBoundingClientRect())
+            const hero = document.querySelector('.home-hero').getBoundingClientRect()
+            const content = document.querySelector('.hero-content').getBoundingClientRect()
+            return {
+              firstRowVisible: tiles.slice(0, 3).every((tile) => tile.top >= 0 && tile.bottom <= innerHeight),
+              secondRowFraction: (innerHeight - tiles[3].top) / tiles[3].height,
+              heroContentFits: content.top >= hero.top && content.bottom <= hero.bottom,
+              overflow: document.documentElement.scrollWidth > innerWidth,
+              firstTop: tiles[0].top, firstBottom: tiles[0].bottom,
+            }
+          })
+          assert.ok(firstView.firstRowVisible, `First shortcut row should be fully visible at ${width}x${height}: ${JSON.stringify(firstView)}`)
+          assert.ok(firstView.secondRowFraction >= 0.5, `At least half the second row should be visible at ${width}x${height}: ${firstView.secondRowFraction}`)
+          assert.ok(firstView.heroContentFits, `Hero text should fit at ${width}x${height}`)
+          assert.equal(firstView.overflow, false)
+        }
         await page.goto(`${origin}/about`)
         await page.getByRole('heading', { name: 'Experience Kashmir Beyond Expectations.' }).waitFor()
         await page.getByRole('heading', { name: 'Your complete Kashmir travel companion.' }).waitFor()
