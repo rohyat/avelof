@@ -28,6 +28,109 @@ async function instantTestScroll(page) {
   })
 }
 
+test('admin separates review subjects and retains filters for moderation and deletion', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  const partnerId = '00000000-0000-4000-8000-000000000099'
+  const driver = {
+    id: partnerId, driverId: 'AVELOF-DRV-10001', fullName: 'Test Driver', age: 30,
+    phone: '9876543210', maskedPhone: '987*****10', licenceNumber: 'JK01 123456789', vehicleNumber: 'JK01AB-1234',
+    vehicleId: 'innova', vehicleName: 'Toyota Innova', location: 'Srinagar', seats: 6,
+    status: 'pending', version: 0, ownerNote: '', createdAt: '2026-11-13T10:00:00Z',
+    photo: `/api/driver-images/${partnerId}/0`,
+  }
+  const hotel = {
+    id: partnerId, hotelId: 'AVELOF_HTL_10001SRG', name: 'Test Hotel', contactName: 'Test Partner', phone: '9876543210',
+    location: 'Srinagar', category: 'Premium', description: 'A comfortable hotel with mountain views and local hospitality.',
+    price: 2000, submittedPrice: 2000, mealPlan: 'Room only', taxDetails: 'Taxes included', heating: 'Room heaters',
+    amenities: ['Wi-Fi'], highlights: ['Mountain views'], roomTypes: ['Standard'], totalRooms: 2,
+    checkIn: '14:00', checkOut: '11:00', photos: [`/api/hotel-images/${partnerId}/0`],
+    status: 'rejected', version: 0, ownerNote: '', createdAt: '2026-11-13T10:00:00Z', updatedAt: '2026-11-13T10:00:00Z',
+  }
+  let records = ['guest', 'driver', 'hotel'].map((category, index) => ({
+    ...reviews[0], id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+    reviewerName: `${category} reviewer`, driverId: category === 'driver' ? driver.driverId : null,
+    hotelId: category === 'hotel' ? hotel.hotelId : null, status: 'published', version: 0,
+    createdAt: '2026-11-13T10:00:00Z', submissionSource: 'guest_submission',
+  }))
+  const queries = []
+  let failPartners = true
+  await page.route('**/api/drivers*', (route) => {
+    const requestedPage = Number(new URL(route.request().url()).searchParams.get('page'))
+    return route.fulfill({ json: { drivers: requestedPage === 1 ? [driver] : [{ ...driver, id: '00000000-0000-4000-8000-000000000098', driverId: 'AVELOF-DRV-10002', fullName: 'Second Driver' }], total: 26, page: requestedPage, pageSize: 25 } })
+  })
+  await page.route('**/api/hotels*', (route) => route.fulfill(failPartners
+    ? { status: 503, json: { error: 'Test partners unavailable' } }
+    : { json: { hotels: [hotel], total: 1, page: 1, pageSize: 25 } }))
+  await page.route('**/api/reviews*', (route) => {
+    const request = route.request()
+    if (request.method() === 'GET') {
+      const query = new URL(request.url()).searchParams
+      queries.push(query.toString())
+      const filtered = records.filter((review) => {
+        const category = review.driverId ? 'driver' : review.hotelId ? 'hotel' : 'guest'
+        return category === query.get('category')
+          && (!query.get('driverId') || review.driverId === query.get('driverId'))
+          && (!query.get('hotelId') || review.hotelId === query.get('hotelId'))
+          && (query.get('status') === 'all' || review.status === query.get('status'))
+      })
+      return route.fulfill({ json: { reviews: filtered, total: filtered.length, averageRating: null, page: Number(query.get('page')), pageSize: 25 } })
+    }
+    const body = request.postDataJSON()
+    if (request.method() === 'DELETE') {
+      records = records.filter((review) => review.id !== body.id)
+      return route.fulfill({ json: { deleted: true, id: body.id } })
+    }
+    const record = records.find((review) => review.id === body.id)
+    record.status = body.status
+    record.version++
+    return route.fulfill({ json: { review: record } })
+  })
+  try {
+    await page.goto(`${origin}/admin/panel/reviews`)
+    await page.getByText('guest reviewer', { exact: true }).waitFor()
+    assert.equal(await page.locator('.admin-review-record').count(), 1)
+    await page.getByRole('button', { name: 'Driver reviews', exact: true }).click()
+    await page.getByText('driver reviewer', { exact: true }).waitFor()
+    await page.getByLabel('Select driver').selectOption('AVELOF-DRV-10002')
+    await page.getByText('No reviews in this view.').waitFor()
+    await page.getByLabel('Select driver').selectOption(driver.driverId)
+    await page.getByText('driver reviewer', { exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Hide review', exact: true }).click()
+    await page.getByText('Review hidden.', { exact: true }).waitFor()
+    await page.getByLabel('Review status').selectOption('rejected')
+    await page.getByRole('button', { name: 'Publish review', exact: true }).click()
+    await page.getByText('No reviews in this view.').waitFor()
+    await page.getByLabel('Review status').selectOption('all')
+    await page.getByRole('button', { name: 'Return to pending', exact: true }).click()
+    await page.getByText('Review awaiting approval.', { exact: true }).waitFor()
+    page.on('dialog', (dialog) => dialog.accept())
+    await page.getByRole('button', { name: 'Delete review', exact: true }).click()
+    await page.getByText('No reviews in this view.').waitFor()
+    assert.equal(await page.getByLabel('Select driver').inputValue(), driver.driverId)
+    assert.ok(queries.at(-1).includes(`driverId=${driver.driverId}`))
+    await page.getByRole('button', { name: 'Hotel reviews', exact: true }).click()
+    await page.getByText('hotel reviewer', { exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Retry loading partners' }).waitFor()
+    failPartners = false
+    await page.getByRole('button', { name: 'Retry loading partners' }).click()
+    await page.getByLabel('Select hotel').selectOption(hotel.hotelId)
+    await page.getByText('hotel reviewer', { exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Delete review', exact: true }).click()
+    await page.getByText('No reviews in this view.').waitFor()
+    assert.equal(await page.getByLabel('Select hotel').inputValue(), hotel.hotelId)
+    assert.ok(queries.at(-1).includes(`hotelId=${hotel.hotelId}`))
+    await page.getByRole('button', { name: 'Guest reviews', exact: true }).click()
+    await page.getByText('guest reviewer', { exact: true }).waitFor()
+    assert.equal(await page.getByLabel('Select hotel').count(), 0)
+    const overflow = await page.evaluate(() => [...document.querySelectorAll('.admin-reviews-page, .admin-reviews-page *')].filter((element) => {
+      const box = element.getBoundingClientRect()
+      return !element.classList.contains('sr-only') && box.width > 0 && (box.right > innerWidth + 1 || element.scrollWidth > element.clientWidth + 1)
+    }).map((element) => `${element.tagName}.${element.className}`).slice(0, 15))
+    assert.deepEqual(overflow, [])
+  } finally { await page.close(); await browser.close() }
+})
+
 test('review carousel preserves layout and supports accessible automatic and manual switching', async (context) => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   try {

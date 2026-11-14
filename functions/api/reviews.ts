@@ -30,9 +30,10 @@ const listSchema = z.object({
   scope: z.enum(['public', 'admin']).default('public'),
   page: z.coerce.number().int().min(1).max(10000).default(1),
   status: z.union([z.literal('all'), reviewStatusSchema]).default('pending'),
+  category: z.enum(['guest', 'driver', 'hotel']).optional(),
   driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/).optional(),
   hotelId: z.string().regex(hotelLookupIdPattern).optional(),
-}).strict().refine(({ driverId, hotelId }) => !(driverId && hotelId))
+}).strict().refine(({ driverId, hotelId, category, scope }) => !(driverId && hotelId) && (!category || scope === 'admin') && !(category === 'guest' && (driverId || hotelId)) && !(category === 'driver' && hotelId) && !(category === 'hotel' && driverId))
 const moderationSchema = z.object({ id: z.uuidv4(), status: reviewStatusSchema, version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
 const deletionSchema = z.object({ id: z.uuidv4(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
 
@@ -67,11 +68,12 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env, waitUn
     if (request.method === 'GET') {
       const parsed = listSchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
       if (!parsed.success) return privateReply({ error: 'Invalid review filters.' }, 400)
-      const { scope, page, status, driverId, hotelId } = parsed.data
+      const { scope, page, status, driverId, hotelId, category } = parsed.data
       if (scope === 'admin' && !await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
       const admin = scope === 'admin'
       const currentHotelId = hotelId ? (await resolveHotelId(env.DB, hotelId))?.hotel_id ?? hotelId : null
-      const where = admin ? "WHERE (? = 'all' OR status = ?) AND (? IS NULL OR driver_id = ?) AND (? IS NULL OR hotel_id = ?)" : "WHERE status = 'published' AND (? IS NULL OR driver_id = ?) AND (? IS NULL OR hotel_id = ?)"
+      const categoryWhere = category === 'guest' ? ' AND driver_id IS NULL AND hotel_id IS NULL' : category === 'driver' ? ' AND driver_id IS NOT NULL' : category === 'hotel' ? ' AND hotel_id IS NOT NULL' : ''
+      const where = (admin ? "WHERE (? = 'all' OR status = ?) AND (? IS NULL OR driver_id = ?) AND (? IS NULL OR hotel_id = ?)" : "WHERE status = 'published' AND (? IS NULL OR driver_id = ?) AND (? IS NULL OR hotel_id = ?)") + categoryWhere
       const values = admin ? [status, status, driverId ?? null, driverId ?? null, currentHotelId, currentHotelId] : [driverId ?? null, driverId ?? null, currentHotelId, currentHotelId]
       const totals = await env.DB.prepare(`SELECT count(*) AS total, avg(rating) AS averageRating FROM reviews ${where}`).bind(...values).first<{ total: number; averageRating: number | null }>()
       const result = await env.DB.prepare(`SELECT ${columns} FROM reviews ${where} ORDER BY ${admin ? 'created_at DESC' : "COALESCE(review_month, substr(published_at, 1, 7)) DESC, published_at DESC"}, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<ReviewRow>()

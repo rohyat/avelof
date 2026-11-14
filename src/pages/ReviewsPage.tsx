@@ -8,6 +8,8 @@ import ReviewStars from '../components/ReviewStars'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import { deleteReview as deleteReviewRequest, loadAdminReviews, loadPublicReviews, moderateReview, ReviewError, saveReview } from '../services/reviewService'
 import { reviewSubmissionSchema } from '../services/reviewSchema'
+import { loadAdminDrivers } from '../services/driverService'
+import { HotelError, loadAdminHotels } from '../services/hotelService'
 import type { AdminReview, ReviewStatus } from '../services/reviewSchema'
 
 const experienceOptions = ['General experience', 'Deluxe', 'Premium', 'Luxury', 'Custom package', 'Hotel stay', 'Cab rental']
@@ -122,7 +124,11 @@ export default function ReviewsPage() {
 
 export function AdminReviewsPage() {
   const [listing, setListing] = useState<Awaited<ReturnType<typeof loadAdminReviews>> | null>(null)
-  const [filters, setFilters] = useState<{ page: number; status: ReviewStatus | 'all'; refresh: number }>({ page: 1, status: 'all', refresh: 0 })
+  const [filters, setFilters] = useState<{ page: number; status: ReviewStatus | 'all'; refresh: number; category: 'guest' | 'driver' | 'hotel'; subjectId: string }>({ page: 1, status: 'all', refresh: 0, category: 'guest', subjectId: '' })
+  const [subjects, setSubjects] = useState<{ id: string; label: string }[]>([])
+  const [subjectsLoading, setSubjectsLoading] = useState(false)
+  const [subjectsError, setSubjectsError] = useState('')
+  const [subjectsRevision, setSubjectsRevision] = useState(0)
   const [loading, setLoading] = useState(true)
   const [signedOut, setSignedOut] = useState(false)
   const [error, setError] = useState('')
@@ -131,7 +137,7 @@ export function AdminReviewsPage() {
 
   useEffect(() => {
     const controller = new AbortController()
-    loadAdminReviews(filters.page, filters.status, controller.signal).then((data) => { setListing(data); setSignedOut(false) }).catch((failure: unknown) => {
+    loadAdminReviews(filters.page, filters.status, controller.signal, { category: filters.category, ...(filters.subjectId ? filters.category === 'driver' ? { driverId: filters.subjectId } : { hotelId: filters.subjectId } : {}) }).then((data) => { setListing(data); setSignedOut(false) }).catch((failure: unknown) => {
       if (controller.signal.aborted) return
       setListing(null)
       if (failure instanceof ReviewError && failure.status === 401) setSignedOut(true)
@@ -140,12 +146,50 @@ export function AdminReviewsPage() {
     return () => controller.abort()
   }, [filters])
 
+  useEffect(() => {
+    const controller = new AbortController()
+    if (filters.category === 'guest') return () => controller.abort()
+    async function loadSubjects() {
+      const options: { id: string; label: string }[] = []
+      for (let page = 1; ; page++) {
+        if (filters.category === 'driver') {
+          const result = await loadAdminDrivers(page, 'all', controller.signal)
+          options.push(...result.drivers.map((driver) => ({ id: driver.driverId, label: `${driver.fullName} (${driver.driverId})` })))
+          if (page * result.pageSize >= result.total) break
+        } else {
+          const result = await loadAdminHotels(page, 'all', controller.signal)
+          options.push(...result.hotels.map((hotel) => ({ id: hotel.hotelId, label: `${hotel.name} (${hotel.hotelId})` })))
+          if (page * result.pageSize >= result.total) break
+        }
+      }
+      if (!controller.signal.aborted) setSubjects(options)
+    }
+    loadSubjects().catch((failure: unknown) => {
+      if (controller.signal.aborted) return
+      if (failure instanceof HotelError && failure.status === 401) { setSignedOut(true); setListing(null) }
+      else setSubjectsError(failure instanceof Error ? failure.message : 'Registered partners could not be loaded. Please retry.')
+    }).finally(() => { if (!controller.signal.aborted) setSubjectsLoading(false) })
+    return () => controller.abort()
+  }, [filters.category, subjectsRevision])
+
   function refresh(page = filters.page, status = filters.status) {
     setLoading(true)
     setError('')
-    setFilters({ page, status, refresh: filters.refresh + 1 })
+    setFilters({ ...filters, page, status, refresh: filters.refresh + 1 })
   }
 
+  function changeSubject(category: 'guest' | 'driver' | 'hotel', subjectId = '') {
+    if (category !== filters.category) {
+      setSubjects([])
+      setSubjectsError('')
+      setSubjectsLoading(category !== 'guest')
+    }
+    setLoading(true)
+    setListing(null)
+    setError('')
+    setNotice('')
+    setFilters({ ...filters, category, subjectId, page: 1 })
+  }
   async function moderate(review: AdminReview, status: ReviewStatus) {
     if (savingId) return
     setSavingId(review.id)
@@ -175,6 +219,14 @@ export function AdminReviewsPage() {
     {signedOut ? <p>Please <Link className="text-link" to="/admin/panel">sign in to the owner dashboard</Link> before managing reviews.</p> : <>
       <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><span aria-current="page">Reviews</span><Link to="/admin/panel/hotels">Hotels</Link><Link to="/admin/panel/drivers">Drivers</Link></nav>
       <OwnerPushNotifications />
+      <nav className="admin-review-sections" aria-label="Review sections">
+        {(['guest', 'driver', 'hotel'] as const).map((category) => <button key={category} className={`button ${filters.category === category ? 'button-dark' : 'button-outline'}`} type="button" aria-current={filters.category === category ? 'page' : undefined} disabled={Boolean(savingId)} onClick={() => changeSubject(category)}>{category === 'guest' ? 'Guest reviews' : category === 'driver' ? 'Driver reviews' : 'Hotel reviews'}</button>)}
+      </nav>
+      {filters.category !== 'guest' && <label className="full-field">Select {filters.category}<select value={filters.subjectId} disabled={subjectsLoading || Boolean(savingId)} onChange={(event) => changeSubject(filters.category, event.target.value)}>
+        <option value="">{subjectsLoading ? 'Loading registered partners...' : `All ${filters.category === 'driver' ? 'drivers' : 'hotels'}`}</option>
+        {subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.label}</option>)}
+      </select></label>}
+      {subjectsError && <p className="enquiry-error" role="alert">{subjectsError} <button type="button" className="text-link" onClick={() => { setSubjectsError(''); setSubjectsLoading(true); setSubjectsRevision((value) => value + 1) }}>Retry loading partners</button></p>}
       <div className="admin-enquiry-toolbar"><strong>{listing?.total ?? 0} {listing?.total === 1 ? 'review' : 'reviews'}</strong><label className="full-field admin-status-filter"><span className="sr-only">Review status</span><select value={filters.status} onChange={(event) => refresh(1, event.target.value as ReviewStatus | 'all')} disabled={loading || Boolean(savingId)}><option value="pending">Awaiting approval</option><option value="published">Published</option><option value="rejected">Hidden</option><option value="all">All reviews</option></select></label><button className="icon-button" title="Refresh reviews" aria-label="Refresh reviews" disabled={loading || Boolean(savingId)} onClick={() => refresh()}><RefreshCw size={18} /></button></div>
       {notice && <p className="booking-admin-notice" role="status">{notice}</p>}
       {loading && <p role="status">Loading reviews...</p>}

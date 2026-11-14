@@ -394,6 +394,12 @@ with success shown inline only after D1 confirms persistence. Hotel enquiries st
 planner itineraries include room quantities and all-room nightly totals for each stay.
 The API still accepts legacy total-only `numberOfPeople` planner enquiries.
 
+Admin review moderation separates Guest reviews (without a linked partner),
+Driver reviews and Hotel reviews. Driver and hotel sections offer dropdowns for
+all registered partners, including pending and rejected registrations. Category,
+partner and status filters apply before pagination and are retained after
+publishing, hiding, returning to pending or deleting a review.
+
 New hotel registrations collect a room count and a room-only INR rate for each
 offered type (Standard, Deluxe, Premium, Family and Suite). The registration and
 private edit pricing section explains that entered room prices are shown directly

@@ -1636,6 +1636,39 @@ test('owner can hide and restore a review with its full public booking ID withou
   } finally { DB.sqlite.close() }
 })
 
+test('admin review categories and partner filters separate guest, driver and hotel reviews', async () => {
+  const DB = database()
+  try {
+    const insert = DB.sqlite.prepare("INSERT INTO reviews (id, reviewer_name, experience, rating, review_text, publication_consent, payload_hash, status, driver_id, hotel_id) VALUES (?, 'Guest', 'Trip', 5, 'Review for filtering', 1, ?, ?, ?, ?)")
+    const ids = Array.from({ length: 5 }, () => crypto.randomUUID())
+    insert.run(ids[0], ids[0], 'published', null, null)
+    insert.run(ids[1], ids[1], 'published', 'AVELOF-DRV-10001', null)
+    insert.run(ids[2], ids[2], 'pending', 'AVELOF-DRV-10002', null)
+    insert.run(ids[3], ids[3], 'published', null, 'AVELOF_HTL_10001SRG')
+    insert.run(ids[4], ids[4], 'rejected', null, 'AVELOF_HTL_10002SRG')
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    for (const [filter, expected] of [
+      ['category=guest', [ids[0]]],
+      ['category=driver', [ids[1], ids[2]]],
+      ['category=hotel', [ids[3], ids[4]]],
+      ['category=driver&driverId=AVELOF-DRV-10002', [ids[2]]],
+      ['category=hotel&hotelId=AVELOF_HTL_10002SRG', [ids[4]]],
+      ['category=driver&status=published', [ids[1]]],
+      ['category=hotel&hotelId=AVELOF_HTL_99999SRG', []],
+    ]) {
+      const response = await reviewRequest(DB, 'GET', undefined, { query: `?scope=admin&status=all&${filter}`, headers: { Cookie } })
+      assert.equal(response.status, 200)
+      const data = await response.json()
+      assert.equal(data.total, expected.length)
+      assert.deepEqual(data.reviews.map((review) => review.id).sort(), expected.sort())
+    }
+    assert.equal((await reviewRequest(DB, 'GET', undefined, { query: '?scope=admin&category=driver' })).status, 401)
+    assert.equal((await reviewRequest(DB, 'GET', undefined, { query: '?category=guest' })).status, 400)
+    assert.equal((await reviewRequest(DB, 'GET', undefined, { query: '?scope=admin&category=guest&driverId=AVELOF-DRV-10001', headers: { Cookie } })).status, 400)
+  } finally { DB.sqlite.close() }
+})
+
 test('only the current admin session can permanently delete a review', async () => {
   const DB = database()
   try {

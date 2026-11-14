@@ -36,8 +36,8 @@ export async function loadPublicReviews(page: number, signal?: AbortSignal, subj
   return publicList.parse(await requestReviews(`?${query}`, 'GET', undefined, signal))
 }
 
-export async function loadAdminReviews(page: number, status: ReviewStatus | 'all', signal?: AbortSignal) {
-  return adminList.parse(await requestReviews(`?${new URLSearchParams({ scope: 'admin', page: String(page), status })}`, 'GET', undefined, signal))
+export async function loadAdminReviews(page: number, status: ReviewStatus | 'all', signal?: AbortSignal, subject: { category?: 'guest' | 'driver' | 'hotel'; driverId?: string; hotelId?: string } = {}) {
+  return adminList.parse(await requestReviews(`?${new URLSearchParams({ scope: 'admin', page: String(page), status, ...subject })}`, 'GET', undefined, signal))
 }
 
 export async function moderateReview(id: string, status: ReviewStatus, version: number) {

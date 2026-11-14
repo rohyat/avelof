@@ -9,7 +9,6 @@ export const hotelLocationCodes: Record<(typeof registrationLocations)[number], 
   Gurez: 'GRZ',
 }
 export const hotelIdPattern = /^AVELOF_HTL_[0-9]{5,10}[A-Z]{3}$/
-export const legacyHotelIdPattern = /^AVELOF_HTL_[A-F0-9]{32}$/
 export const hotelLookupIdPattern = /^(?:AVELOF_HTL_[0-9]{5,10}[A-Z]{3}|AVELOF_HTL_[A-F0-9]{32})$/
 export const hotelCategories = ['Deluxe', 'Premium', 'Luxury'] as const
 export const hotelPriceRanges = Array.from({ length: 9 }, (_, index) => {

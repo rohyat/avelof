@@ -16,5 +16,3 @@ export const driverVehicleOptions = driverVehicleIds.map((id) => ({
     'bus-26': 'Bus 26-seater',
   }[id]),
 }))
-
-export type DriverVehicleId = typeof driverVehicleIds[number]
