@@ -71,6 +71,7 @@ test('hotel registration, private lookup and moderation integrate with public st
     await context.test('registration preserves higher resolution for five photos and confirms only successful persistence', async () => {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
       let saved
+      let originalJpegSize
       let fail = true
       await page.route('**/api/hotels*', async (route) => {
         if (route.request().method() !== 'POST') return route.fulfill({ json: list([]) })
@@ -81,6 +82,7 @@ test('hotel registration, private lookup and moderation integrate with public st
         for (const photo of photos) {
           assert.equal(photo.type, 'image/jpeg')
           assert.ok(photo.size <= hotelPhotoLimit)
+          assert.ok(photo.size < originalJpegSize, 'Uploads should be smaller than the previous 0.92-quality JPEG')
           const bytes = new Uint8Array(await photo.arrayBuffer())
           assert.equal(validHotelJpeg(bytes), true)
           const buffer = Buffer.from(bytes)
@@ -93,18 +95,65 @@ test('hotel registration, private lookup and moderation integrate with public st
       })
       try {
         await page.goto(`${origin}/register-hotel`)
+        assert.equal(await page.locator('.photo-upload-heading svg').count(), 1)
         await fillRegistration(page)
         const photo = await makePhoto(page)
-        await page.getByLabel('Hotel photos (1-5 required)').setInputFiles(Array.from({ length: 5 }, (_, index) => ({ ...photo, name: `hotel-${index}.png` })))
+        originalJpegSize = await page.evaluate(async (base64) => {
+          const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0))
+          const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }))
+          try {
+            const canvas = document.createElement('canvas')
+            canvas.width = 1920; canvas.height = 1344
+            canvas.getContext('2d').drawImage(bitmap, 0, 0, 1920, 1344)
+            return (await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92))).size
+          } finally { bitmap.close() }
+        }, photo.buffer.toString('base64'))
+        await page.evaluate(() => {
+          const original = globalThis.createImageBitmap
+          const metrics = { active: 0, maximum: 0, names: [] }
+          globalThis.photoProcessingMetrics = metrics
+          globalThis.createImageBitmap = async (...args) => {
+            metrics.names.push(args[0].name)
+            metrics.maximum = Math.max(metrics.maximum, ++metrics.active)
+            try {
+              await new Promise((resolve) => setTimeout(resolve, 10))
+              const bitmap = await original(...args)
+              const close = bitmap.close.bind(bitmap)
+              bitmap.close = () => { metrics.active--; close() }
+              return bitmap
+            } catch (error) { metrics.active--; throw error }
+          }
+        })
+        await page.getByLabel('Hotel photos (1-5 required)').setInputFiles([
+          ...Array.from({ length: 5 }, (_, index) => ({ ...photo, name: `hotel-${index}.png` })),
+          { name: 'ignored.txt', mimeType: 'text/plain', buffer: Buffer.from('Not a photo; only the first five files should be processed.') },
+        ])
         await page.locator('.hotel-photo-grid img').nth(4).waitFor()
+        assert.equal(await page.locator('.hotel-photo-grid img').count(), 5)
+        const metrics = await page.evaluate(() => globalThis.photoProcessingMetrics)
+        assert.deepEqual(metrics.names, Array.from({ length: 5 }, (_, index) => `hotel-${index}.png`))
+        assert.equal(metrics.maximum, 2)
+        assert.equal(metrics.active, 0)
+        await page.getByRole('status').filter({ hasText: 'Only the first 5 will be uploaded.' }).waitFor()
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
         await page.getByRole('button', { name: 'Submit hotel for approval' }).click()
         await page.getByRole('alert').filter({ hasText: 'Photo storage is unavailable.' }).waitFor()
         assert.equal(await page.getByRole('heading', { name: 'Your hotel registration has been saved.' }).count(), 0)
+        assert.equal(await page.getByRole('dialog').count(), 0)
         const originalId = saved.id
         fail = false
         await page.getByRole('button', { name: 'Submit hotel for approval' }).click()
+        const success = page.getByRole('dialog', { name: 'Hotel registration saved' })
+        await success.waitFor()
+        assert.ok((await success.innerText()).includes(hotelId))
+        assert.ok((await success.innerText()).includes(accessCode))
+        assert.ok((await success.innerText()).includes('not a confirmed listing or booking'))
+        assert.equal(await success.getByRole('button', { name: 'View registration details' }).evaluate((element) => element === document.activeElement), true)
+        await page.keyboard.press('Escape')
+        await success.waitFor({ state: 'hidden' })
         await page.getByRole('heading', { name: 'Your hotel registration has been saved.' }).waitFor()
+        await page.waitForFunction(() => document.activeElement?.classList.contains('review-ready'))
+        assert.equal(await page.locator('.review-ready').evaluate((element) => element === document.activeElement), true)
         assert.equal(saved.id, originalId)
         assert.equal(saved.phone, hotel.phone)
         assert.equal(saved.category, 'Premium')
@@ -121,17 +170,21 @@ test('hotel registration, private lookup and moderation integrate with public st
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       } finally { await page.close() }
     })
-    await context.test('invalid photo counts report an error and prevent submission', async () => {
+    await context.test('invalid or empty photo selections prevent submission and can be replaced', async () => {
       const page = await browser.newPage()
       try {
         await page.goto(`${origin}/register-hotel`)
         const photo = await makePhoto(page)
-        await page.getByLabel('Hotel photos (1-5 required)').setInputFiles(Array.from({ length: 6 }, (_, index) => ({ ...photo, name: `hotel-${index}.png` })))
-        await page.getByRole('alert').filter({ hasText: 'between one and five' }).waitFor()
+        await page.getByLabel('Hotel photos (1-5 required)').setInputFiles({ name: 'not-a-photo.txt', mimeType: 'text/plain', buffer: Buffer.from('Invalid photo') })
+        await page.getByRole('alert').filter({ hasText: 'Use JPEG, PNG or WebP' }).waitFor()
         assert.equal(await page.getByRole('button', { name: 'Submit hotel for approval' }).isEnabled(), false)
         await page.getByLabel('Hotel photos (1-5 required)').setInputFiles(photo)
         await page.locator('.hotel-photo-grid img').waitFor()
         assert.equal(await page.getByRole('button', { name: 'Submit hotel for approval' }).isEnabled(), true)
+        await page.getByLabel('Hotel photos (1-5 required)').setInputFiles([])
+        await page.getByRole('alert').filter({ hasText: 'Select at least one photo.' }).waitFor()
+        assert.equal(await page.locator('.hotel-photo-grid img').count(), 0)
+        assert.equal(await page.getByRole('button', { name: 'Submit hotel for approval' }).isEnabled(), false)
       } finally { await page.close() }
     })
     await context.test('status lookup sends the code in the body and excludes private hotel details', async () => {

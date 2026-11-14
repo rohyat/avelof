@@ -317,6 +317,17 @@ requires contacting AVELOF; do not expose lookup by phone alone.
 
 ## Partner portal and drivers
 
+Hotel and driver photo fields show a file-image icon and a visible file chooser.
+Hotel selections use only the first five files, with an on-screen notice when
+extras are ignored; drivers still require exactly one portrait. Photo preparation
+runs at most two images concurrently, preserves selection order and strips
+metadata. JPEG encoding starts at 0.85 quality and targets 350 KB per photo,
+retaining up to 1920 px with the existing 1 MB hard limit. Smaller uploads reduce
+transfer time without bypassing server validation or database confirmation.
+Both registration forms show a dismissible success dialog with the registration
+ID and private status code only after confirmed storage. The receipt remains
+available on the page after dismissal; registration still awaits owner approval.
+
 The footer's `/partners` link separates hotel and driver onboarding from
 customer navigation. Check Bookings and the existing menu remain unchanged.
 Registration is public but rate-limited and approval-only; it is not an

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, RefreshCw, Trash2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, FileImage, RefreshCw, Trash2 } from 'lucide-react'
+import RegistrationReceipt from '../components/RegistrationReceipt'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import NumberStepper from '../components/NumberStepper'
-import { heatingOptions, hotelAmenities, hotelCategories, hotelCategoryLabels, hotelHighlightOptions, hotelRoomTypes, hotelStatusLabels, hotelTaxOptions, registrationLocations } from '../data/hotelRegistration'
+import { heatingOptions, hotelAmenities, hotelCategories, hotelCategoryLabels, hotelHighlightOptions, hotelPhotoCount, hotelRoomTypes, hotelStatusLabels, hotelTaxOptions, registrationLocations } from '../data/hotelRegistration'
 import { hotelPriceSchema, hotelStatusSchema, hotelSubmissionSchema } from '../services/hotelSchema'
 import type { AdminHotel, HotelStatus } from '../services/hotelSchema'
 import { compressHotelPhotos, deleteHotel, hotelErrorText, HotelError, loadAdminHotels, lookupHotel, moderateHotel, saveHotel } from '../services/hotelService'
@@ -25,6 +26,7 @@ export default function HotelRegistrationPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [photoError, setPhotoError] = useState('')
+  const [photoNotice, setPhotoNotice] = useState('')
   const [receipt, setReceipt] = useState<HotelReceipt | null>(null)
   const pending = useRef({ fingerprint: '', id: crypto.randomUUID() })
   const inFlight = useRef(false)
@@ -34,6 +36,7 @@ export default function HotelRegistrationPage() {
     const version = ++photoVersion.current
     setProcessing(true)
     setPhotoError('')
+    setPhotoNotice(files.length > hotelPhotoCount ? `You selected ${files.length} photos. Only the first ${hotelPhotoCount} will be uploaded.` : '')
     setPhotos([])
     try {
       const compressed = await compressHotelPhotos(files)
@@ -79,12 +82,12 @@ export default function HotelRegistrationPage() {
     <Link className="text-link" to="/partners"><ArrowLeft size={16} /> Partner with AVELOF</Link>
     <div className="enquiry-access-heading"><div><p className="eyebrow">Partner with AVELOF</p><h1>Register your hotel</h1><p>Submit your property for review. It will appear in Hotels & stays only after AVELOF approval.</p></div></div>
     <p><Link className="text-link" to="/hotel-status">Already registered? Check your hotel status <ArrowRight size={16} /></Link></p>
-    {receipt ? <section className="review-ready" role="status">
+    {receipt ? <RegistrationReceipt kind="Hotel" reference={receipt.hotelId} accessCode={receipt.accessCode}>
       <h2>Your hotel registration has been saved.</h2><p>Status: {hotelStatusLabels[receipt.status]}. This is not a confirmed listing or booking.</p>
       <dl className="hotel-receipt"><div><dt>Hotel ID</dt><dd>{receipt.hotelId}</dd></div><div><dt>Status access code</dt><dd>{receipt.accessCode}</dd></div></dl>
       <p>Your status code uses the first four letters of the hotel name and the last four digits of the registered phone number.</p>
       <Link className="button button-dark" to="/hotel-status">Check hotel status <ArrowRight size={16} /></Link>
-    </section> : <form className="review-submission-form hotel-registration-form" onSubmit={submit} aria-busy={busy}>
+    </RegistrationReceipt> : <form className="review-submission-form hotel-registration-form" onSubmit={submit} aria-busy={busy}>
       <fieldset disabled={busy} className="hotel-form-fields">
         <label>Hotel name<input name="name" maxLength={120} required /></label>
         <label>Contact person's name (private)<input name="contactName" maxLength={80} autoComplete="name" required /></label>
@@ -102,13 +105,14 @@ export default function HotelRegistrationPage() {
         <label>Check-out time<input name="checkOut" type="time" required defaultValue="11:00" /></label>
         <fieldset className="hotel-amenities hotel-amenity-options review-text-field"><legend>Amenities available</legend>{hotelAmenities.map((amenity) => <label key={amenity}><input type="checkbox" name="amenities" value={amenity} />{amenity}</label>)}</fieldset>
         <fieldset className="hotel-amenities hotel-highlights review-text-field"><legend>Major highlights</legend>{hotelHighlightOptions.map((highlight) => <label key={highlight}><input type="checkbox" name="highlights" value={highlight} />{highlight}</label>)}<small className="review-text-field">Select the points that apply. Selected highlights appear in your approved listing.</small></fieldset>
-        <label className="review-text-field">Hotel photos (1-5 required)<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required onChange={(event) => { void selectPhotos(Array.from(event.target.files ?? [])) }} /><small>JPEG, PNG or WebP; original files up to 5 MB each. Photos retain up to 1920 px and are compressed to at most 1 MB each; original metadata is removed.</small></label>
-        {processing && <p role="status">Preparing photos...</p>}
+        <label className="review-text-field photo-upload-field"><span className="photo-upload-heading"><FileImage size={24} aria-hidden="true" /> Hotel photos (1-5 required)</span><small>Choose photos to upload. If you select more than five, only the first five are used.</small><input aria-label="Hotel photos (1-5 required)" name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required onChange={(event) => { void selectPhotos(Array.from(event.target.files ?? [])) }} /><small>JPEG, PNG or WebP; original files up to 5 MB each. Photos retain up to 1920 px and are compressed to at most 1 MB each; original metadata is removed.</small></label>
+        <p role="status" className="review-text-field">{photoNotice} {processing ? 'Preparing photos...' : photos.length ? `${photos.length} ${photos.length === 1 ? 'photo ready' : 'photos ready'} to upload.` : ''}</p>
         {photoError && <p className="enquiry-error review-text-field" role="alert">{photoError}</p>}
         <div className="hotel-photo-grid review-text-field">{photos.map((photo, index) => <PhotoPreview key={index} photo={photo} index={index} />)}</div>
         <label className="enquiry-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
         <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I am authorised to register this property and publish these photos. I consent to publication of approved hotel details and photos, including AVELOF's reviewed price. My contact name and phone stay private. I will not upload guest faces, identity documents or payment information.</span></label>
         {error && <p className="enquiry-error review-text-field" role="alert">{error}</p>}
+        {busy && <p className="review-text-field" role="status">Uploading photos and saving your hotel registration. Please keep this page open.</p>}
         <button className="button button-dark" disabled={processing || !photos.length} type="submit">{busy ? 'Saving registration...' : 'Submit hotel for approval'} <ArrowRight size={16} /></button>
       </fieldset>
     </form>}

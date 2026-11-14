@@ -116,10 +116,12 @@ export const hotelNightlyPrice = (hotel: Hotel, breakfast: boolean, dinner: bool
 }
 
 export async function compressHotelPhotos(files: File[]) {
-  if (files.length < 1 || files.length > hotelPhotoCount) throw new HotelError('Select between one and five photos.', 400)
-  const photos: Blob[] = []
-  for (const file of files) {
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5000000) throw new HotelError('Use JPEG, PNG or WebP photos, each no larger than 5 MB.', 400)
+  if (!files.length) throw new HotelError('Select at least one photo.', 400)
+  const selected = files.slice(0, hotelPhotoCount)
+  if (selected.some((file) => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5000000)) throw new HotelError('Use JPEG, PNG or WebP photos, each no larger than 5 MB.', 400)
+  const photos: Blob[] = new Array(selected.length)
+  let nextIndex = 0
+  async function compress(file: File) {
     let image: ImageBitmap
     try { image = await createImageBitmap(file) }
     catch { throw new HotelError(`Could not read ${file.name}. Choose a valid photo.`, 400) }
@@ -135,13 +137,22 @@ export async function compressHotelPhotos(files: File[]) {
       context.fillRect(0, 0, canvas.width, canvas.height)
       context.drawImage(image, 0, 0, canvas.width, canvas.height)
       let photo: Blob | null = null
-      for (const quality of [0.92, 0.85, 0.78, 0.7]) {
+      for (const quality of [0.85, 0.78, 0.7]) {
         photo = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality))
-        if (photo && photo.size <= hotelPhotoLimit) break
+        if (photo && photo.size <= 350000) break
       }
       if (!photo || photo.size > hotelPhotoLimit) throw new HotelError('This photo could not be compressed enough. Choose a smaller image.', 400)
-      photos.push(photo)
+      return photo
     } finally { image.close() }
   }
+  async function worker() {
+    while (nextIndex < selected.length) {
+      const index = nextIndex++
+      photos[index] = await compress(selected[index])
+    }
+  }
+  const results = await Promise.allSettled(Array.from({ length: Math.min(2, selected.length) }, () => worker()))
+  const failure = results.find((result) => result.status === 'rejected')
+  if (failure?.status === 'rejected') throw failure.reason
   return photos
 }

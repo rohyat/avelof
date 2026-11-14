@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { Trash2 } from 'lucide-react'
 import NumberStepper from '../components/NumberStepper'
 import PartnerPhotos from '../components/PartnerPhotos'
+import RegistrationReceipt from '../components/RegistrationReceipt'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import { driverDistricts, driverVehicleNumberPattern, driverVehicleOptions, normalizeDriverVehicleNumber } from '../data/driverRegistration'
 import { hotelStatusLabels } from '../data/hotelRegistration'
@@ -51,7 +52,7 @@ export default function DriverRegistrationPage() {
     <Link className="text-link" to="/partners">Partner with AVELOF</Link>
     <div className="enquiry-access-heading"><div><p className="eyebrow">Driver partners</p><h1>Register as a driver</h1><p>After approval, your full name, portrait, vehicle details and vehicle registration appear in our driver directory. Your phone and driving-licence numbers are masked; age and full contact details remain private.</p></div></div>
     <p><Link to="/driver-status">Already registered? Check driver status</Link></p>
-    {receipt ? <section className="review-ready" role="status"><h2>Your driver registration has been saved.</h2><p>{hotelStatusLabels[receipt.status]}. Not a confirmed listing or booking.</p><dl className="hotel-receipt"><dt>Driver ID</dt><dd>{receipt.driverId}</dd><dt>Status access code</dt><dd>{receipt.accessCode}</dd></dl><p>Your status code uses the first four letters of your name and the last four digits of your registered phone number.</p><Link to="/driver-status" className="button button-dark">Check driver status</Link></section> : <form className="review-submission-form" onSubmit={submit}>
+    {receipt ? <RegistrationReceipt kind="Driver" reference={receipt.driverId} accessCode={receipt.accessCode}><h2>Your driver registration has been saved.</h2><p>{hotelStatusLabels[receipt.status]}. Not a confirmed listing or booking.</p><dl className="hotel-receipt"><dt>Driver ID</dt><dd>{receipt.driverId}</dd><dt>Status access code</dt><dd>{receipt.accessCode}</dd></dl><p>Your status code uses the first four letters of your name and the last four digits of your registered phone number.</p><Link to="/driver-status" className="button button-dark">Check driver status</Link></RegistrationReceipt> : <form className="review-submission-form" onSubmit={submit} aria-busy={busy}>
       <fieldset className="hotel-form-fields" disabled={busy}>
         <label>Full legal name<input name="fullName" maxLength={100} required autoComplete="name" /></label>
         <NumberStepper label="Age (minimum 18)" name="age" min={18} max={100} />

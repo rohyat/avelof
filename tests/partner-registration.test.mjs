@@ -46,6 +46,7 @@ test('partner onboarding and approved listings work separately from customer nav
       })
       try {
         await page.goto(`${origin}/register-driver`)
+        assert.equal(await page.locator('.photo-upload-heading svg').count(), 1)
         assert.equal(await page.getByLabel('Driver portrait (one photo required)').getAttribute('multiple'), null)
         assert.equal(await page.getByRole('button', { name: 'Decrease Age (minimum 18)' }).count(), 1)
         assert.equal(await page.getByRole('combobox', { name: 'District' }).locator('option').count(), 22)
@@ -75,9 +76,17 @@ test('partner onboarding and approved listings work separately from customer nav
         await page.getByRole('button', { name: 'Submit driver for approval' }).click()
         await page.getByRole('alert').filter({ hasText: 'registration API is not connected to this preview' }).waitFor()
         assert.equal(await page.getByRole('heading', { name: 'Your driver registration has been saved.' }).count(), 0)
+        assert.equal(await page.getByRole('dialog').count(), 0)
         const firstId = saved.id
         fail = false
         await page.getByRole('button', { name: 'Submit driver for approval' }).click()
+        const success = page.getByRole('dialog', { name: 'Driver registration saved' })
+        await success.waitFor()
+        assert.ok((await success.innerText()).includes(driverId))
+        assert.ok((await success.innerText()).includes(accessCode))
+        assert.ok((await success.innerText()).includes('not a confirmed listing or booking'))
+        await success.getByRole('button', { name: 'View registration details' }).click()
+        await success.waitFor({ state: 'hidden' })
         await page.getByRole('heading', { name: 'Your driver registration has been saved.' }).waitFor()
         assert.equal(saved.id, firstId)
         assert.equal(saved.age, 30)
