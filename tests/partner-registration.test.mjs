@@ -103,6 +103,18 @@ test('partner onboarding and approved listings work separately from customer nav
                 return bounds.width > 0 && bounds.left >= section.left && bounds.right <= section.right
               })), true)
             assert.equal(await page.locator('form').evaluate((form) => getComputedStyle(form).display), 'block')
+            const uploadLayout = await page.locator('.photo-upload-field').evaluate((field) => {
+              const box = field.getBoundingClientRect()
+              const children = [...field.children].map((child) => child.getBoundingClientRect())
+              return {
+                display: getComputedStyle(field).display,
+                fits: children.every((child) => child.left >= box.left && child.right <= box.right + 1),
+                separated: children.every((child, index) => !index || child.top >= children[index - 1].bottom),
+                contains: children.every((child) => child.top >= box.top && child.bottom <= box.bottom),
+              }
+            })
+            assert.equal(uploadLayout.display, 'grid')
+            assert.ok(uploadLayout.fits && uploadLayout.separated && uploadLayout.contains, `${path} upload text and control must fit without overlapping at ${width}px`)
             const steppers = await page.locator('.number-stepper-field').evaluateAll((fields) =>
               fields.map((field) => {
                 const label = field.getBoundingClientRect()
@@ -160,6 +172,13 @@ test('partner onboarding and approved listings work separately from customer nav
         for (const kind of ['hotel', 'driver']) {
           await page.goto(`${origin}/register-${kind}`)
           const editLink = page.locator('.partner-registration-hero').getByRole('link', { name: 'Edit your details', exact: true })
+          if (kind === 'hotel') {
+            assert.equal(await editLink.count(), 0)
+            await page.goto(`${origin}/partners`)
+            await page.locator('a[href="/hotel-status"]').click()
+            await page.getByRole('heading', { name: 'Edit your hotel details', exact: true }).waitFor()
+            continue
+          }
           assert.equal(await editLink.getAttribute('href'), `/${kind}-status`)
           await editLink.click()
           await page.getByRole('heading', { name: `Edit your ${kind} details`, exact: true }).waitFor()

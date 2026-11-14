@@ -404,7 +404,8 @@ New hotel registrations collect a room count and a room-only INR rate for each
 offered type (Standard, Deluxe, Premium, Family and Suite). The registration and
 private edit pricing section explains that entered room prices are shown directly
 to customers once approved. AVELOF deducts 10% commission from that price rather
-than adding it on top, and the hotel receives 90%, with an INR 2,000 example. This is
+than adding it on top, and the hotel receives 90%, with a boxed table of INR 2,000,
+INR 3,000 and INR 5,000 examples showing the customer price, hotel share and commission. This is
 informational guidance; it does not change stored rates or customer estimates.
 A zero count excludes
 that type. Family room-only rates cover four people; other room rates cover two.

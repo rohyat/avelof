@@ -117,12 +117,15 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
             <li>AVELOF's 10% commission is deducted from the amount you enter.</li>
             <li>You receive the remaining 90%. Please set your price accordingly.</li>
           </ul>
-          <strong>Example: If you enter INR 2,000</strong>
-          <ul>
-            <li>Customers see INR 2,000.</li>
-            <li>You receive INR 1,800.</li>
-            <li>AVELOF retains INR 200 as commission.</li>
-          </ul>
+          <div className="hotel-commission-examples">
+            <table>
+              <caption>Price examples (INR)</caption>
+              <thead><tr><th scope="col">You enter / Customer sees</th><th scope="col">You receive (90%)</th><th scope="col">AVELOF retains (10%)</th></tr></thead>
+              <tbody>
+                {[2000, 3000, 5000].map((price) => <tr key={price}><td>{price.toLocaleString('en-IN')}</td><td>{(price * 0.9).toLocaleString('en-IN')}</td><td>{(price * 0.1).toLocaleString('en-IN')}</td></tr>)}
+              </tbody>
+            </table>
+          </div>
         </div>
         {legacyRooms ? <><label className="review-text-field">Room types (one per line)<textarea name="legacyRoomTypes" required defaultValue={editing?.roomTypes.join('\n')} /></label><NumberStepper label="Total rooms" name="totalRooms" min={1} max={10000} defaultValue={editing?.totalRooms} /><NumberStepper label="Nightly rate (INR)" name="legacyPrice" min={1} defaultValue={editing?.price} currency />{editing?.breakfastPrice === undefined && <label>Meal plan<select name="mealPlan" defaultValue={editing?.mealPlan}>{hotelMealPlans.map((plan) => <option key={plan}>{plan}</option>)}</select></label>}</> : <fieldset className="hotel-amenities hotel-room-types review-text-field"><legend>Room types, quantity & nightly rates</legend>{hotelRoomTypes.map((roomType) => <div className="registration-room-rate" key={roomType}><NumberStepper label={`${roomType} rooms`} name={`roomCount_${roomType.toLowerCase()}`} min={0} max={10000} defaultValue={editing ? editing.roomRates?.find((room) => room.roomType === roomType)?.count ?? 0 : 1} /><NumberStepper label={`${roomType} rate (INR)`} name={`roomPrice_${roomType.toLowerCase()}`} min={1} defaultValue={editing?.roomRates?.find((room) => room.roomType === roomType)?.price ?? 2000} step={100} currency /></div>)}<small className="review-text-field">Set a room type to 0 if you do not offer it. Only available room types and their rates are listed. Hotel cards show the lowest room rate.</small></fieldset>}
         {(!editing || editing.breakfastPrice !== undefined) && <><NumberStepper label="Breakfast add-on (INR)" name="breakfastPrice" defaultValue={editing?.breakfastPrice ?? 500} step={50} currency />

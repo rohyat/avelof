@@ -12,7 +12,7 @@ export default function PartnerRegistrationLayout({ kind, children, editing = fa
         <p className="eyebrow">AVELOF partner registration</p>
         <h1>{editing ? hotel ? 'Edit your hotel' : 'Edit your driver registration' : hotel ? 'Register your hotel' : 'Register as a driver'}</h1>
         <p>{editing ? 'Update your details and submit them for review. Saving hides your listing until AVELOF approves the changes.' : hotel ? 'A welcoming stay starts with you. Introduce your property and let us help travellers discover it.' : 'Bring your local knowledge to the journey. Introduce yourself and your vehicle to AVELOF.'}</p>
-        {!editing && <div className="partner-edit-action"><Link className="button button-outline" to={hotel ? '/hotel-status' : '/driver-status'}>Edit your details <ArrowRight size={16} /></Link></div>}
+        {!editing && !hotel && <div className="partner-edit-action"><Link className="button button-outline" to="/driver-status">Edit your details <ArrowRight size={16} /></Link></div>}
         <span className="partner-review-badge"><ShieldCheck size={16} /> Reviewed before going live</span>
       </div>
       <span className="partner-hero-icon"><Icon size={64} strokeWidth={1.25} aria-hidden="true" /></span>
