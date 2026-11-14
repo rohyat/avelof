@@ -486,13 +486,16 @@ body.enquiry-open { overflow: hidden; }
 .partner-edit-action { display: grid; width: max-content; max-width: 100%; gap: 12px; margin-block: 16px; }
 .partner-edit-action .button-outline { background: #fff; color: var(--forest); }
 .partner-edit-action .button-outline:hover { background: var(--glacier); }
-.planner-steps { display: flex; flex-wrap: wrap; gap: 12px 20px; padding: 0; margin: 20px 0; list-style: none; }
-.planner-steps li { display: flex; align-items: center; gap: 8px; color: #64746e; font-size: 13px; }
-.planner-steps li span { display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid #b6c1b8; border-radius: 50%; }
+.planner-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0; margin: 20px 0; list-style: none; }
+.planner-steps li { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #64746e; font-size: 13px; text-align: center; }
+.planner-steps li:not(:first-child)::before { content: ''; position: absolute; top: 15px; right: 50%; width: 100%; height: 2px; background: #cbd6d0; }
+.planner-steps .planner-step-number { position: relative; z-index: 1; display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px; border: 1px solid #b6c1b8; border-radius: 50%; background: #fff; }
+.planner-step-label { padding-inline: 3px; line-height: 1.4; }
 .planner-steps li[aria-current="step"] { color: var(--forest); font-weight: 700; }
-.planner-steps li[aria-current="step"] span { background: var(--forest); color: #fff; }
+.planner-steps li[aria-current="step"] .planner-step-number { background: var(--forest); border-color: var(--forest); color: #fff; }
 .planner-steps li.is-complete { color: var(--forest); }
-.planner-steps li.is-complete span { background: #eaf3ef; border-color: var(--forest); }
+.planner-steps li.is-complete .planner-step-number { background: #eaf3ef; border-color: var(--forest); }
+.planner-steps li.is-complete::before, .planner-steps li[aria-current="step"]::before { background: var(--forest); }
 .planner-back { margin-bottom: 20px; }
 .planner-hotel-photo { overflow: hidden; }
 .planner-hotel-photo img { width: 100%; height: 100%; object-fit: cover; }
