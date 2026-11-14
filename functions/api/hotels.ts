@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { hotelModerationSchema, hotelSubmissionSchema } from '../../src/services/hotelSchema.ts'
+import { hotelDetailsSchema, hotelModerationSchema, hotelSubmissionSchema, validHotelRoomRates } from '../../src/services/hotelSchema.ts'
 import { hotelLookupIdPattern, hotelPhotoCount, hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
 import { accessConfigured, allowAccessAttempt, hashText, isAdmin, privateReply, sameOrigin } from '../_lib/enquiryAccess.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
@@ -54,10 +54,17 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       }
       const parsed = hotelModerationSchema.safeParse(input)
       if (!parsed.success || (parsed.data.breakfastPrice === undefined) !== (parsed.data.dinnerPrice === undefined)) return privateReply({ error: 'Check the hotel price and moderation details. Supply both meal prices together.' }, 400)
-      const { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice } = parsed.data
+      const { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice, roomRates } = parsed.data
       const current = await DB.prepare('SELECT details_json FROM hotel_registrations WHERE id = ? AND version = ?').bind(id, version).first<{ details_json: string }>()
       if (!current) return privateReply({ error: 'This hotel changed. Refresh before updating it.' }, 409)
-      const details = JSON.parse(current.details_json)
+      const details = hotelDetailsSchema.parse(JSON.parse(current.details_json))
+      if (details.roomRates && !roomRates) return privateReply({ error: 'Supply the reviewed rate for every available room type.' }, 400)
+      if (roomRates) {
+        if (!details.roomRates || roomRates.length !== details.roomRates.length || roomRates.some((rate) => !details.roomRates?.some((existing) => existing.roomType === rate.roomType && existing.count === rate.count))) return privateReply({ error: 'Reviewed room types and quantities must match the registration.' }, 400)
+        details.roomRates = roomRates
+      }
+      details.price = price
+      if (!validHotelRoomRates(details)) return privateReply({ error: 'The listing price must match the lowest available room rate.' }, 400)
       if (breakfastPrice !== undefined && dinnerPrice !== undefined) Object.assign(details, { breakfastPrice, dinnerPrice, mealPlan: 'Room only' })
       const row = await DB.prepare(`UPDATE hotel_registrations SET status = ?, price = ?, owner_note = ?, details_json = ?, version = version + 1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND version = ? RETURNING ${hotelColumns}`).bind(status, price, ownerNote, JSON.stringify(details), id, version).first<HotelRow>()
       if (!row) return privateReply({ error: 'This hotel changed. Refresh before updating it.' }, 409)
@@ -75,7 +82,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     let details: unknown
     try { details = JSON.parse(String(form.get('details'))) } catch { return privateReply({ error: 'Invalid hotel details.' }, 400) }
     const parsed = hotelSubmissionSchema.safeParse(details)
-    if (!parsed.success || parsed.data.website || (parsed.data.breakfastPrice === undefined) !== (parsed.data.dinnerPrice === undefined) || parsed.data.breakfastPrice !== undefined && parsed.data.mealPlan !== 'Room only') return privateReply({ error: 'Check your hotel details, phone number, room-only and meal prices, and publication consent.' }, 400)
+    if (!parsed.success || !validHotelRoomRates(parsed.data) || parsed.data.website || (parsed.data.breakfastPrice === undefined) !== (parsed.data.dinnerPrice === undefined) || parsed.data.breakfastPrice !== undefined && parsed.data.mealPlan !== 'Room only') return privateReply({ error: 'Check your hotel details, phone number, room-only and meal prices, and publication consent.' }, 400)
     const photos = form.getAll('photos')
     if (photos.length < 1 || photos.length > hotelPhotoCount) return privateReply({ error: 'Upload between one and five hotel photos.' }, 400)
     const images: Uint8Array[] = []

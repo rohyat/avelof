@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { driverDistricts, driverVehicleIds, driverVehicleNumberPattern, normalizeDriverVehicleNumber } from '../data/driverRegistration.ts'
-import { hotelStatusSchema } from './hotelSchema.ts'
+import { hotelLookupSchema, hotelStatusSchema } from './hotelSchema.ts'
 import { indianPhoneNumber } from './phoneNumbers.ts'
 import { partnerStatusAccessCodePattern } from './partnerAccessCode.ts'
 const text = (max: number) => z.string().trim().min(1).max(max)
@@ -20,6 +20,10 @@ export const driverSubmissionSchema = driverDetailsSchema.extend({
   ...driverPrivateSchema.shape, location: z.enum(driverDistricts), vehicleNumber: driverVehicleNumberSchema, id: z.uuidv4().toLowerCase(),
   publicationConsent: z.literal(true), website: z.string().max(200).default(''),
 }).strict()
+export const driverEditDetailsSchema = driverSubmissionSchema.omit({ id: true })
+export const driverEditAuthSchema = hotelLookupSchema.extend({
+  version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+}).strict()
 export const publicDriverSchema = driverDetailsSchema.extend({
   id: z.uuidv4(), driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/),
   vehicleName: text(120), maskedPhone: z.string().regex(/^[0-9*]+$/),
@@ -33,12 +37,15 @@ export const adminDriverSchema = publicDriverSchema.extend({
   version: z.number().int().min(0), ownerNote: z.string(), createdAt: z.string(),
 })
 export const driverStatusResultSchema = publicDriverSchema.omit({ photo: true, averageRating: true, reviewCount: true }).extend({
-  status: hotelStatusSchema,
+  ...driverPrivateSchema.shape, status: hotelStatusSchema, version: z.number().int().min(0),
 })
 export const driverReceiptSchema = z.object({
   saved: z.literal(true), id: z.uuidv4(), driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/),
   accessCode: z.string().regex(partnerStatusAccessCodePattern), status: hotelStatusSchema,
 })
 export type DriverSubmission = z.infer<typeof driverSubmissionSchema>
+export type DriverEditDetails = z.infer<typeof driverEditDetailsSchema>
+export type DriverEditAuth = z.infer<typeof driverEditAuthSchema>
+export type OwnerDriver = z.infer<typeof driverStatusResultSchema>
 export type PublicDriver = z.infer<typeof publicDriverSchema>
 export type AdminDriver = z.infer<typeof adminDriverSchema>

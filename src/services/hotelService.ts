@@ -1,8 +1,8 @@
 import { z } from 'zod'
 import { useEffect, useState } from 'react'
 import { adminHotelSchema, hotelReceiptSchema, hotelStatusResultSchema, publicHotelSchema } from './hotelSchema'
-import { hotelPhotoCount, hotelPhotoDimension, hotelPhotoLimit } from '../data/hotelRegistration'
-import type { HotelSubmission, HotelStatus, PublicHotel } from './hotelSchema'
+import { hotelPhotoCount, hotelPhotoDimension, hotelPhotoLimit, hotelRoomMealMultiplier, hotelRoomRateBasis } from '../data/hotelRegistration'
+import type { HotelRoomRate, HotelSubmission, HotelStatus, PublicHotel } from './hotelSchema'
 import type { Hotel } from '../types'
 
 const pagination = { total: z.number().int().min(0), page: z.number().int().min(1), pageSize: z.literal(25) }
@@ -48,11 +48,20 @@ export async function saveHotel(details: HotelSubmission, photos: Blob[]) {
 export async function lookupHotel(identifier: string, accessCode: string) {
   return z.object({ hotel: hotelStatusResultSchema }).parse(await requestHotel('/api/hotel-status', 'POST', { identifier, accessCode })).hotel
 }
+export async function updateHotel(details: HotelSubmission, version: number, accessCode: string, photos: Blob[]) {
+  const body = new FormData()
+  body.append('details', JSON.stringify(details))
+  body.append('auth', JSON.stringify({ version, accessCode }))
+  photos.forEach((photo, index) => body.append('photos', photo, `hotel-${index + 1}.jpg`))
+  const receipt = hotelReceiptSchema.parse(await requestHotel('/api/hotel-update', 'POST', body))
+  if (receipt.id !== details.id || receipt.status !== 'pending') throw new HotelError('Hotel update could not be confirmed. Retry with the same form.', 503)
+  return receipt
+}
 export async function loadAdminHotels(page: number, status: HotelStatus | 'all', signal?: AbortSignal) {
   return adminList.parse(await requestHotel(`/api/hotels?${new URLSearchParams({ scope: 'admin', page: String(page), status })}`, 'GET', undefined, signal))
 }
-export async function moderateHotel(id: string, version: number, status: HotelStatus, price: number, ownerNote: string, breakfastPrice?: number, dinnerPrice?: number) {
-  return z.object({ hotel: adminHotelSchema }).parse(await requestHotel('/api/hotels', 'PATCH', { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice })).hotel
+export async function moderateHotel(id: string, version: number, status: HotelStatus, price: number, ownerNote: string, breakfastPrice?: number, dinnerPrice?: number, roomRates?: HotelRoomRate[]) {
+  return z.object({ hotel: adminHotelSchema }).parse(await requestHotel('/api/hotels', 'PATCH', { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice, roomRates })).hotel
 }
 export async function deleteHotel(id: string, version: number) {
   return z.object({ deleted: z.literal(true), id: z.uuidv4() }).parse(await requestHotel('/api/hotels', 'DELETE', { id, version }))
@@ -74,10 +83,10 @@ export function toCatalogHotel(hotel: PublicHotel): Hotel {
     hotelAverageRating: hotel.averageRating, hotelReviewCount: hotel.reviewCount,
     name: hotel.name, location: hotel.location, category: hotel.category, price: hotel.price,
     image: hotel.photos[0], gallery: hotel.photos,
-    description: hotel.description, rateBasis: 'per room per night for 2 adults',
+    description: hotel.description, rateBasis: hotelRoomRateBasis(selectedHotelRoom(hotel)?.roomType),
     mealPlan: hotel.mealPlan, taxDetails: hotel.taxDetails, totalRooms: hotel.totalRooms,
     ...(hotel.breakfastPrice !== undefined && hotel.dinnerPrice !== undefined ? { roomOnlyPrice: hotel.price, breakfastPrice: hotel.breakfastPrice, dinnerPrice: hotel.dinnerPrice } : {}),
-    roomTypes: hotel.roomTypes, facilities: [hotel.heating, ...hotel.amenities],
+    roomTypes: hotel.roomTypes, roomRates: hotel.roomRates, facilities: [hotel.heating, ...hotel.amenities],
     checkIn: hotel.checkIn, checkOut: hotel.checkOut, highlights: hotel.highlights,
   }
 }
@@ -109,10 +118,22 @@ export const includedHotelMeals = (hotel: Hotel) => ({
   dinner: hotel.mealPlan === 'Breakfast and dinner included' || hotel.mealPlan === 'All meals included',
   }),
 })
-export const hotelNightlyPrice = (hotel: Hotel, breakfast: boolean, dinner: boolean) => {
-  const base = hotel.roomOnlyPrice ?? hotel.price
-  const legacyMeal = (hotel.price - base) / 2
-  return base + (breakfast ? hotel.breakfastPrice ?? legacyMeal : 0) + (dinner ? hotel.dinnerPrice ?? legacyMeal : 0)
+export function selectedHotelRoom(hotel: Pick<Hotel, 'roomRates'>, roomType?: string) {
+  return hotel.roomRates?.find((room) => room.roomType === roomType)
+    ?? hotel.roomRates?.reduce((lowest, room) => room.price < lowest.price ? room : lowest)
+}
+export const hotelNightlyPrice = (hotel: Hotel, breakfast: boolean, dinner: boolean, roomType?: string) => {
+  const base = selectedHotelRoom(hotel, roomType)?.price ?? hotel.roomOnlyPrice ?? hotel.price
+  const meals = hotelMealPrices(hotel, roomType)
+  return Math.round((base + (breakfast ? meals.breakfast : 0) + (dinner ? meals.dinner : 0)) * 100) / 100
+}
+export function hotelMealPrices(hotel: Hotel, roomType?: string) {
+  const multiplier = hotelRoomMealMultiplier(selectedHotelRoom(hotel, roomType)?.roomType)
+  const legacyMeal = (hotel.price - (hotel.roomOnlyPrice ?? hotel.price)) / 2
+  return {
+    breakfast: Math.round((hotel.breakfastPrice ?? legacyMeal) * multiplier * 100) / 100,
+    dinner: Math.round((hotel.dinnerPrice ?? legacyMeal) * multiplier * 100) / 100,
+  }
 }
 
 export async function compressHotelPhotos(files: File[]) {

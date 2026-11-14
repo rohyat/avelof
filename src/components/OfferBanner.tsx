@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { hotels, rentalCars, tourPackages } from '../data/catalog'
+import { rentalCars, tourPackages } from '../data/catalog'
 import { diwaliReferencePrice } from '../data/offers'
 import DiscountLabel from './DiscountLabel'
 
-const startingHotel = hotels.reduce((lowest, hotel) => (hotel.roomOnlyPrice ?? hotel.price) < (lowest.roomOnlyPrice ?? lowest.price) ? hotel : lowest)
 const startingCab = rentalCars.reduce((lowest, car) => car.price < lowest.price ? car : lowest)
-const hotelPrice = startingHotel.roomOnlyPrice ?? startingHotel.price
 const offers = [
   ...tourPackages.filter((item) => !item.underDevelopment).map((item) => ({
     id: item.id,
@@ -20,11 +18,6 @@ const offers = [
     referenceLabel: 'Original price',
     href: `/tour-packages/${item.id}`,
   })),
-  {
-    id: 'hotels', title: 'Hotels', description: 'Deluxe & Premium · Room only',
-    image: startingHotel.image, price: hotelPrice, originalPrice: diwaliReferencePrice(hotelPrice),
-    priceLabel: 'from / couple / night', referenceLabel: 'Before offer', href: '/hotels',
-  },
   {
     id: 'cabs', title: 'Cabs', description: 'Transfers & sightseeing · Vehicle only',
     image: startingCab.image, price: startingCab.price, originalPrice: diwaliReferencePrice(startingCab.price),
@@ -66,8 +59,8 @@ export default function OfferBanner() {
   }
 
   return <section className="offer-banner" aria-label="Diwali offers">
-    <div className="offer-banner-heading"><div className="offer-heading-line"><span className="offer-diya" role="img" aria-label="Diwali diya lamp">🪔</span><strong>Diwali offer · 30% off</strong></div><span className="offer-heading-subtitle">Packages, hotels &amp; cabs</span></div>
-    <div className="offer-carousel" role="region" aria-roledescription="carousel" aria-label="Packages, hotels and cabs offers"
+    <div className="offer-banner-heading"><div className="offer-heading-line"><span className="offer-diya" role="img" aria-label="Diwali diya lamp">🪔</span><strong>Diwali offer · 30% off</strong></div><span className="offer-heading-subtitle">Packages &amp; cabs</span></div>
+    <div className="offer-carousel" role="region" aria-roledescription="carousel" aria-label="Packages and cabs offers"
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onPointerDownCapture={() => setFocused(false)}
       onFocusCapture={(event) => setFocused(event.target.matches(':focus-visible'))} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false) }}>

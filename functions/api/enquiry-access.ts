@@ -6,7 +6,7 @@ import { requestedBooking } from '../../src/services/bookingDetails.ts'
 import { hotelDetailsSchema } from '../../src/services/hotelSchema.ts'
 import { driverDetailsSchema } from '../../src/services/driverSchema.ts'
 import { driverVehicleOptions } from '../../src/data/driverRegistration.ts'
-import { hotels, rentalCars, tourPackages } from '../../src/data/catalog.ts'
+import { rentalCars, tourPackages } from '../../src/data/catalog.ts'
 import type { BookingKind } from '../../src/types.ts'
 
 const referencePattern = /^AVELOF_(DLX|PRM|CSTM|HTL|CAB|INQ)_[1-9]\d{4,}$/
@@ -66,7 +66,6 @@ async function publicSummary(row: EnquiryRow, database: D1Database) {
   const fields: unknown = JSON.parse(row.fields_json)
   const source = fields && typeof fields === 'object' ? fields as Record<string, unknown> : {}
   const selected: Record<string, string> = {}
-  if (typeof source.preferredStay === 'string' && hotels.some((hotel) => hotel.name === source.preferredStay)) selected.preferredStay = source.preferredStay
   if (!selected.preferredStay && typeof source.preferredStay === 'string') {
     const match = /\((AVELOF_HTL_(?:[0-9]{5,10}[A-Z]{3}|[A-F0-9]{32}))\)$/.exec(source.preferredStay)
     if (match) {

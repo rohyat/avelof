@@ -6,18 +6,24 @@ import { Trash2 } from 'lucide-react'
 import NumberStepper from '../components/NumberStepper'
 import PartnerPhotos from '../components/PartnerPhotos'
 import RegistrationReceipt from '../components/RegistrationReceipt'
+import PartnerRegistrationLayout from '../components/PartnerRegistrationLayout'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import { driverDistricts, driverVehicleNumberPattern, driverVehicleOptions, normalizeDriverVehicleNumber } from '../data/driverRegistration'
 import { hotelStatusLabels } from '../data/hotelRegistration'
-import { driverReceiptSchema, driverStatusResultSchema, driverSubmissionSchema } from '../services/driverSchema'
-import type { AdminDriver } from '../services/driverSchema'
+import { driverEditDetailsSchema, driverReceiptSchema, driverStatusResultSchema, driverSubmissionSchema } from '../services/driverSchema'
+import type { AdminDriver, OwnerDriver } from '../services/driverSchema'
 import { HotelError, hotelErrorText } from '../services/hotelService'
 import { hotelStatusSchema } from '../services/hotelSchema'
 import type { HotelStatus } from '../services/hotelSchema'
-import { deleteDriver, loadAdminDrivers, lookupDriver, moderateDriver, saveDriver } from '../services/driverService'
+import { deleteDriver, editDriver, loadAdminDrivers, lookupDriver, moderateDriver, saveDriver } from '../services/driverService'
 
 export default function DriverRegistrationPage() {
+  return <PartnerRegistrationLayout kind="driver"><DriverForm /></PartnerRegistrationLayout>
+}
+
+function DriverForm({ editing, onCancel }: { editing?: { driver: OwnerDriver; accessCode: string }; onCancel?: () => void }) {
   const [photos, setPhotos] = useState<Blob[]>([])
+  const [replacePhoto, setReplacePhoto] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -25,6 +31,8 @@ export default function DriverRegistrationPage() {
   const [receipt, setReceipt] = useState<z.infer<typeof driverReceiptSchema> | null>(null)
   const pending = useRef({ id: crypto.randomUUID(), fingerprint: '' })
   const photoVersion = useRef(0)
+  const photoGeneration = useRef(0)
+  const generation = photoGeneration.current
   const inFlight = useRef(false)
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -41,53 +49,72 @@ export default function DriverRegistrationPage() {
     const fingerprint = JSON.stringify({ details, photos: photoVersion.current })
     if (pending.current.fingerprint && pending.current.fingerprint !== fingerprint) pending.current.id = crypto.randomUUID()
     pending.current.fingerprint = fingerprint
-    const parsed = driverSubmissionSchema.safeParse({ ...details, id: pending.current.id })
+    const parsed = driverSubmissionSchema.safeParse({ ...details, id: editing?.driver.id ?? pending.current.id })
     if (!parsed.success) { setError(parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(' ')); return }
-    if (photos.length !== 1) { setError('Select one valid driver portrait photo.'); return }
+    if ((!editing || replacePhoto) && photos.length !== 1) { setError('Select one valid driver portrait photo.'); return }
     setBusy(true); inFlight.current = true
-    try { setReceipt(await saveDriver(parsed.data, photos[0])) } catch (failure) { setError(hotelErrorText(failure)) }
+    try {
+      if (editing) {
+        const { id, ...editDetails } = parsed.data
+        void id
+        setReceipt(await editDriver({ identifier: editing.driver.driverId, accessCode: editing.accessCode, version: editing.driver.version }, driverEditDetailsSchema.parse(editDetails), editing.driver.id, replacePhoto ? photos[0] : undefined))
+      } else setReceipt(await saveDriver(parsed.data, photos[0]))
+    } catch (failure) { setError(hotelErrorText(failure)) }
     finally { setBusy(false); inFlight.current = false }
   }
-  return <section className="enquiry-access-page page-width">
-    <Link className="text-link" to="/partners">Partner with AVELOF</Link>
-    <div className="enquiry-access-heading"><div><p className="eyebrow">Driver partners</p><h1>Register as a driver</h1><p>After approval, your full name, portrait, vehicle details and vehicle registration appear in our driver directory. Your phone and driving-licence numbers are masked; age and full contact details remain private.</p></div></div>
-    <p><Link to="/driver-status">Already registered? Check driver status</Link></p>
-    {receipt ? <RegistrationReceipt kind="Driver" reference={receipt.driverId} accessCode={receipt.accessCode}><h2>Your driver registration has been saved.</h2><p>{hotelStatusLabels[receipt.status]}. Not a confirmed listing or booking.</p><dl className="hotel-receipt"><dt>Driver ID</dt><dd>{receipt.driverId}</dd><dt>Status access code</dt><dd>{receipt.accessCode}</dd></dl><p>Your status code uses the first four letters of your name and the last four digits of your registered phone number.</p><Link to="/driver-status" className="button button-dark">Check driver status</Link></RegistrationReceipt> : <form className="review-submission-form" onSubmit={submit} aria-busy={busy}>
-      <fieldset className="hotel-form-fields" disabled={busy}>
-        <label>Full legal name<input name="fullName" maxLength={100} required autoComplete="name" /></label>
-        <NumberStepper label="Age (minimum 18)" name="age" min={18} max={100} />
-        <label>Phone number<input name="phone" type="tel" required maxLength={30} autoComplete="tel" /><small>One driver registration per Indian phone number; only a masked number is shown publicly.</small></label>
-        <label>Driving licence number<input name="licenceNumber" maxLength={40} minLength={5} required /></label>
-        <label>Vehicle registration number<input name="vehicleNumber" maxLength={13} minLength={10} required pattern="JK[0-9]{2}[A-Za-z]{1,2}-[0-9]{4}" placeholder="JK13B-1444 or JK01AB-1485" title="Use JK13B-1444 or JK01AB-1485 format." aria-invalid={Boolean(vehicleNumberError)} aria-describedby={vehicleNumberError ? 'vehicle-number-error' : undefined} onChange={(event) => { const normalized = normalizeDriverVehicleNumber(event.currentTarget.value); event.currentTarget.value = normalized; setVehicleNumberError(normalized && !driverVehicleNumberPattern.test(normalized) ? 'Use format JK13B-1444 or JK01AB-1485.' : '') }} onBlur={(event) => { const normalized = normalizeDriverVehicleNumber(event.currentTarget.value); event.currentTarget.value = normalized; setVehicleNumberError(normalized && !driverVehicleNumberPattern.test(normalized) ? 'Use format JK13B-1444 or JK01AB-1485.' : '') }} />{vehicleNumberError && <small id="vehicle-number-error" className="enquiry-error" role="alert">{vehicleNumberError}</small>}</label>
-        <label>Vehicle<select name="vehicleId" required>{driverVehicleOptions.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.label}</option>)}</select></label>
-        <label>District<select name="location">{driverDistricts.map((district) => <option key={district}>{district}</option>)}</select></label>
-        <NumberStepper label="Passenger seats (excluding driver)" name="seats" min={1} max={60} />
-        <PartnerPhotos onChange={(next, loading) => { photoVersion.current++; setPhotos(next); setProcessing(loading) }} />
+  return <>
+    {receipt ? <RegistrationReceipt kind="Driver" reference={receipt.driverId} accessCode={receipt.accessCode}><h2>Your driver registration has been saved.</h2><p>{hotelStatusLabels[receipt.status]}. Not a confirmed listing or booking.</p><dl className="hotel-receipt"><dt>Driver ID</dt><dd>{receipt.driverId}</dd><dt>Status access code</dt><dd>{receipt.accessCode}</dd></dl><p>Your status code uses the first four letters of your name and the last four digits of your registered phone number. Save this code; it may have changed.</p>{editing ? <button type="button" className="button button-dark" onClick={onCancel}>Check driver status</button> : <Link to="/driver-status" className="button button-dark">Check driver status</Link>}</RegistrationReceipt> : <form className="review-submission-form" onSubmit={submit} aria-busy={busy}>
+      <fieldset className="registration-fields" disabled={busy}>
+        <section className="hotel-form-fields registration-section" aria-labelledby="driver-personal-title">
+        <div className="registration-section-heading"><span>01</span><div><h2 id="driver-personal-title">Meet your driver</h2><p>Your details help our team review your registration.</p></div></div>
+        <label>Full legal name<input name="fullName" maxLength={100} required autoComplete="name" defaultValue={editing?.driver.fullName} /></label>
+        <NumberStepper label="Age (minimum 18)" name="age" min={18} max={100} defaultValue={editing?.driver.age} />
+        <label>Phone number<input name="phone" type="tel" required maxLength={30} autoComplete="tel" defaultValue={editing?.driver.phone} /><small>One driver registration per Indian phone number; only a masked number is shown publicly.</small></label>
+        <label>Driving licence number<input name="licenceNumber" maxLength={40} minLength={5} required defaultValue={editing?.driver.licenceNumber} /></label>
+        </section>
+        <section className="hotel-form-fields registration-section" aria-labelledby="driver-vehicle-title">
+        <div className="registration-section-heading"><span>02</span><div><h2 id="driver-vehicle-title">Your vehicle</h2><p>Share your vehicle details and where you are based. No rate required.</p></div></div>
+        <label>Vehicle registration number<input name="vehicleNumber" defaultValue={editing?.driver.vehicleNumber} maxLength={13} minLength={10} required pattern="JK[0-9]{2}[A-Za-z]{1,2}-[0-9]{4}" placeholder="JK13B-1444 or JK01AB-1485" title="Use JK13B-1444 or JK01AB-1485 format." aria-invalid={Boolean(vehicleNumberError)} aria-describedby={vehicleNumberError ? 'vehicle-number-error' : undefined} onChange={(event) => { const normalized = normalizeDriverVehicleNumber(event.currentTarget.value); event.currentTarget.value = normalized; setVehicleNumberError(normalized && !driverVehicleNumberPattern.test(normalized) ? 'Use format JK13B-1444 or JK01AB-1485.' : '') }} onBlur={(event) => { const normalized = normalizeDriverVehicleNumber(event.currentTarget.value); event.currentTarget.value = normalized; setVehicleNumberError(normalized && !driverVehicleNumberPattern.test(normalized) ? 'Use format JK13B-1444 or JK01AB-1485.' : '') }} />{vehicleNumberError && <small id="vehicle-number-error" className="enquiry-error" role="alert">{vehicleNumberError}</small>}</label>
+        <label>Vehicle<select name="vehicleId" required defaultValue={editing?.driver.vehicleId}>{driverVehicleOptions.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.label}</option>)}</select></label>
+        <label>District<select name="location" defaultValue={editing?.driver.location}>{driverDistricts.map((district) => <option key={district}>{district}</option>)}</select></label>
+        <NumberStepper label="Passenger seats (excluding driver)" name="seats" min={1} max={60} defaultValue={editing?.driver.seats} />
+        </section>
+        <section className="hotel-form-fields registration-section" aria-labelledby="driver-portrait-title">
+        <div className="registration-section-heading"><span>03</span><div><h2 id="driver-portrait-title">Portrait & final check</h2><p>A friendly face for your approved driver profile.</p></div></div>
+        {editing && <><p>Your existing portrait is retained unless you choose a replacement. It is not shown here for privacy.</p><label><input type="checkbox" checked={replacePhoto} onChange={(event) => { photoGeneration.current++; setReplacePhoto(event.target.checked); setPhotos([]); setProcessing(false) }} /> Replace portrait</label></>}
+        {(!editing || replacePhoto) && <PartnerPhotos onChange={(next, loading) => { if (generation !== photoGeneration.current) return; photoVersion.current++; setPhotos(next); setProcessing(loading) }} />}
         <label className="enquiry-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
         <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I consent to publishing my full name, masked phone number, masked driving-licence number, driver portrait, vehicle registration, vehicle, base location and passenger seats after AVELOF approval. My age, full phone number and full driving-licence number stay private.</span></label>
         {error && <p className="enquiry-error review-text-field" role="alert">{error}</p>}
-        <button type="submit" className="button button-dark" disabled={processing || !photos.length}>{busy ? 'Saving...' : processing ? 'Preparing photos...' : 'Submit driver for approval'}</button>
+        <button type="submit" className="button button-dark" disabled={processing || ((!editing || replacePhoto) && !photos.length)}>{busy ? 'Saving...' : processing ? 'Preparing photos...' : editing ? 'Save changes for approval' : 'Submit driver for approval'}</button>
+        {editing && <button type="button" className="button button-outline" onClick={onCancel}>Cancel editing</button>}
+        <p className="registration-submit-note">{editing ? 'Saving hides an approved listing immediately until AVELOF approves it again.' : 'Your name, portrait, vehicle details and registration appear only after approval.'}</p>
+        </section>
       </fieldset>
     </form>}
-  </section>
+  </>
 }
 
 export function DriverStatusPage() {
   const [driver, setDriver] = useState<z.infer<typeof driverStatusResultSchema> | null>(null)
+  const [accessCode, setAccessCode] = useState('')
+  const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (busy) return
     const fields = new FormData(event.currentTarget)
-    setBusy(true); setError(''); setDriver(null)
-    try { setDriver(await lookupDriver(String(fields.get('identifier')), String(fields.get('accessCode')))) }
+    setBusy(true); setError(''); setDriver(null); setAccessCode('')
+    const code = String(fields.get('accessCode')).trim().toUpperCase()
+    try { setDriver(await lookupDriver(String(fields.get('identifier')), code)); setAccessCode(code) }
     catch (failure) { setError(hotelErrorText(failure)) } finally { setBusy(false) }
   }
-  return <section className="enquiry-access-page page-width"><Link to="/partners">Partner with AVELOF</Link><h1>Check driver status</h1>
+  if (editing && driver) return <PartnerRegistrationLayout kind="driver" editing><DriverForm editing={{ driver, accessCode }} onCancel={() => { setEditing(false); setDriver(null); setAccessCode('') }} /></PartnerRegistrationLayout>
+  return <section className="enquiry-access-page page-width"><Link to="/partners">Partner with AVELOF</Link><h1>Edit your driver details</h1><p>Enter your driver ID or registered phone and the status access code received after submission to check your status and edit your details.</p>
     <form className="review-submission-form" onSubmit={submit}><label>Driver ID or phone number<input name="identifier" maxLength={80} required autoComplete="off" /></label><label>Status access code<input name="accessCode" minLength={5} maxLength={12} required autoComplete="off" /></label><button className="button button-dark" disabled={busy}>Check status</button></form>
     {error && <p className="enquiry-error" role="alert">{error}</p>}
-    {driver && <section className="admin-review-record hotel-owner-status"><h2>{driver.fullName}</h2><p>{driver.vehicleName} · {driver.location} · {driver.seats} seats</p><p className="hotel-identifier">{driver.driverId}</p><p role="status">{hotelStatusLabels[driver.status]}</p>{driver.status === 'approved' ? <Link to="/drivers">View driver listing</Link> : <p>Not publicly listed. Contact AVELOF for changes.</p>}</section>}
+    {driver && <section className="admin-review-record hotel-owner-status"><h2>{driver.fullName}</h2><p>{driver.vehicleName} · {driver.location} · {driver.seats} seats</p><p className="hotel-identifier">{driver.driverId}</p><p role="status">{hotelStatusLabels[driver.status]}</p>{driver.status === 'approved' ? <Link to="/drivers">View driver listing</Link> : <p>Not publicly listed.</p>}<p>Saving changes hides your listing until it is approved again.</p><button type="button" className="button button-dark" onClick={() => setEditing(true)}>Edit registration</button></section>}
   </section>
 }
 function DriverRecord({ driver, disabled, save, remove }: { driver: AdminDriver; disabled: boolean; save: (driver: AdminDriver, status: HotelStatus, note: string, vehicleNumber: string) => Promise<void>; remove: (driver: AdminDriver) => Promise<void> }) {

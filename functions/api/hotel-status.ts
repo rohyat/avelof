@@ -26,7 +26,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env }) => {
     if (!row || !equalHashes(hotelAccessCode(row), parsed.data.accessCode)) return privateReply({ error: 'No matching hotel and access code. Check your details.' }, 404)
     const { photos, averageRating, reviewCount, ...hotel } = publicHotel(row)
     void photos; void averageRating; void reviewCount
-    return privateReply({ hotel: { ...hotel, status: row.status } })
+    return privateReply({ hotel: { ...hotel, status: row.status, contactName: row.contact_name, phone: row.phone, version: row.version } })
   } catch (error) {
     console.error('Private hotel lookup failed', error)
     return privateReply({ error: 'Could not load your hotel status. Please try again.' }, 503)

@@ -79,6 +79,7 @@ export interface Hotel extends CatalogBase {
   mealPlan?: string
   packageId?: string
   roomTypes: string[]
+  roomRates?: { roomType: string; count: number; price: number }[]
   facilities: string[]
   checkIn: string
   checkOut: string

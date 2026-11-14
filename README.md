@@ -105,8 +105,9 @@ The `enquiries` table stores a unique reference, enquiry type, contact
 details, guest counts, status and creation time. `fields_json` preserves all
 type-specific dates, hotel/meal choices, vehicle preferences and planner data.
 The `details` TEXT column holds the editable custom-trip summary or additional
-notes. Planner enquiries prefill this text box with the complete itinerary,
-stays, meals, vehicle and estimate details. Quotes and rates are customer-supplied
+notes. Planner enquiries save the complete itinerary, stays, meals, vehicle and
+estimate details automatically, without asking the customer to re-enter them.
+Quotes and rates are customer-supplied
 snapshots, not authoritative prices. No payment information should be collected.
 
 `public_reference` is the short customer-facing ID, for example
@@ -277,11 +278,30 @@ Unchanged retries reuse the ID and do not duplicate rows or alerts.
 are sent in a POST body and are never stored in URLs or browser storage.
 Phone numbers and contact names are not exposed in public hotel responses.
 
+Hotels and drivers can edit their own registrations after private status lookup
+with their registration ID (or phone) and access code. The authenticated lookup
+returns editable details, including private contact/licence fields and a version;
+public responses still exclude those private fields. Credentials remain in request
+bodies and page memory, never URLs or browser storage.
+
+Choose Edit hotel details or Edit registration, update the prefilled form, renew
+publication consent and Save changes for approval. Hotel updates use
+`POST /api/hotel-update`; driver updates use multipart `POST /api/drivers` with an
+`auth` part. Saving forces pending status and immediately hides the listing and its
+photos from public access until the owner reviews and approves it again. It keeps
+registration IDs and linked reviews, and queues the existing owner alert.
+Existing photos are retained unless replacements are supplied (a hotel selection
+replaces the full set; a driver replacement replaces the portrait). Version checks
+prevent overwriting newer moderation or partner changes. Updated name/phone details
+can change the access code; save the code shown in the successful receipt.
+No database migration is needed. Older hotel room labels and meal pricing remain
+editable without inventing per-room rates.
+
 `/admin/panel/hotels` uses the existing signed owner session. Review photos and
 rights, edit the rate, approve, reject or return to pending, and add an owner
 note. Version checks prevent overwriting another edit. Only approved rows and
-their photos appear publicly. Existing catalog stays remain unchanged; approved
-registrations join the hotel catalog, detail pages, enquiry selector and planner.
+their photos appear publicly. Approved registrations populate the hotel catalog,
+detail pages, enquiry selector and planner; there are no built-in sample stays.
 New registered rates expose optional meals in hotel cards, details, enquiries
 and the planner, with no invented discount comparison. Older registrations
 retain their original fixed meal plan.
@@ -316,6 +336,101 @@ include these records in retention/deletion procedures. A lost access code
 requires contacting AVELOF; do not expose lookup by phone alone.
 
 ## Partner portal and drivers
+
+The built-in illustrative hotel catalog has been removed. Hotel listings,
+detail pages, enquiry selectors and planner hotel options use approved
+registrations only. An empty approved feed shows an explicit empty state;
+the planner can still request a recommended stay. No sample hotel rates or
+discount offers are used. Existing D1 registrations, photos, reviews and enquiry
+records are unchanged. Tour-package itineraries are separate from hotel listings
+and retain their existing content.
+
+Hotel listing cards use a compact, content-sized portrait layout,
+with a photo, rating, two highlights, three amenities and the minimum room
+rate. Full descriptions, hotel IDs and all features remain on the detail page.
+Hotel detail pricing shows the lowest-priced room name and starting rate without
+selection controls. Clicking Book Now opens the enquiry form for room and meal
+selection. Cards can grow when text needs additional space.
+Hotel tiles keep Explore Now above Book Now on all screen sizes. The detail
+page places the hotel ID, room count and guest ratings directly below the photos,
+before the stay description. Pricing uses the room name and INR amount without
+"From"; detail pricing panels offer Book Now without an email action.
+Small room-type labels on hotel tiles show available categories without extra prices.
+Hotel tiles give more space to photography, overlay the location on the photo,
+and omit the visible photo-source caption to keep the details section compact.
+Hotel price filters use the minimum room rate, with INR 1,000 bands from
+1,500–2,500 through 9,500–10,500 and a final Above 10,500 option.
+Shared boundaries belong to the higher band (2,500 starts the second band);
+10,500 is included in the final bounded band. Any price also includes stays below
+1,500. Unknown or old price-filter URLs fall back to Any price.
+Approved registered hotels remain selectable in customised trips only; they do not
+replace curated package stays or change published package prices. The custom planner
+shows a combined vehicle and selected-stay estimate, updated for each night's room
+and meals. Adults and children aged 5 years and above are entered alongside dates
+in the first step; entered children count toward room capacity and vehicle seats.
+The guest fields explain that children below 5 years are complimentary. The planner suggests
+the smallest suitable vehicle (lowest daily rate when capacities match), allows
+larger choices, and blocks vehicles that do not fit. Groups beyond a single listed
+vehicle's capacity must contact AVELOF for a multiple-vehicle quote.
+Room quantities default to the guest total divided by four for Family rooms or
+two for other types, rounded up. Customers can increase/decrease quantities with
+steppers but cannot go below this minimum. Room-type or guest-count changes reset
+quantities to the appropriate minimum. Selected room quantities and per-room meal
+charges are multiplied into nightly/stay totals in both hotel enquiries and planners.
+Unselected nights and extras are explicitly excluded. The estimate accompanies the
+enquiry for owner review and is not a final quote or booking confirmation.
+The planner shows dates/places, vehicle and hotels as separate steps with Back/Next
+navigation that retains selections. Hotel cards rotate their submitted photos and
+completed steps show ticks, with Back directly below the step indicator.
+Srinagar-based day trips require the previous night's stay in Srinagar; the planner
+does not offer Gulmarg or Pahalgam overnights immediately before these excursions.
+Gulmarg-to-Pahalgam transfers remain available. Wider hotel cards
+only expand room and meal controls for the selected stay. Planner tiles keep the
+hotel category but omit amenities and highlights; View hotel shows the full details.
+The final planner step is inline, not a popup, and asks only for name and phone.
+It preserves the previously selected adults/children and all itinerary details,
+with success shown inline only after D1 confirms persistence. Hotel enquiries store
+`roomCount`, `hotelNightlyTotal` and `hotelStayEstimate` alongside the per-room rate;
+planner itineraries include room quantities and all-room nightly totals for each stay.
+The API still accepts legacy total-only `numberOfPeople` planner enquiries.
+
+New hotel registrations collect a room count and a room-only INR rate for each
+offered type (Standard, Deluxe, Premium, Family and Suite). The registration and
+private edit pricing section explains that entered room prices are shown directly
+to customers once approved. AVELOF deducts 10% commission from that price rather
+than adding it on top, and the hotel receives 90%, with an INR 2,000 example. This is
+informational guidance; it does not change stored rates or customer estimates.
+A zero count excludes
+that type. Family room-only rates cover four people; other room rates cover two.
+Breakfast and dinner are entered as shared base add-ons for two people. For a
+selected Family room, each optional meal costs 1.5 times its base charge, rounded
+to the nearest paise, and covers all four people. This rule is applied consistently
+to listings, enquiries and planner estimates; the Family room-only rate is not
+multiplied. Existing legacy meal-inclusive rates stay unchanged when no structured
+room type is available.
+Structured `roomRates` are stored in the existing private details JSON; no database
+migration is needed. The API validates unique types, positive rates and counts,
+matching totals and a listing price equal to the lowest available room rate.
+Owners review each room rate separately; hotel cards show only the minimum,
+while detail pages list all available room types without individual price labels.
+Facilities and highlights use matching prominent icon cards, followed by room types.
+The enquiry rate selector defaults to the lowest-priced room and shows the chosen room's
+price separately; dropdown options contain room names only. Enquiry forms
+and selected planner stays let customers choose a room type and calculate its
+rate plus meals. The enquiry stores `roomType` and the selected `nightlyRate`;
+planner itineraries include both. These are enquiry estimates, not availability
+or booking confirmations. Older registrations without room
+rates retain their existing pricing; no individual rates are invented for them.
+Amenities and highlights use labelled icons on registration and public listings.
+
+Hotel and driver registration share a responsive partner layout with a review
+guide, privacy guidance and numbered form sections. All fields remain on one page;
+the redesign does not change validation, approval or submission requirements.
+Room-count and rate steppers use full-width, equal-height controls with labels
+above them. Room counts use equal-width columns on desktop and a single column
+on mobile; increment and decrement buttons retain 44 px touch targets.
+Room labels have a fixed 12 px gap above the control, with 24 px between room
+fields; this spacing is independent of the room-only and meal price controls.
 
 Hotel and driver photo fields show a file-image icon and a visible file chooser.
 Hotel selections use only the first five files, with an on-screen notice when

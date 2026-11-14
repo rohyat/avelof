@@ -1,6 +1,5 @@
-import type { Destination, Hotel, RentalCar, TourPackage, OwnerProvidedGuestReview } from '../types'
+import type { Destination, RentalCar, TourPackage, OwnerProvidedGuestReview } from '../types'
 import { vehiclePhotos } from './vehiclePhotos.ts'
-import { hotelPhoto } from './hotelPhotos.ts'
 import { catalogPhotos as photos, providedDestinationPhotos as suppliedPhotos } from './previewPhotos.ts'
 
 const packageCatalog: TourPackage[] = [
@@ -98,65 +97,6 @@ export const rentalCars: RentalCar[] = [
   tripTypes: ['Airport transfer', 'Local sightseeing', 'Multi-day tour'],
   conditions: ['Prices will be confirmed on enquiry.', 'Passenger capacity and air conditioning depend on the allocated vehicle.', 'Photos show reference models, not the allocated vehicle. Tempo Travellers are manufactured by Force Motors.'],
 }))
-
-const deluxeHotels: Hotel[] = [
-  { id: 'hotel-royal-imsar', name: 'Hotel Royal Imsar', location: 'Srinagar', price: 3500 },
-  { id: 'hotel-fair-view', name: 'Hotel Fair View', location: 'Srinagar', price: 3500 },
-  { id: 'hotel-star-of-kashmir', name: 'Hotel Star of Kashmir', location: 'Srinagar', price: 3500 },
-  { id: 'the-mallard', name: 'The Mallard', location: 'Srinagar', price: 3500 },
-  { id: 'the-cedar-pahalgam', name: 'The Cedar Pahalgam', location: 'Pahalgam', price: 4000 },
-  { id: 'hotel-diamond-dreams', name: 'Hotel Diamond Dreams', location: 'Pahalgam', price: 4000 },
-  { id: 'white-house-pahalgam', name: 'White House Pahalgam', location: 'Pahalgam', price: 3500 },
-  { id: 'home-2', name: 'Home 2', location: 'Pahalgam', price: 4000 },
-].map((hotel) => ({
-  ...hotel,
-  kind: 'hotel',
-  image: hotelPhoto(hotel.id === 'white-house-pahalgam' ? 'hotel-white-water-resort' : hotel.id),
-  gallery: [hotelPhoto(hotel.id === 'white-house-pahalgam' ? 'hotel-white-water-resort' : hotel.id)],
-  category: 'Deluxe package',
-  packageId: 'deluxe',
-  roomOnlyPrice: hotel.price - 1000,
-  rateBasis: 'per couple per night',
-  mealPlan: hotel.id === 'white-house-pahalgam' ? 'Breakfast and dinner available for ₹500 each' : 'Breakfast and dinner included',
-  description: hotel.id === 'white-house-pahalgam'
-    ? `${hotel.name} in ${hotel.location}, with breakfast and dinner available as optional add-ons.`
-    : `${hotel.name} in ${hotel.location}, a Deluxe package stay for a couple with breakfast and dinner included.`,
-  roomTypes: ['Room for a couple'],
-  facilities: hotel.id === 'white-house-pahalgam' ? ['Breakfast available for ₹500', 'Dinner available for ₹500'] : ['Breakfast included', 'Dinner included'],
-  checkIn: 'Confirm with AVELOF',
-  checkOut: 'Confirm with AVELOF',
-  highlights: hotel.id === 'white-house-pahalgam' ? ['Pahalgam stay', 'Optional breakfast and dinner'] : ['Deluxe package', 'Breakfast and dinner included'],
-}))
-
-const premiumHotels: Hotel[] = [
-  { id: 'hotel-crown-prince', name: 'Hotel Crown Prince', location: 'Srinagar' },
-  { id: 'luxury-heritage-hotel', name: 'Hotel The Luxury Heritage', location: 'Srinagar' },
-  { id: 'jamal-resorts', name: 'Jamal Resorts', location: 'Srinagar' },
-  { id: 'hotel-white-water-resort', name: 'Hotel White Water Resort', location: 'Pahalgam' },
-  { id: 'twin-towers-by-defy', name: "Twin Towers by D'foy", location: 'Pahalgam' },
-  { id: 'himalayan-hills', name: 'Himalayan Hills', location: 'Pahalgam' },
-  { id: 'hotel-signature', name: 'Hotel Signature', location: 'Gulmarg' },
-  { id: 'the-gulmarg-house', name: 'The Gulmarg House', location: 'Gulmarg' },
-].map((hotel) => ({
-  ...hotel,
-  kind: 'hotel',
-  price: hotel.location === 'Srinagar' ? 4700 : 5100,
-  roomOnlyPrice: (hotel.location === 'Srinagar' ? 4700 : 5100) - 1200,
-  image: hotelPhoto(hotel.id),
-  gallery: [hotelPhoto(hotel.id)],
-  category: 'Premium package',
-  packageId: 'premium',
-  rateBasis: 'per couple per night',
-  mealPlan: 'Breakfast and dinner included',
-  description: `${hotel.name} in ${hotel.location}, a Premium package stay for a couple with breakfast and dinner included.`,
-  roomTypes: ['Room for a couple'],
-  facilities: ['Breakfast included', 'Dinner included'],
-  checkIn: 'Confirm with AVELOF',
-  checkOut: 'Confirm with AVELOF',
-  highlights: ['Premium package', 'Breakfast and dinner included'],
-}))
-
-export const hotels: Hotel[] = [...deluxeHotels, ...premiumHotels]
 
 export const ownerGuestReviewMonths: Record<string, string> = {
   'guest-rating-1': '2025-01', 'guest-rating-2': '2025-01',

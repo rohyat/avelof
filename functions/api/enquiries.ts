@@ -109,7 +109,8 @@ export const onRequest: PagesFunction<Env> = async ({ request, env, waitUntil })
     if (!attempts || attempts.attempts > 5) return reply({ error: 'Too many enquiries.' }, 429, { 'Retry-After': '600' })
     const details = fields.customDetails ?? ''
     const inserted = await env.DB.prepare('INSERT INTO enquiries (reference, kind, full_name, phone_number, adults, children, details, fields_json, payload_hash, phone_lookup) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (reference) DO NOTHING')
-      .bind(reference, kind, fields.fullName, fields.phoneNumber, Number(fields.adults), Number(fields.children), details, fieldsJson, payloadHash, fields.phoneNumber.replace(/\D/g, '')).run()
+      // Legacy count columns retain occupancy; fields_json preserves total-only versus adult/child counts.
+      .bind(reference, kind, fields.fullName, fields.phoneNumber, Number(fields.adults ?? fields.numberOfPeople), Number(fields.children ?? 0), details, fieldsJson, payloadHash, fields.phoneNumber.replace(/\D/g, '')).run()
     const saved = await env.DB.prepare('SELECT payload_hash FROM enquiries WHERE reference = ?').bind(reference).first<{ payload_hash: string }>()
     if (saved?.payload_hash !== payloadHash) return reply({ error: 'Enquiry could not be saved with this reference.' }, 409)
     return await savedReply(env.DB, reference, payloadHash, prefix, 201, env, waitUntil, Number(inserted.meta?.changes ?? 0) > 0)

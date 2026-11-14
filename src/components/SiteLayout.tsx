@@ -3,7 +3,7 @@ import type { MouseEvent } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom'
 import { Menu, MessageCircle, X } from 'lucide-react'
 import { business } from '../config'
-import { hotels, rentalCars, tourPackages } from '../data/catalog'
+import { rentalCars, tourPackages } from '../data/catalog'
 import BookingModal from './BookingModal'
 import OfferBanner from './OfferBanner'
 import { createWhatsAppUrl } from '../services/bookingService'
@@ -112,7 +112,7 @@ export default function SiteLayout() {
   }, [location.key])
 
   useEffect(() => {
-    const catalogItem = [...tourPackages, ...rentalCars, ...hotels].find((item) => item.id === location.pathname.split('/').at(-1))
+    const catalogItem = [...tourPackages, ...rentalCars].find((item) => item.id === location.pathname.split('/').at(-1))
     const pageDetails: Record<string, { title: string; description: string }> = {
       '/': { title: 'AVELOF | Experience Kashmir Beyond Expectations', description: "Where Kashmir's natural beauty meets quality stays, comfortable journeys and genuine local care." },
       '/tour-packages': { title: 'Kashmir Tour Packages | AVELOF', description: 'Explore thoughtfully planned Kashmir tour packages with local expertise, flexible itineraries and handpicked stays.' },

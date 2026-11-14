@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { z } from 'zod'
 import { adminDriverSchema, driverReceiptSchema, driverStatusResultSchema, publicDriverSchema } from './driverSchema'
-import type { DriverSubmission, PublicDriver } from './driverSchema'
+import type { DriverEditAuth, DriverEditDetails, DriverSubmission, PublicDriver } from './driverSchema'
 import type { HotelStatus } from './hotelSchema'
 import { HotelError, hotelErrorText, requestHotel } from './hotelService'
 import type { RentalCar } from '../types'
@@ -19,6 +19,15 @@ export async function saveDriver(data: DriverSubmission, photo: Blob) {
 }
 export async function lookupDriver(identifier: string, accessCode: string) {
   return z.object({ driver: driverStatusResultSchema }).parse(await requestHotel('/api/drivers', 'POST', { identifier, accessCode })).driver
+}
+export async function editDriver(auth: DriverEditAuth, details: DriverEditDetails, expectedId: string, photo?: Blob) {
+  const body = new FormData()
+  body.append('auth', JSON.stringify(auth))
+  body.append('details', JSON.stringify(details))
+  if (photo) body.append('photos', photo, 'driver-portrait.jpg')
+  const receipt = driverReceiptSchema.parse(await requestHotel('/api/drivers', 'POST', body))
+  if (receipt.id !== expectedId || receipt.status !== 'pending') throw new HotelError('Driver update could not be confirmed. Look up your status again.', 503)
+  return receipt
 }
 export async function loadAdminDrivers(page: number, status: HotelStatus | 'all', signal?: AbortSignal) {
   return adminList.parse(await requestHotel(`/api/drivers?${new URLSearchParams({ scope: 'admin', page: String(page), status })}`, 'GET', undefined, signal))
