@@ -9,6 +9,8 @@ import PartnersPage from './pages/PartnersPage'
 import DriverRegistrationPage, { AdminDriversPage, DriverStatusPage } from './pages/DriverRegistrationPage'
 import DriversPage from './pages/DriversPage'
 import DriverReviewsPage from './pages/DriverReviewsPage'
+import { ActivitiesPage, FoodAndShoppingPage, TravelGuidePage } from './pages/DiscoveryPages'
+import BusinessRegistrationPage, { AdminBusinessesPage, BusinessStatusPage } from './pages/BusinessRegistrationPage'
 
 export default function App() {
   return (
@@ -27,14 +29,20 @@ export default function App() {
         <Route path="register-hotel" element={<HotelRegistrationPage />} />
         <Route path="hotel-status" element={<HotelStatusPage />} />
         <Route path="partners" element={<PartnersPage />} />
+        <Route path="register-business" element={<BusinessRegistrationPage />} />
+        <Route path="business-status" element={<BusinessStatusPage />} />
         <Route path="register-driver" element={<DriverRegistrationPage />} />
         <Route path="driver-status" element={<DriverStatusPage />} />
         <Route path="destinations" element={<DestinationsPage />} />
+        <Route path="activities" element={<ActivitiesPage />} />
+        <Route path="food-and-shopping" element={<FoodAndShoppingPage />} />
+        <Route path="travel-guide" element={<TravelGuidePage />} />
         <Route path="my-enquiries" element={<EnquiriesPage />} />
         <Route path="admin/panel" element={<AdminEnquiriesPage />} />
         <Route path="admin/panel/reviews" element={<AdminReviewsPage />} />
         <Route path="admin/panel/hotels" element={<AdminHotelsPage />} />
         <Route path="admin/panel/drivers" element={<AdminDriversPage />} />
+        <Route path="admin/panel/businesses" element={<AdminBusinessesPage />} />
         <Route path="my-enquiries/admin" element={<Navigate to="/admin/panel" replace />} />
         <Route path="my-enquiries/admin/reviews" element={<Navigate to="/admin/panel/reviews" replace />} />
         <Route path="reviews" element={<ReviewsPage />} />

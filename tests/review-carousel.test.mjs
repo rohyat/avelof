@@ -211,12 +211,13 @@ test('review carousel preserves layout and supports accessible automatic and man
 
     await context.test('home shortcut tiles stay clear and readable across screen sizes', async () => {
       const page = await browser.newPage({ viewport: { width: 768, height: 1024 } })
+      await page.route('**/api/businesses*', (route) => route.fulfill({ json: { businesses: [], total: 0, page: 1, pageSize: 25 } }))
       try {
         await page.goto(origin)
         const tiles = page.locator('.home-shortcut-link')
         const shortcuts = page.getByRole('navigation', { name: 'Explore AVELOF' })
         await tiles.last().waitFor()
-        assert.deepEqual(await tiles.allTextContents(), ['Plan a trip', 'Packages', 'Cabs', 'Hotels', 'Places', 'Bookings', 'Reviews', 'Drivers', 'Partner'])
+        assert.deepEqual(await tiles.allTextContents(), ['Plan a trip', 'Packages', 'Hotels', 'Cabs', 'Drivers', 'Bookings', 'Places', 'Activities', 'Reviews', 'Food & Shopping', 'Travel Guide', 'Partner'])
         assert.equal(await page.getByRole('button', { name: 'Ask AVELOF' }).count(), 0)
         assert.ok(await page.getByRole('heading', { name: 'Experience Kashmir Beyond Expectations.' }).isVisible())
         assert.ok(await page.getByText("Where Kashmir's natural beauty meets warm hospitality, memorable stays and genuine local care.", { exact: true }).isVisible())
@@ -225,6 +226,36 @@ test('review carousel preserves layout and supports accessible automatic and man
         assert.equal(await homeHero.getAttribute('aria-label'), null)
         assert.match(await homeHero.evaluate((hero) => getComputedStyle(hero).backgroundImage), /homepage-background\.jpg/)
         assert.equal(await homeHero.locator('img').count(), 0)
+        for (const [label, path, title] of [
+          ['Activities', '/activities', 'Kashmir Activities | AVELOF'],
+          ['Food & Shopping', '/food-and-shopping', 'Kashmir Restaurants & Shops | AVELOF'],
+          ['Travel Guide', '/travel-guide', 'Kashmir Travel Guide | AVELOF'],
+        ]) {
+          await shortcuts.getByRole('link', { name: label, exact: true }).click()
+          assert.equal(new URL(page.url()).pathname, path)
+          await page.getByRole('heading', { name: label, exact: true, level: 1 }).waitFor()
+          assert.equal(await page.title(), title)
+          if (label === 'Activities') {
+            assert.ok(await page.getByRole('heading', { name: 'Your places. Your experiences.' }).isVisible())
+            assert.equal(await page.getByRole('link', { name: 'Choose activities in Plan a trip' }).getAttribute('href'), '/#custom-trip')
+            assert.equal(await page.locator('.activity-card').count(), 12)
+          } else if (label === 'Food & Shopping') {
+            assert.ok(await page.getByRole('combobox', { name: 'Business type', exact: true }).isVisible())
+            assert.ok(await page.getByRole('combobox', { name: 'Destination', exact: true }).isVisible())
+            assert.ok(await page.getByText(/does not provide food orders/i).isVisible())
+            assert.equal(await page.locator('main form').count(), 0)
+          } else {
+            assert.equal(await page.locator('.discovery-card').count(), 4)
+            assert.equal(await page.locator('.discovery-card li').count(), 12)
+          }
+          for (const width of [320, 390, 1440]) {
+            await page.setViewportSize({ width, height: 900 })
+            assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${label} should fit at ${width}px`)
+          }
+          await page.reload()
+          await page.getByRole('heading', { name: label, exact: true, level: 1 }).waitFor()
+          await page.getByRole('link', { name: 'Home', exact: true }).click()
+        }
         await page.clock.install()
         await page.goto(`${origin}/destinations`)
         const destinationPhotos = [
@@ -279,10 +310,10 @@ test('review carousel preserves layout and supports accessible automatic and man
             const rows = new Set(tiles.map((tile) => Math.round(tile.getBoundingClientRect().y)))
             return { count: tiles.length, overflow: document.documentElement.scrollWidth > innerWidth, rowCount: rows.size, clippedText: tiles.some((tile) => tile.scrollWidth > tile.clientWidth) }
           })
-          assert.equal(layout.count, 9)
+          assert.equal(layout.count, 12)
           assert.equal(layout.overflow, false, `Page overflow at ${width}px`)
           assert.equal(layout.clippedText, false, `Tile labels should fit at ${width}px`)
-          assert.equal(layout.rowCount, 3, `Tiles should form three balanced rows at ${width}px`)
+          assert.equal(layout.rowCount, 4, `Tiles should form four balanced rows at ${width}px`)
         }
         for (const [width, height] of [[320, 640], [360, 740], [390, 844], [446, 699], [430, 932]]) {
           await page.setViewportSize({ width, height })

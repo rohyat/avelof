@@ -59,10 +59,10 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       uploadedKeys.push(key)
       await saveRegistrationPhoto(DB, key, image)
     }
-    const { id, phone, contactName, publicationConsent, website, ...publicDetails } = data
+    const { id, phone, contactName, publicationConsent, website, latitude, longitude, ...publicDetails } = data
     void publicationConsent; void website
-    const row = await DB.prepare(`UPDATE hotel_registrations SET phone = ?, contact_name = ?, details_json = ?, photo_keys_json = ?, submitted_price = ?, price = ?, status = 'pending', owner_note = '', publication_consent = 1, payload_hash = ?, version = version + 1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND version = ? AND NOT EXISTS (SELECT 1 FROM hotel_registrations WHERE phone = ? AND id != ?) RETURNING ${hotelColumns}`)
-      .bind(phone, contactName, JSON.stringify(publicDetails), images.length ? JSON.stringify(uploadedKeys) : current.photo_keys_json, data.price, data.price, payloadHash, id, credentials.data.version, phone, id).first<HotelRow>()
+    const row = await DB.prepare(`UPDATE hotel_registrations SET phone = ?, contact_name = ?, details_json = ?, photo_keys_json = ?, submitted_price = ?, price = ?, latitude = CASE WHEN ? THEN ? ELSE latitude END, longitude = CASE WHEN ? THEN ? ELSE longitude END, status = 'pending', owner_note = '', publication_consent = 1, payload_hash = ?, version = version + 1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND version = ? AND NOT EXISTS (SELECT 1 FROM hotel_registrations WHERE phone = ? AND id != ?) RETURNING ${hotelColumns}`)
+      .bind(phone, contactName, JSON.stringify(publicDetails), images.length ? JSON.stringify(uploadedKeys) : current.photo_keys_json, data.price, data.price, latitude !== undefined ? 1 : 0, latitude ?? null, longitude !== undefined ? 1 : 0, longitude ?? null, payloadHash, id, credentials.data.version, phone, id).first<HotelRow>()
     if (!row) {
       await deleteRegistrationPhotos(DB, uploadedKeys)
       uploadedKeys.length = 0

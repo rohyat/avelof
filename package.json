@@ -4,14 +4,17 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:maps-ui": "node --test tests/location-picker.test.mjs",
     "dev": "vite",
     "dev:cloudflare": "wrangler pages dev dist --port 8791",
     "build": "tsc -b && tsc -p tsconfig.functions.json && vite build",
     "deploy": "wrangler pages deploy dist --project-name avelof --branch main",
-    "test": "node --test functions/api/enquiries.test.mjs",
+    "test": "node --test functions/api/enquiries.test.mjs functions/api/businesses.test.mjs",
     "test:reviews-ui": "node --test tests/review-carousel.test.mjs",
     "test:hotels-ui": "node --test tests/hotel-registration.test.mjs",
     "test:partners-ui": "node --test tests/partner-registration.test.mjs",
+    "test:activities-ui": "node --test tests/activities.test.mjs",
+    "test:businesses-ui": "node --test tests/business-registration.test.mjs",
     "setup:access": "node scripts/setup-enquiry-access.mjs",
     "setup:admin-password": "node scripts/set-admin-password.mjs",
     "setup:push-notifications": "node scripts/setup-push-notifications.mjs",
@@ -23,6 +26,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "leaflet": "^1.9.4",
     "@block65/webcrypto-web-push": "^2.0.0",
     "lucide-react": "^1.70.0",
     "react": "^19.3.1",
@@ -31,6 +35,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.21",
     "@cloudflare/workers-types": "^5.20261110.1",
     "@tailwindcss/vite": "^4.3.4",
     "@types/node": "^24.19.2",

@@ -41,6 +41,8 @@ export const enquirySchema = z.object({
     vehicleRentalEstimate: shortText.optional(),
     placesToVisit: z.string().trim().max(20000).optional(),
     selectedDestinations: z.string().trim().max(2000).optional(),
+    selectedActivities: z.string().trim().max(6000).optional(),
+    unionCabRequests: z.string().trim().max(2000).optional(),
     planningNote: z.string().trim().max(2000).optional(),
     customDetails: z.string().trim().max(20000).optional(),
   }).strict(),

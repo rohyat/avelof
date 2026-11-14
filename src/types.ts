@@ -66,6 +66,8 @@ export interface RentalCar extends CatalogBase {
 }
 
 export interface Hotel extends CatalogBase {
+  latitude?: number | null
+  longitude?: number | null
   kind: 'hotel'
   registeredHotelId?: string
   hotelAverageRating?: number | null

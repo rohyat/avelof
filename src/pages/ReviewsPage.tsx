@@ -217,7 +217,7 @@ export function AdminReviewsPage() {
     <Link className="text-link" to="/admin/panel"><ArrowLeft size={16} /> Owner dashboard</Link>
     <div className="enquiry-access-heading"><Star size={28} /><div><p className="eyebrow">AVELOF owner access</p><h1>Review moderation</h1></div></div>
     {signedOut ? <p>Please <Link className="text-link" to="/admin/panel">sign in to the owner dashboard</Link> before managing reviews.</p> : <>
-      <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><span aria-current="page">Reviews</span><Link to="/admin/panel/hotels">Hotels</Link><Link to="/admin/panel/drivers">Drivers</Link></nav>
+      <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><span aria-current="page">Reviews</span><Link to="/admin/panel/hotels">Hotels</Link><Link to="/admin/panel/drivers">Drivers</Link><Link to="/admin/panel/businesses">Food & Shopping</Link></nav>
       <OwnerPushNotifications />
       <nav className="admin-review-sections" aria-label="Review sections">
         {(['guest', 'driver', 'hotel'] as const).map((category) => <button key={category} className={`button ${filters.category === category ? 'button-dark' : 'button-outline'}`} type="button" aria-current={filters.category === category ? 'page' : undefined} disabled={Boolean(savingId)} onClick={() => changeSubject(category)}>{category === 'guest' ? 'Guest reviews' : category === 'driver' ? 'Driver reviews' : 'Hotel reviews'}</button>)}

@@ -134,7 +134,7 @@ export const destinations: Destination[] = [
     detail: 'Wide meadows and high mountain scenery, with snow activities in winter and walking trails in warmer months.',
     suggestedVisit: 'Full day or 1-2 nights', season: 'Spring-autumn for meadows; winter for snow',
     accessNote: 'Gondola tickets require separate booking and operations depend on weather. Snow can require local transfers or chains; high-altitude activities need extra care.',
-    attractions: [{ name: 'Gulmarg Gondola', detail: 'Kongdori and the higher Apharwat section, when operating.' }, { name: 'Gulmarg meadow', detail: 'Gentle walks around the meadow and golf-course area.' }, { name: 'Drung Waterfall', detail: 'A nearby stop via Tangmarg; winter paths can be icy.' }],
+    attractions: [{ name: 'Gulmarg Gondola', detail: 'A cable-car journey with separately booked tickets and weather-dependent operations.' }, { name: 'Gulmarg meadow', detail: 'Gentle walks around the meadow and golf-course area.' }, { name: 'Drung Waterfall', detail: 'A nearby stop via Tangmarg; winter paths can be icy.' }, { name: 'Kongdori', detail: 'Mountain scenery at the first Gondola phase, subject to tickets and operation.' }, { name: 'Apharwat views', detail: 'Higher-altitude scenery reached by the second Gondola phase when permitted; check weather and suitability.' }],
   },
   {
     id: 'pahalgam', name: 'Pahalgam', aliases: [], image: suppliedPhotos.pahalgam, photoIsUserProvided: true, count: 'River country',
@@ -151,7 +151,7 @@ export const destinations: Destination[] = [
     detail: 'An alpine valley beside the Sind River, with meadow views and access to higher mountain excursions.',
     suggestedVisit: 'Full day or 1 night', season: 'Late spring-autumn; winter operations vary',
     accessNote: 'Check road and activity access before departure. Thajiwas excursions and any onward Zoji La trip require separate time and arrangements.',
-    attractions: [{ name: 'Thajiwas area', detail: 'Walking or pony excursions towards glacier scenery, depending on conditions.' }, { name: 'Sind River', detail: 'Scenic stops along the valley; avoid entering fast-flowing water.' }, { name: 'Sonamarg meadow', detail: 'Open views and short walks near the town.' }, { name: 'Zoji La', detail: 'An optional onward mountain-pass excursion, not included in the Srinagar estimate; seasonal restrictions apply.' }],
+    attractions: [{ name: 'Thajiwas area', detail: 'Walking or pony excursions towards glacier scenery, depending on conditions.' }, { name: 'Sind River', detail: 'Scenic stops along the valley; avoid entering fast-flowing water.' }, { name: 'Sonamarg meadow', detail: 'Open views and short walks near the town.' }, { name: 'Zoji La', detail: 'An optional onward mountain-pass excursion, not included in the Srinagar estimate; seasonal restrictions apply.' }, { name: 'Alpine trekking country', detail: 'Sonamarg is a starting area for longer alpine routes, including Great Lakes itineraries. These require separate days, guides and access checks.' }],
   },
   {
     id: 'doodhpathri', name: 'Doodhpathri', aliases: ['Dudhpatri', 'Doodhpatri'], image: suppliedPhotos.doodhpathri, photoIsUserProvided: true, count: 'Quiet meadow',
@@ -159,7 +159,7 @@ export const destinations: Destination[] = [
     detail: 'Rolling grassland and forested slopes, well suited to an unhurried picnic and short meadow walks.',
     suggestedVisit: 'Half to full day', season: 'Late spring-autumn',
     accessNote: 'Snow can restrict the upper road. River paths are uneven, and facilities are limited away from the main meadow.',
-    attractions: [{ name: 'Doodhpathri meadow', detail: 'Open grassland for gentle walks and a picnic.' }, { name: 'Shaliganga River', detail: 'A walk down to river scenery; wear shoes with grip.' }, { name: 'Tangnar', detail: 'Forest and meadow stops on the approach road.' }],
+    attractions: [{ name: 'Doodhpathri meadow', detail: 'Open grassland for gentle walks and a picnic.' }, { name: 'Shaliganga River', detail: 'A walk down to river scenery; wear shoes with grip.' }, { name: 'Tangnar', detail: 'Forest and meadow stops on the approach road.' }, { name: 'Forested slopes', detail: 'Enjoy the wooded edges of the meadow from accessible paths, without venturing onto unfamiliar trails.' }, { name: 'Valley viewpoints', detail: 'Pause for rolling meadow and mountain views where roadside stopping is safe and permitted.' }],
   },
   {
     id: 'yusmarg', name: 'Yusmarg', aliases: ['USMRG', 'Yousmarg', 'Yusmarg'], image: suppliedPhotos.yusmarg, photoIsUserProvided: true, count: 'Meadow & forest',
@@ -167,7 +167,7 @@ export const destinations: Destination[] = [
     detail: 'A quieter meadow escape with forest walks and longer trails for guests who want time outdoors.',
     suggestedVisit: 'Full day', season: 'Late spring-autumn',
     accessNote: 'Doodh Ganga and Nilnag are walking excursions, not drive-up stops. Check trail conditions and allow time to return before dark.',
-    attractions: [{ name: 'Yusmarg meadow', detail: 'Easy meadow walks beside the surrounding forest.' }, { name: 'Doodh Ganga', detail: 'A forest walk to the river; route and duration depend on conditions.' }, { name: 'Nilnag Lake', detail: 'A longer guided walking excursion, arranged separately.' }, { name: 'Charar-e-Sharief', detail: 'A shrine town that can be considered on the approach route.' }],
+    attractions: [{ name: 'Yusmarg meadow', detail: 'Easy meadow walks beside the surrounding forest.' }, { name: 'Doodh Ganga', detail: 'A forest walk to the river; route and duration depend on conditions.' }, { name: 'Nilnag Lake', detail: 'A longer guided walking excursion, arranged separately.' }, { name: 'Charar-e-Sharief', detail: 'A shrine town that can be considered on the approach route.' }, { name: 'Forest-edge scenery', detail: 'Spend unhurried time along the meadow and forest boundary; check paths locally before longer walks.' }],
   },
   {
     id: 'peer-ki-gali', name: 'Peer Ki Gali', aliases: ['Peer Ki Gai', 'Pir Ki Gali', 'Peer Ki Gali'], image: photos.mountain, count: 'High mountain pass',
@@ -192,7 +192,7 @@ export const destinations: Destination[] = [
     detail: 'A remote valley beyond Razdan Pass, known for the Kishanganga River and mountain village life.',
     suggestedVisit: '2-3 nights; not a casual day trip', season: 'Usually late spring-autumn, subject to pass opening',
     accessNote: 'Razdan Pass closes in winter. Check road status, identification or permit requirements and accommodation ahead; mobile coverage can be limited.',
-    attractions: [{ name: 'Habba Khatoon peak', detail: 'Distinctive mountain views near Dawar.' }, { name: 'Kishanganga River', detail: 'Valley scenery and village-side walks.' }, { name: 'Razdan Pass', detail: 'A seasonal viewpoint on the approach.' }, { name: 'Tulail Valley', detail: 'An additional onward excursion with extra travel and access checks.' }],
+    attractions: [{ name: 'Habba Khatoon peak', detail: 'Distinctive mountain views near Dawar.' }, { name: 'Kishanganga River', detail: 'Valley scenery and village-side walks.' }, { name: 'Razdan Pass', detail: 'A seasonal viewpoint on the approach.' }, { name: 'Tulail Valley', detail: 'An additional onward excursion with extra travel and access checks.' }, { name: 'Dawar village', detail: 'A base for exploring the valley at a slower pace; respect residents and ask before photographing people.' }],
   },
   {
     id: 'manasbal', name: 'Manasbal Lake', aliases: ['Manasbal', 'Safapora'], image: '/images/destinations/manasbal.jpg', count: 'Lake day out',
@@ -201,7 +201,7 @@ export const destinations: Destination[] = [
     detail: 'A quieter lake north of Srinagar, with garden views and relaxed time by the water.',
     suggestedVisit: 'Half day', season: 'Spring-autumn',
     accessNote: 'Boat availability and charges vary. Wular is a separate onward drive, not included in this travel estimate.',
-    attractions: [{ name: 'Manasbal lakefront', detail: 'Water views, gardens and seasonal boat rides.' }, { name: 'Jharokha Bagh', detail: 'A historic garden beside the lake.' }],
+    attractions: [{ name: 'Manasbal lakefront', detail: 'Water views and relaxed time beside the lake.' }, { name: 'Jharokha Bagh', detail: 'A historic garden beside the lake.' }, { name: 'Seasonal lake vegetation', detail: 'Look for seasonal aquatic plants from permitted lakefront areas; flowering varies through the year.' }, { name: 'Lakeside birdlife', detail: 'Observe birds quietly from the shore without feeding or disturbing them; sightings vary.' }, { name: 'Lake views from the water', detail: 'Ask locally about permitted boat rides, life jackets and separate charges. Operation is not guaranteed.' }],
   },
   {
     id: 'wular', name: 'Wular Lake', aliases: ['Wullar', 'Bandipora'], image: photos.lake, count: 'Wetland & birdlife',
@@ -209,7 +209,7 @@ export const destinations: Destination[] = [
     detail: 'Broad wetland landscapes and birdlife, with views that vary with season and water level.',
     suggestedVisit: 'Half to full day', season: 'Spring-autumn; birdlife varies by season',
     accessNote: 'Wular has several approach points. The distance here is for the Bandipora side; confirm the chosen viewpoint and local access.',
-    attractions: [{ name: 'Wular lake viewpoints', detail: 'Wide lake views from accessible designated stops.' }, { name: 'Watlab', detail: 'An alternative lake-view area with a separate approach route.' }],
+    attractions: [{ name: 'Wular lake viewpoints', detail: 'Wide lake views from accessible designated stops.' }, { name: 'Watlab', detail: 'An alternative lake-view area with a separate approach route.' }, { name: 'Wetland birdlife', detail: 'Look for birds from permitted viewing areas; species and sightings change with the season.' }, { name: 'Bandipora-side scenery', detail: 'Explore the chosen lake approach at a relaxed pace, confirming safe stopping points with your driver.' }, { name: 'Changing water landscapes', detail: 'Seasonal water levels reshape the lake scenery. Stay on established paths rather than entering wetland edges.' }],
   },
   {
     id: 'dachigam', name: 'Dachigam National Park', aliases: ['Dachigam', 'Harwan'], image: photos.meadow, count: 'Wildlife & woodland',
@@ -217,6 +217,6 @@ export const destinations: Destination[] = [
     detail: 'Protected woodland near Srinagar, home to the endangered Hangul deer and rich Himalayan habitat.',
     suggestedVisit: 'Half day, subject to permission', season: 'Seasonal visitor access; confirm in advance',
     accessNote: 'Entry requires advance permission or booking with the relevant authorities. Wildlife sightings are not guaranteed; deeper park access is restricted.',
-    attractions: [{ name: 'Lower Dachigam', detail: 'Permitted nature walks or visits as arranged by park authorities.' }, { name: 'Harwan Garden', detail: 'A nearby garden stop outside the national park.' }],
+    attractions: [{ name: 'Lower Dachigam', detail: 'Permitted nature walks or visits as arranged by park authorities.' }, { name: 'Harwan Garden', detail: 'A nearby garden stop outside the national park.' }, { name: 'Himalayan woodland', detail: 'Appreciate forest habitat on authorised visitor routes; deeper park areas are restricted.' }, { name: 'Hangul habitat', detail: 'The park protects the endangered Kashmir stag. A visit is not a promise of a sighting.' }, { name: 'Forest birdlife', detail: 'Observe quietly within permitted areas and follow your authorised guide or park staff instructions.' }],
   },
 ]

@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowDown, ArrowLeft, Clock, MapPin, Route, Search, X } from 'lucide-react'
-import BookingModal, { EnquiryForm } from '../components/BookingModal'
+import { ArrowLeft, ArrowRight, CalendarDays, Clock, Compass, MapPin, Search, ShieldCheck, Sparkles, X } from 'lucide-react'
 import { destinationOptions as destinations } from '../data/destinationOptions'
 import DestinationPhotos from '../components/DestinationPhotos'
-import type { PreparedRequest } from '../types'
+import ActivityIcon from '../components/ActivityIcon'
+import { activitiesForPlaces } from '../data/activities'
+import { placeSuggestions, recentPlaceSearchesKey, searchPlaceSuggestions } from '../services/destinationSearch'
+import type { PlaceSuggestion } from '../services/destinationSearch'
+import SearchAutocomplete from '../components/SearchAutocomplete'
 
 export default function DestinationsPage() {
   const location = useLocation()
@@ -13,67 +16,59 @@ export default function DestinationsPage() {
   const tripReturn = (navigationState?.tripReturn?.sectionId === 'custom-trip' && navigationState.tripReturn.returnPath === '/')
     || (navigationState?.tripReturn?.sectionId === 'package-planner' && navigationState.tripReturn.returnPath === '/tour-packages')
   const [search, setSearch] = useState(new URLSearchParams(location.search).get('place') ?? '')
-  const [driveLimit, setDriveLimit] = useState('all')
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [request, setRequest] = useState<PreparedRequest | null>(null)
-  const [today] = useState(() => {
-    const date = new Date()
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-  })
-  const selected = selectedIds.map((id) => destinations.find((place) => place.id === id)!).filter(Boolean)
+  const [selectedDestination, setSelectedDestination] = useState<string | null>(null)
+  const matches = searchPlaceSuggestions(search)
+  const customiseUrl = tripReturn ? `${navigationState?.tripReturn?.returnPath}#${navigationState?.tripReturn?.sectionId}` : '/#custom-trip'
   const filtered = destinations.filter((place) => {
-    const text = [place.name, ...place.aliases, place.count, place.detail, ...place.attractions.map((attraction) => `${attraction.name} ${attraction.detail}`)].join(' ').toLowerCase()
-    return text.includes(search.trim().toLowerCase()) && (driveLimit === 'all' || place.maxDriveHours <= Number(driveLimit))
+    if (selectedDestination) return place.id === selectedDestination
+    const text = [place.name, ...place.aliases, place.count, place.detail, ...place.attractions.map((attraction) => `${attraction.name} ${attraction.detail}`), ...activitiesForPlaces([place.id]).map((activity) => activity.name)].join(' ').toLowerCase()
+    return text.includes(search.trim().toLowerCase()) || matches.some((match) => match.destinationId === place.id)
   })
 
-  function togglePlace(id: string) {
-    setSelectedIds((current) => current.includes(id) ? current.filter((selectedId) => selectedId !== id) : [...current, id])
+  function chooseSuggestion(suggestion: PlaceSuggestion) {
+    setSearch(suggestion.label)
+    setSelectedDestination(suggestion.destinationId)
+    requestAnimationFrame(() => {
+      const heading = document.getElementById(`place-${suggestion.destinationId}`)
+      heading?.focus({ preventScroll: true })
+      heading?.closest('article')?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    })
   }
 
   return <>
     <section className="page-hero places-hero">
       <div className="page-width">
-        <div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>Destinations & visit planner</span></div>
+        <div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>Places</span></div>
         <p className="eyebrow">Near the lake. Beyond the mountains.</p>
         <h1>Places to visit<br /><em>in Kashmir.</em></h1>
         <p>Find the places that fit your pace, from a Srinagar morning to a few nights in the high valleys.</p>
         <div className="destination-hero-actions">
-          <a className="button button-dark" href="#visit-planner">Plan your visit <ArrowDown size={17} /></a>
+          <Link className="button button-dark" to={customiseUrl}>Customise your trip <ArrowRight size={17} aria-hidden="true" /></Link>
           {tripReturn && <button className="button button-outline" type="button" onClick={() => navigate(-1)}><ArrowLeft size={16} /> Back to your trip</button>}
         </div>
       </div>
     </section>
     <div className="page-width destination-guide-layout">
       <section className="place-guide" aria-label="Destination guide">
-        <div className="journey-estimate-note"><Route size={21} /><p><strong>Starting from central Srinagar</strong>Distances and driving times are approximate and one-way, excluding stops and nearby excursions. Allow return travel time too. Traffic, snow, road closures and your pickup point can change the journey; confirm conditions before travelling.</p></div>
-        <div className="place-filters">
-          <label className="place-search"><span>Search places or attractions</span><div><Search size={18} /><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Try Gulmarg, Aru or a waterfall" /></div></label>
-          <label><span>One-way drive</span><select value={driveLimit} onChange={(event) => setDriveLimit(event.target.value)}><option value="all">Any distance</option><option value="2">Up to 2 hours</option><option value="3">Up to 3 hours</option><option value="5">Up to 5 hours</option></select></label>
-        </div>
-        <p className="place-result-count" role="status">{filtered.length} {filtered.length === 1 ? 'place' : 'places'} / {selected.length} in your plan</p>
-        {filtered.length ? <div className="place-list">{filtered.map((place) => <article className="place-entry" key={place.id}>
-          <div className="place-travel-facts"><span><MapPin size={16} /><strong>{place.distance}</strong> from Srinagar</span><span><Clock size={16} /><strong>{place.travelTime}</strong> one way</span></div>
+        <SearchAutocomplete label="Search places or attractions" placeholder="Try Gulmarg, Chandanwari or Drung" value={search} items={placeSuggestions} storageKey={recentPlaceSearchesKey} submitLabel="Search places" suggestionsLabel="Place suggestions" recentLabel="Recent place searches" onChange={(value) => { setSearch(value); setSelectedDestination(null) }} onSelect={chooseSuggestion} />
+        <p className="place-result-count" role="status">{filtered.length} {filtered.length === 1 ? 'place' : 'places'} to explore</p>
+        {filtered.length ? <div className="place-list">{filtered.map((place) => {
+          const placeActivities = activitiesForPlaces([place.id])
+          return <article className="place-entry" key={place.id} aria-labelledby={`place-${place.id}`}>
+          <div className="place-travel-facts"><span><MapPin size={16} /><strong>{place.distance}</strong> from Srinagar (approx.)</span><span><Clock size={16} /><strong>{place.travelTime}</strong> one way (approx.)</span></div>
           <div className="place-entry-main">
             <figure><DestinationPhotos places={place.includedPlaces} />{place.includedPlaces.some((included) => !included.photoCredit && !included.photoIsUserProvided && !included.additionalPhotos?.length) && <figcaption>Uncredited images are illustrative travel photography</figcaption>}</figure>
-            <div className="place-entry-copy"><p className="eyebrow">{place.count}</p><h2>{place.name}</h2><p>{place.detail}</p><dl><div><dt>Time to spend</dt><dd>{place.suggestedVisit}</dd></div><div><dt>Best season</dt><dd>{place.season}</dd></div></dl>
-              <label className="place-select"><input type="checkbox" checked={selectedIds.includes(place.id)} onChange={() => togglePlace(place.id)} /><span>Add {place.name} to my visit</span></label>
+            <div className="place-entry-copy"><p className="eyebrow">{place.count}</p><h2 id={`place-${place.id}`} tabIndex={-1}>{place.name}</h2><p>{place.detail}</p><dl><div><dt><Clock size={15} aria-hidden="true" /> Time to spend</dt><dd>{place.suggestedVisit}</dd></div><div><dt><CalendarDays size={15} aria-hidden="true" /> Best season</dt><dd>{place.season}</dd></div></dl>
             </div>
           </div>
-          <details className="place-attractions"><summary>Attractions & access in {place.name}</summary><ul>{place.attractions.map((attraction) => <li key={attraction.name}><strong>{attraction.name}</strong><p>{attraction.detail}</p></li>)}</ul><p className="place-access-note"><strong>Before you go: </strong>{place.accessNote}</p></details>
-        </article>)}</div> : <div className="empty-state"><Search size={26} /><h2>No places match</h2><p>Try another place, attraction or driving time.</p><button className="button button-outline" onClick={() => { setSearch(''); setDriveLimit('all') }}>Clear filters <X size={16} /></button></div>}
+          <section className="place-attractions" aria-label={`Main attractions in ${place.name}`}><h3><Compass size={20} aria-hidden="true" /> Main attractions</h3><ul>{place.attractions.map((attraction, index) => <li key={attraction.name}><span className="place-highlight-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><div><strong>{attraction.name}</strong><p>{attraction.detail}</p></div></li>)}</ul></section>
+          <section className="place-experiences" aria-label={`Activities in ${place.name}`}><h3><Sparkles size={20} aria-hidden="true" /> Activities & experiences</h3>
+            {placeActivities.length ? <><p className="place-section-note">Optional paid experiences from our activity catalogue. Request them in the Activities step; prices and availability are confirmed separately.</p><ul>{placeActivities.map((activity) => <li key={activity.id}><ActivityIcon activity={activity} /><div><h4>{activity.name}</h4><p>{activity.description}</p><small>{activity.season}</small><p className="place-activity-note">{activity.note}</p>{activity.operatorCheck && <strong className="activity-check-note">Operator verification required</strong>}</div></li>)}</ul></> : <><p className="place-section-note">Enjoy the scenery, photography and permitted sightseeing described above. No paid activities for this place are currently listed in our catalogue; ask AVELOF about suitable options rather than assuming an operator is available.</p><Link className="text-link" to="/activities">Browse the activity catalogue <ArrowRight size={15} aria-hidden="true" /></Link></>}
+          </section>
+          <section className="place-before-you-go" aria-label={`Before visiting ${place.name}`}><h3><ShieldCheck size={20} aria-hidden="true" /> Before you go</h3><p className="place-access-note">{place.accessNote}</p></section>
+          <div className="place-customise"><p>Make room for {place.name} in a trip shaped around your dates and pace. Choose your places in the main planner.</p><Link className="button button-dark" to={customiseUrl}>Customise your trip <ArrowRight size={16} aria-hidden="true" /></Link></div>
+        </article>})}</div> : <div className="empty-state"><Search size={26} /><h2>No places match</h2><p>Try another place or attraction.</p><button className="button button-outline" onClick={() => { setSearch(''); setSelectedDestination(null) }}>Clear search <X size={16} /></button></div>}
       </section>
-      <aside className="visit-planner" id="visit-planner" aria-labelledby="planner-title">
-        <p className="eyebrow">A journey shaped around you</p><h2 id="planner-title">Plan your visit.</h2>
-        <div className="visit-selection" aria-live="polite"><h3>{selected.length} {selected.length === 1 ? 'place' : 'places'} selected</h3>
-          {selected.length ? <ul>{selected.map((place) => <li key={place.id}><div><strong>{place.name}</strong><span>{place.travelTime} from Srinagar</span></div><button className="icon-button" title={`Remove ${place.name}`} aria-label={`Remove ${place.name}`} onClick={() => togglePlace(place.id)}><X size={17} /></button></li>)}</ul> : <p>No places selected yet.</p>}
-        </div>
-        <p className="planner-caution">Each estimate starts from Srinagar, not the previous place. This is a wishlist, not a confirmed route; our team will check the order, dates and road access.</p>
-        {selected.some((place) => place.maxDriveHours >= 4) && <p className="planner-long-drive">Your plan includes a long mountain drive. Allow a dedicated travel day and discuss overnight stays with our team.</p>}
-        <EnquiryForm selectedItem="Custom package" submitDisabled={!selected.length} additionalFields={{ placesToVisit: selected.map((place) => `${place.name} (${place.distance}; ${place.travelTime} one-way from Srinagar)`).join('\n'), planningNote: 'Destination wishlist only. Please recommend a feasible route and check seasonal access.' }} onPrepared={setRequest}>
-          <div className="form-grid planner-dates"><label>Arrival date <span className="optional">Optional</span><input name="arrivalDate" type="date" min={today} /></label><label>Trip length (days)<input name="tripDays" type="number" min="1" max="60" defaultValue="5" required /></label></div>
-        </EnquiryForm>
-      </aside>
     </div>
-    {request && <BookingModal kind="package" initialRequest={request} onClose={() => setRequest(null)} />}
   </>
 }

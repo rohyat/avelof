@@ -21,6 +21,8 @@ import { hotelPhotoLimit, hotelUploadLimit } from '../../src/data/hotelRegistrat
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 import { adminCookie, correctAdminUsername, createAdminSession, customerAccessCode, hashText, isAdmin, phoneCandidates, verifyAdminPassword } from '../_lib/enquiryAccess.ts'
 import { indianPhoneNumber } from '../../src/services/phoneNumbers.ts'
+import { hotelSubmissionSchema, hotelModerationSchema } from '../../src/services/hotelSchema.ts'
+import { businessSubmissionSchema } from '../../src/services/businessSchema.ts'
 import { requestedBooking } from '../../src/services/bookingDetails.ts'
 import { buildOwnerReviewImport } from '../../scripts/import-owner-reviews.mjs'
 import { ownerGuestReviewMonths, ownerProvidedGuestReviews } from '../../src/data/catalog.ts'
@@ -332,7 +334,7 @@ test('driver approval needs no price, excludes private data and hides photos on 
     assert.equal((await driverRequest(DB, bucket, 'PATCH', edit)).status, 401)
     assert.equal((await driverRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie, Origin: 'https://elsewhere.test' } })).status, 403)
     assert.equal((await driverRequest(DB, bucket, 'PATCH', { ...edit, price: 1 }, { headers: { Cookie } })).status, 400)
-    for (const invalid of [{ vehicleNumber: 'JK01AB1234' }, { status: 'invalid' }, { ownerNote: 'a'.repeat(1001) }]) {
+    for (const invalid of [{ vehicleNumber: 'JK01AB123' }, { status: 'invalid' }, { ownerNote: 'a'.repeat(1001) }]) {
       assert.equal((await driverRequest(DB, bucket, 'PATCH', { ...edit, ...invalid }, { headers: { Cookie } })).status, 400)
     }
     const approval = await driverRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })
@@ -360,10 +362,23 @@ test('D1 numeric BLOB arrays are restored to exact JPEG response bytes', () => {
   assert.deepEqual(restored, new Uint8Array(testHotelJpeg))
   assert.equal(validHotelJpeg(restored), true)
 })
+test('driver numbers accept spaces and omitted separators and persist a dash before the last four digits', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    for (const [index, vehicleNumber] of ['JK13J7748', 'JK 13 J 7748', 'jk13j-7748'].entries()) {
+      const input = { ...driverPayload(), vehicleNumber, phone: `987654321${index}` }
+      const response = await driverRequest(DB, bucket, 'POST', input, { headers: { 'CF-Connecting-IP': `192.0.2.${index + 60}` } })
+      assert.equal(response.status, 201)
+      const stored = DB.sqlite.prepare('SELECT private_json FROM driver_registrations WHERE id = ?').get(input.id)
+      assert.equal(JSON.parse(stored.private_json).vehicleNumber, 'JK13J-7748')
+    }
+  } finally { DB.sqlite.close() }
+})
+
 test('driver validation and failed uploads never return success or leave unreferenced photos', async () => {
   const DB = database(), bucket = hotelBucket()
   try {
-    for (const [index, invalid] of [{ age: 17 }, { seats: 2.5 }, { price: -1 }, { vehicleId: 'Invalid' }, { location: 'Gulmarg' }, { vehicleNumber: 'JK01AB1234' }, { vehicleNumber: 'DL01AB-1234' }].entries()) {
+    for (const [index, invalid] of [{ age: 17 }, { seats: 2.5 }, { price: -1 }, { vehicleId: 'Invalid' }, { location: 'Gulmarg' }, { vehicleNumber: 'JK01AB123' }, { vehicleNumber: 'DL01AB-1234' }].entries()) {
       assert.equal((await driverRequest(DB, bucket, 'POST', { ...driverPayload(), ...invalid }, { headers: { 'CF-Connecting-IP': `192.0.2.${index + 1}` } })).status, 400)
     }
     assert.equal((await driverRequest(DB, bucket, 'POST', driverPayload(), { photos: [testHotelJpeg, testHotelJpeg], headers: { 'CF-Connecting-IP': '192.0.2.10' } })).status, 400)
@@ -441,6 +456,106 @@ test('hotel room-only and meal add-on rates survive approval, including free mea
     assert.equal(published.breakfastPrice, 0)
     assert.equal(published.dinnerPrice, 700)
     assert.equal(published.mealPlan, 'Room only')
+  } finally { DB.sqlite.close() }
+})
+
+test('hotel map coordinates validate, survive private edits and moderation, and clear explicitly', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    const base = hotelPayload()
+    const invalidPins = [
+      { latitude: 0 }, { longitude: 0 }, { latitude: null, longitude: 0 },
+      { latitude: 91, longitude: 0 }, { latitude: 0, longitude: -181 },
+      { latitude: '34', longitude: 74 }, { latitude: null, longitude: 74 },
+    ]
+    for (const [index, pin] of invalidPins.entries()) {
+      assert.equal((await hotelRequest(DB, bucket, 'POST', { ...base, ...pin }, { headers: { 'CF-Connecting-IP': `192.0.2.${index + 1}` } })).status, 400)
+    }
+    const input = { ...base, latitude: 34.123456, longitude: 74.123456 }
+    const receipt = await (await hotelRequest(DB, bucket, 'POST', input, { headers: { 'CF-Connecting-IP': '192.0.2.50' } })).json()
+    assert.equal(receipt.saved, true)
+    assert.deepEqual(await (await hotelRequest(DB, bucket, 'POST', input, { headers: { 'CF-Connecting-IP': '192.0.2.50' } })).json(), receipt)
+    let row = DB.sqlite.prepare('SELECT latitude, longitude FROM hotel_registrations WHERE id = ?').get(input.id)
+    assert.equal(row.latitude, input.latitude)
+    assert.equal(row.longitude, input.longitude)
+    assert.equal((await (await hotelRequest(DB, bucket, 'GET')).json()).total, 0)
+    let owner = (await (await hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: receipt.accessCode }, { lookup: true })).json()).hotel
+    assert.equal(owner.latitude, input.latitude)
+    assert.equal(owner.longitude, input.longitude)
+
+    const updateOptions = { handler: onHotelUpdateRequest, photos: [], auth: { version: 0, accessCode: receipt.accessCode } }
+    assert.equal((await hotelRequest(DB, bucket, 'POST', { ...input, longitude: 181 }, updateOptions)).status, 400)
+    const { latitude, longitude, ...withoutPin } = input
+    const update = await hotelRequest(DB, bucket, 'POST', withoutPin, updateOptions)
+    assert.equal(update.status, 200)
+    assert.equal((await hotelRequest(DB, bucket, 'POST', withoutPin, updateOptions)).status, 200)
+    row = DB.sqlite.prepare('SELECT latitude, longitude FROM hotel_registrations WHERE id = ?').get(input.id)
+    assert.equal(row.latitude, latitude)
+    assert.equal(row.longitude, longitude)
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    const admin = (await (await hotelRequest(DB, bucket, 'GET', undefined, { query: '?scope=admin', headers: { Cookie } })).json()).hotels[0]
+    assert.equal(admin.latitude, latitude)
+    assert.equal(admin.longitude, longitude)
+    const edit = { id: input.id, version: 1, status: 'approved', price: input.price, ownerNote: '' }
+    assert.equal((await hotelRequest(DB, bucket, 'PATCH', { ...edit, latitude: 1 }, { headers: { Cookie } })).status, 400)
+    assert.equal((await hotelRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })).status, 200)
+    let listing = (await (await hotelRequest(DB, bucket, 'GET')).json()).hotels[0]
+    assert.equal(listing.latitude, latitude)
+    assert.equal(listing.longitude, longitude)
+    assert.equal(listing.phone, undefined)
+    assert.equal(listing.contactName, undefined)
+    assert.equal((await hotelRequest(DB, bucket, 'PATCH', { ...edit, version: 2, latitude: -90, longitude: 180 }, { headers: { Cookie } })).status, 200)
+    listing = (await (await hotelRequest(DB, bucket, 'GET')).json()).hotels[0]
+    assert.equal(listing.latitude, -90)
+    assert.equal(listing.longitude, 180)
+    const clearOptions = { ...updateOptions, auth: { ...updateOptions.auth, version: 3 } }
+    assert.equal((await hotelRequest(DB, bucket, 'POST', { ...withoutPin, latitude: null, longitude: null }, clearOptions)).status, 200)
+    owner = (await (await hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: receipt.accessCode }, { lookup: true })).json()).hotel
+    assert.equal(owner.latitude, undefined)
+    assert.equal(owner.longitude, undefined)
+    assert.equal((await hotelRequest(DB, bucket, 'PATCH', { ...edit, version: 4, latitude: 0, longitude: 0 }, { headers: { Cookie } })).status, 200)
+    assert.equal((await hotelRequest(DB, bucket, 'PATCH', { ...edit, version: 5, latitude: null, longitude: null }, { headers: { Cookie } })).status, 200)
+    listing = (await (await hotelRequest(DB, bucket, 'GET')).json()).hotels[0]
+    assert.equal(listing.latitude, undefined)
+    assert.equal(listing.longitude, undefined)
+    const setOptions = { ...updateOptions, auth: { ...updateOptions.auth, version: 6 } }
+    assert.equal((await hotelRequest(DB, bucket, 'POST', { ...withoutPin, latitude: 1, longitude: 2 }, setOptions)).status, 200)
+    owner = (await (await hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: receipt.accessCode }, { lookup: true })).json()).hotel
+    assert.equal(owner.latitude, 1)
+    assert.equal(owner.longitude, 2)
+    DB.sqlite.prepare('UPDATE hotel_registrations SET latitude = NULL, longitude = NULL WHERE id = ?').run(input.id)
+    assert.throws(() => DB.sqlite.prepare('UPDATE hotel_registrations SET latitude = 1 WHERE id = ?').run(input.id))
+    assert.throws(() => DB.sqlite.prepare('UPDATE hotel_registrations SET latitude = 91, longitude = 1 WHERE id = ?').run(input.id))
+  } finally { DB.sqlite.close() }
+})
+
+test('coordinate schemas reject non-finite numbers and migration preserves old rows', () => {
+  for (const latitude of [NaN, Infinity, -Infinity]) {
+    assert.equal(hotelSubmissionSchema.safeParse({ ...hotelPayload(), latitude, longitude: 0 }).success, false)
+    assert.equal(hotelModerationSchema.safeParse({ id: crypto.randomUUID(), version: 0, status: 'pending', price: 1, ownerNote: '', latitude, longitude: 0 }).success, false)
+    assert.equal(businessSubmissionSchema.safeParse({
+      id: crypto.randomUUID(), name: 'Sample', kind: 'shop', location: 'Srinagar', address: 'Market',
+      description: 'A locally owned shop with handmade gifts and crafts for visitors.', website: '',
+      contactName: 'Owner', contactPhone: '9876543210', contactEmail: 'owner@example.test',
+      publicationConsent: true, latitude, longitude: 0,
+    }).success, false)
+  }
+  const DB = database('0022_business_map_coordinates.sql')
+  try {
+    const hotel = hotelPayload()
+    DB.sqlite.prepare("INSERT INTO hotel_registrations (id, hotel_id, phone, contact_name, details_json, photo_keys_json, submitted_price, price, publication_consent, payload_hash) VALUES (?, ?, ?, ?, ?, '[]', 1, 1, 1, 'hash')")
+      .run(hotel.id, `AVELOF_HTL_${hotel.id.replaceAll('-', '').toUpperCase()}`, '9876543210', 'Owner', '{}')
+    const businessId = crypto.randomUUID()
+    DB.sqlite.prepare("INSERT INTO business_registrations (id, contact_name, contact_phone, contact_email, details_json, photo_key, publication_consent, payload_hash) VALUES (?, 'Owner', '9876543210', 'owner@example.test', '{}', 'photo', 1, 'hash')").run(businessId)
+    DB.sqlite.exec(readFileSync(new URL('../../migrations/0022_business_map_coordinates.sql', import.meta.url), 'utf8'))
+    for (const [table, id] of [['hotel_registrations', hotel.id], ['business_registrations', businessId]]) {
+      const row = DB.sqlite.prepare(`SELECT latitude, longitude FROM ${table} WHERE id = ?`).get(id)
+      assert.equal(row.latitude, null)
+      assert.equal(row.longitude, null)
+      assert.throws(() => DB.sqlite.prepare(`UPDATE ${table} SET latitude = 1 WHERE id = ?`).run(id))
+      assert.throws(() => DB.sqlite.prepare(`UPDATE ${table} SET latitude = 'invalid', longitude = 1 WHERE id = ?`).run(id))
+    }
   } finally { DB.sqlite.close() }
 })
 
@@ -934,12 +1049,16 @@ test('hotel enquiries preserve room quantities and reject insufficient capacity 
     assert.equal((await send(DB, { ...family, reference: payload().reference, fields: { ...family.fields, roomCount: '1' } })).status, 400)
     assert.equal((await send(DB, { ...body, reference: payload().reference, fields: { ...body.fields, adults: '100', children: '1', roomCount: '100' } })).status, 400)
     const planned = payload()
-    Object.assign(planned.fields, { adults: '6', children: '2', placesToVisit: 'Day 1: selected hotel; rooms: 4; all rooms per night: INR 12,000', selectedDestinations: 'Srinagar', carRental: 'Tempo Traveller 12-seater' })
+    Object.assign(planned.fields, { adults: '6', children: '2', placesToVisit: 'Day 1: selected hotel; rooms: 4; all rooms per night: INR 12,000', selectedDestinations: 'Srinagar', selectedActivities: 'Srinagar: Dal Lake shikara ride (Weather permitting)', unionCabRequests: 'Add union cabs in Pahalgam for Aru Valley, Betaab Valley and Chandanwari.', carRental: 'Tempo Traveller 12-seater' })
     assert.equal((await send(DB, planned)).status, 201)
     const row = DB.sqlite.prepare('SELECT * FROM enquiries WHERE reference = ?').get(planned.reference)
     assert.equal(row.adults, 6)
     assert.equal(row.children, 2)
     assert.equal(JSON.parse(row.fields_json).placesToVisit, planned.fields.placesToVisit)
+    assert.equal(JSON.parse(row.fields_json).selectedActivities, planned.fields.selectedActivities)
+    assert.equal(JSON.parse(row.fields_json).unionCabRequests, planned.fields.unionCabRequests)
+    assert.equal((await send(DB, { ...planned, reference: payload().reference, fields: { ...planned.fields, unionCabRequests: 'a'.repeat(2001) } })).status, 400)
+    assert.equal((await send(DB, { ...planned, reference: payload().reference, fields: { ...planned.fields, selectedActivities: 'a'.repeat(6001) } })).status, 400)
   } finally { DB.sqlite.close() }
 })
 
@@ -1195,14 +1314,14 @@ test('ID-only summary exposes only selected booking details and masked contacts,
   const DB = database()
   try {
     const input = payload()
-    Object.assign(input.fields, { fullName: 'Robert Smith', customDetails: 'Robert Smith, private address and passport', placesToVisit: 'Private itinerary', selectedDestinations: 'Private place' })
+    Object.assign(input.fields, { fullName: 'Robert Smith', customDetails: 'Robert Smith, private address and passport', placesToVisit: 'Private itinerary', selectedDestinations: 'Private place', selectedActivities: 'Private activity requests', unionCabRequests: 'Private union cab requests' })
     const saved = await (await send(DB, input)).json()
     const response = await access(DB, { action: 'booking-summary', reference: saved.reference })
     assert.equal(response.status, 200)
     const body = await response.json()
     assert.deepEqual(body.booking, { reference: saved.reference, kind: 'package', status: 'received', maskedName: 'R***r* S***h', maskedPhone: '9*******10', bookingDetails: { type: 'Customized package', name: 'Customized package', startLabel: 'Start date', endLabel: 'End date', startDate: '2027-01-10', endDate: '2027-01-12' } })
     const output = JSON.stringify(body)
-    for (const hidden of ['Robert Smith', '+91 9876543210', 'private address', 'Private itinerary', 'Private place', saved.accessCode, input.reference]) assert.equal(output.includes(hidden), false)
+    for (const hidden of ['Robert Smith', '+91 9876543210', 'private address', 'Private itinerary', 'Private place', 'Private activity requests', 'Private union cab requests', saved.accessCode, input.reference]) assert.equal(output.includes(hidden), false)
     assert.equal((await access(DB, { action: 'booking-summary', reference: 'AVELOF_DLX_99999' })).status, 404)
     assert.equal((await access(DB, { action: 'booking-summary', reference: saved.reference }, { headers: { Origin: 'https://other.test' } })).status, 403)
     assert.match(response.headers.get('Cache-Control'), /no-store/)

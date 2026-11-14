@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, FileImage, RefreshCw, Trash2 } from 'lucide-react'
 import RegistrationReceipt from '../components/RegistrationReceipt'
+import RegistrationForm from '../components/RegistrationForm'
 import PartnerRegistrationLayout from '../components/PartnerRegistrationLayout'
 import HotelFeature from '../components/HotelFeature'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
@@ -12,6 +13,10 @@ import { hotelPriceSchema, hotelStatusSchema, hotelSubmissionSchema } from '../s
 import type { AdminHotel, HotelRoomRate, HotelStatus } from '../services/hotelSchema'
 import { compressHotelPhotos, deleteHotel, hotelErrorText, HotelError, loadAdminHotels, lookupHotel, moderateHotel, saveHotel, selectedHotelRoom, updateHotel } from '../services/hotelService'
 import type { HotelReceipt, OwnerHotel } from '../services/hotelService'
+import LocationPicker from '../components/LocationPicker'
+import MapLocationLink from '../components/MapLocationLink'
+import { locationFields, mapCoordinates } from '../services/mapLocation'
+import type { MapCoordinates } from '../services/mapLocation'
 
 function PhotoPreview({ photo, index }: { photo: Blob; index: number }) {
   const imageRef = useRef<HTMLImageElement>(null)
@@ -30,6 +35,8 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
   const [photoError, setPhotoError] = useState('')
   const [photoNotice, setPhotoNotice] = useState('')
   const [receipt, setReceipt] = useState<HotelReceipt | null>(null)
+  const [destination, setDestination] = useState(editing?.location ?? '')
+  const [coordinates, setCoordinates] = useState<MapCoordinates | undefined>(() => mapCoordinates(editing ?? {}))
   const pending = useRef({ fingerprint: '', id: crypto.randomUUID() })
   const inFlight = useRef(false)
   const photoVersion = useRef(0)
@@ -62,6 +69,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
     const details = {
       name: fields.get('name'), contactName: fields.get('contactName'), phone: fields.get('phone'),
       category: fields.get('category'), location: fields.get('location'),
+      ...locationFields(coordinates),
       description: editing ? fields.get('description') : `${String(fields.get('category'))} accommodation in ${String(fields.get('location'))}.`,
       price: legacyRooms ? Number(fields.get('legacyPrice')) : Math.min(...roomCounts.map(({ price }) => price)),
       ...(!legacyRooms ? { roomRates: roomCounts } : {}),
@@ -96,7 +104,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
       <dl className="hotel-receipt"><div><dt>Hotel ID</dt><dd>{receipt.hotelId}</dd></div><div><dt>Status access code</dt><dd>{receipt.accessCode}</dd></div></dl>
       <p>Your status code uses the first four letters of the hotel name and the last four digits of the registered phone number.</p>
       {editing ? <button className="button button-dark" type="button" onClick={onCancel}>Check hotel status <ArrowRight size={16} /></button> : <Link className="button button-dark" to="/hotel-status">Check hotel status <ArrowRight size={16} /></Link>}
-    </RegistrationReceipt> : <form className="review-submission-form hotel-registration-form" onSubmit={submit} aria-busy={busy}>
+    </RegistrationReceipt> : <RegistrationForm className="review-submission-form hotel-registration-form" onSubmit={submit} aria-busy={busy}>
       <fieldset disabled={busy} className="registration-fields">
         <section className="hotel-form-fields registration-section" aria-labelledby="hotel-property-title">
         <div className="registration-section-heading"><span>01</span><div><h2 id="hotel-property-title">Property & contact</h2><p>A few essentials about your hotel and how we can reach you.</p></div></div>
@@ -104,7 +112,8 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
         <label>Hotel name<input name="name" maxLength={120} required defaultValue={editing?.name} /></label>
         <label>Contact person's name (private)<input name="contactName" maxLength={80} autoComplete="name" required defaultValue={editing?.contactName} /></label>
         <label>Phone number (private)<input name="phone" type="tel" autoComplete="tel" maxLength={30} required placeholder="10-digit Indian phone number" defaultValue={editing?.phone} /><small>One hotel per phone number. You can use this number for private status lookup.</small></label>
-        <label>Location<select name="location" required defaultValue={editing?.location ?? ''}><option value="" disabled>Select location</option>{registrationLocations.map((location) => <option key={location}>{location}</option>)}</select></label>
+        <label>Location<select name="location" required value={destination} onChange={(event) => setDestination(event.target.value)}><option value="" disabled>Select location</option>{registrationLocations.map((location) => <option key={location}>{location}</option>)}</select></label>
+        <LocationPicker value={coordinates} onChange={setCoordinates} destination={destination} disabled={busy} />
         <label>AVELOF category<select name="category" required defaultValue={editing?.category ?? ''}><option value="" disabled>Select category</option>{hotelCategories.map((category) => <option key={category} value={category}>{hotelCategoryLabels[category]}</option>)}</select><small>Our accommodation categories are not official star certifications.</small></label>
         {editing && <label className="review-text-field">Hotel description<textarea name="description" required minLength={20} maxLength={1600} defaultValue={editing.description} /></label>}
         </section>
@@ -131,7 +140,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
         {(!editing || editing.breakfastPrice !== undefined) && <><NumberStepper label="Breakfast add-on (INR)" name="breakfastPrice" defaultValue={editing?.breakfastPrice ?? 500} step={50} currency />
         <NumberStepper label="Dinner add-on (INR)" name="dinnerPrice" defaultValue={editing?.dinnerPrice ?? 500} step={50} currency /></>}
         <p className="privacy-note review-text-field">Rates are per room per night: Family rooms cover 4 people; other room types cover 2 people. Enter the base breakfast and dinner add-ons for 2 people; Family rooms automatically use 1.5 times each meal charge for 4 people. AVELOF may edit these prices before approval.</p>
-        <label>Taxes<select name="taxDetails" defaultValue={editing?.taxDetails}>{hotelTaxOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
+        <label>Taxes<select name="taxDetails" required defaultValue={editing?.taxDetails}>{hotelTaxOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
         </section>
         <section className="hotel-form-fields registration-section" aria-labelledby="hotel-facilities-title">
         <div className="registration-section-heading"><span>03</span><div><h2 id="hotel-facilities-title">The stay experience</h2><p>The comforts and little details guests can look forward to.</p></div></div>
@@ -149,7 +158,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
         {photoError && <p className="enquiry-error review-text-field" role="alert">{photoError}</p>}
         <div className="hotel-photo-grid review-text-field">{photos.map((photo, index) => <PhotoPreview key={index} photo={photo} index={index} />)}</div>
         <label className="enquiry-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
-        <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I am authorised to register this property and publish these photos. I consent to publication of approved hotel details and photos, including AVELOF's reviewed price. My contact name and phone stay private. I will not upload guest faces, identity documents or payment information.</span></label>
+        <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I am authorised to register this property and publish these photos. I consent to publication of approved hotel details and photos, including AVELOF's reviewed price and exact map pin if provided. My contact name and phone stay private. I will not upload guest faces, identity documents or payment information.</span></label>
         {error && <p className="enquiry-error review-text-field" role="alert">{error}</p>}
         {busy && <p className="review-text-field" role="status">Uploading photos and saving your hotel registration. Please keep this page open.</p>}
         <button className="button button-dark" disabled={processing || (!editing && !photos.length)} type="submit">{busy ? 'Saving registration...' : editing ? 'Save changes for approval' : 'Submit hotel for approval'} <ArrowRight size={16} /></button>
@@ -157,7 +166,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
         <p className="registration-submit-note">Your hotel will not appear publicly until AVELOF approves it.</p>
         </section>
       </fieldset>
-    </form>}
+    </RegistrationForm>}
   </PartnerRegistrationLayout>
 }
 
@@ -207,10 +216,11 @@ export function HotelStatusPage() {
   </section>
 }
 
-function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminHotel; disabled: boolean; onSave: (hotel: AdminHotel, status: HotelStatus, price: number, note: string, breakfast?: number, dinner?: number, roomRates?: HotelRoomRate[]) => Promise<void>; onDelete: (hotel: AdminHotel) => Promise<void> }) {
+function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminHotel; disabled: boolean; onSave: (hotel: AdminHotel, status: HotelStatus, price: number, note: string, breakfast?: number, dinner?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null) => Promise<void>; onDelete: (hotel: AdminHotel) => Promise<void> }) {
   const [note, setNote] = useState(hotel.ownerNote)
   const [status, setStatus] = useState<HotelStatus>(hotel.status)
   const [error, setError] = useState('')
+  const [coordinates, setCoordinates] = useState<MapCoordinates | undefined>(() => mapCoordinates(hotel))
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const fields = new FormData(event.currentTarget)
@@ -219,11 +229,12 @@ function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminH
     if (!parsed.success) { setError('Enter a rate from INR 1 to INR 1,000,000 with at most two decimal places.'); return }
     setError('')
     if (roomRates?.some((room) => !hotelPriceSchema.safeParse(room.price).success)) { setError('Check the reviewed rate for each room type.'); return }
-    await onSave(hotel, status, parsed.data, note, hotel.breakfastPrice !== undefined ? Number(fields.get('breakfastPrice')) : undefined, hotel.dinnerPrice !== undefined ? Number(fields.get('dinnerPrice')) : undefined, roomRates)
+    await onSave(hotel, status, parsed.data, note, hotel.breakfastPrice !== undefined ? Number(fields.get('breakfastPrice')) : undefined, hotel.dinnerPrice !== undefined ? Number(fields.get('dinnerPrice')) : undefined, roomRates, coordinates ?? null)
   }
   return <article className="admin-review-record">
     <div className="admin-review-heading"><h2>{hotel.name}</h2><span className="enquiry-status">{hotelStatusLabels[hotel.status]}</span></div>
     <p className="hotel-identifier">{hotel.hotelId}</p><p>{hotel.location} · {hotelCategoryLabels[hotel.category]}</p>
+    <MapLocationLink location={hotel} />
     <p>Private contact: {hotel.contactName} · {hotel.phone}</p><p>{hotel.description}</p>
     <div className="hotel-photo-grid">{hotel.photos.map((photo, index) => <a href={photo} key={photo} target="_blank" rel="noreferrer"><img src={photo} alt={`${hotel.name}, submitted photo ${index + 1}`} loading="lazy" /></a>)}</div>
     <p>Heating: {hotel.heating}. Amenities: {hotel.amenities.join(', ') || 'None selected'}.</p>
@@ -233,6 +244,7 @@ function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminH
     <p>Family room rates cover 4 people; other room rates cover 2 people. Reviewed breakfast and dinner are base charges for 2 people; Family rooms use 1.5 times each charge.</p>
     <form className="review-submission-form" onSubmit={submit}>
       <fieldset disabled={disabled} className="hotel-form-fields">
+        <LocationPicker value={coordinates} onChange={setCoordinates} destination={hotel.location} disabled={disabled} />
         {hotel.roomRates ? hotel.roomRates.map((room) => <NumberStepper key={room.roomType} label={`Reviewed ${room.roomType} rate (INR)`} name={`roomPrice_${room.roomType}`} min={1} defaultValue={room.price} step={100} currency />) : <NumberStepper label="Reviewed price (INR)" name="price" min={1} defaultValue={hotel.price} step={100} currency />}
         {hotel.breakfastPrice !== undefined && <><NumberStepper label="Reviewed breakfast (INR)" name="breakfastPrice" defaultValue={hotel.breakfastPrice} step={50} currency /><NumberStepper label="Reviewed dinner (INR)" name="dinnerPrice" defaultValue={hotel.dinnerPrice} step={50} currency /></>}
         <label>Listing status<select value={status} onChange={(event) => setStatus(hotelStatusSchema.parse(event.target.value))}><option value="pending">Awaiting approval</option><option value="approved">Approve and publish</option><option value="rejected">Reject / remove from public listings</option></select></label>
@@ -267,10 +279,10 @@ export function AdminHotelsPage() {
   function refresh(page = filters.page, status = filters.status) {
     setLoading(true); setError(''); setFilters((current) => ({ page, status, revision: current.revision + 1 }))
   }
-  async function save(hotel: AdminHotel, status: HotelStatus, price: number, note: string, breakfast?: number, dinner?: number, roomRates?: HotelRoomRate[]) {
+  async function save(hotel: AdminHotel, status: HotelStatus, price: number, note: string, breakfast?: number, dinner?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null) {
     if (inFlight.current) return
     inFlight.current = true; setSaving(true); setError(''); setNotice('')
-    try { await moderateHotel(hotel.id, hotel.version, status, price, note, breakfast, dinner, roomRates); setNotice('Hotel price and status saved.'); refresh() }
+    try { await moderateHotel(hotel.id, hotel.version, status, price, note, breakfast, dinner, roomRates, coordinates); setNotice('Hotel price and status saved.'); refresh() }
     catch (failure) {
       if (failure instanceof HotelError && failure.status === 401) { setSignedOut(true); setListing(null) }
       else setError(hotelErrorText(failure))
@@ -292,7 +304,7 @@ export function AdminHotelsPage() {
     <Link className="text-link" to="/admin/panel"><ArrowLeft size={16} /> Owner dashboard</Link>
     <div className="enquiry-access-heading"><div><p className="eyebrow">AVELOF owner access</p><h1>Hotel registrations</h1></div></div>
     {signedOut ? <p>Please <Link to="/admin/panel">sign in to the owner dashboard</Link> to manage hotels.</p> : <>
-      <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><Link to="/admin/panel/reviews">Reviews</Link><span aria-current="page">Hotels</span><Link to="/admin/panel/drivers">Drivers</Link></nav>
+      <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><Link to="/admin/panel/reviews">Reviews</Link><span aria-current="page">Hotels</span><Link to="/admin/panel/drivers">Drivers</Link><Link to="/admin/panel/businesses">Food & Shopping</Link></nav>
       <OwnerPushNotifications />
       <p>Check photo rights, property details and rate accuracy before approving. Category labels are not official star certifications. Phone numbers and contact names are never shown publicly.</p>
       <div className="admin-enquiry-toolbar"><strong>{listing?.total ?? 0} hotels</strong><label>Hotel status<select disabled={loading || saving} value={filters.status} onChange={(event) => refresh(1, event.target.value === 'all' ? 'all' : hotelStatusSchema.parse(event.target.value))}><option value="pending">Awaiting approval</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="all">All hotels</option></select></label><button type="button" className="icon-button" aria-label="Refresh hotels" title="Refresh hotels" disabled={loading || saving} onClick={() => refresh()}><RefreshCw size={18} /></button></div>

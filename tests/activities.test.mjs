@@ -1,0 +1,314 @@
+import assert from 'node:assert/strict'
+import { test } from 'node:test'
+import { chromium } from 'playwright'
+import { business } from '../src/config.ts'
+import { activities, activitiesForPlaces, activityDestinations, formatSelectedActivities } from '../src/data/activities.ts'
+import { travelGuideSections } from '../src/data/travelGuide.ts'
+import { unionCabsForPlaces } from '../src/data/unionCabs.ts'
+import { searchSuggestions } from '../src/services/searchSuggestions.ts'
+
+const origin = process.env.AVELOF_ACTIVITY_TEST_URL || 'http://localhost:8792'
+
+test('activity catalogue has unique IDs and destination-scoped, bounded request text', () => {
+  const searchItems = activities.map((activity) => ({ id: activity.id, label: activity.name }))
+  assert.equal(searchSuggestions(searchItems, 'Shi')[0].id, 'srinagar-shikara')
+  assert.equal(searchSuggestions(searchItems, 'shikra')[0].id, 'srinagar-shikara')
+  assert.equal(new Set(activities.map((activity) => activity.id)).size, activities.length)
+  for (const destination of activityDestinations) {
+    assert.ok(activities.some((activity) => activity.destination === destination))
+  }
+  const ids = activities.map((activity) => activity.id)
+  assert.equal(formatSelectedActivities(ids, []).length, 0)
+  assert.equal(activitiesForPlaces(['srinagar']).every((activity) => activity.destination === 'Srinagar'), true)
+  assert.ok(formatSelectedActivities(ids, activityDestinations.map((place) => place.toLowerCase())).length <= 6000)
+  assert.equal(formatSelectedActivities(['gulmarg-skiing', 'invalid'], ['srinagar']), '')
+  assert.deepEqual(unionCabsForPlaces(['gulmarg', 'invalid', 'pahalgam'], ['pahalgam']).map((option) => option.id), ['pahalgam'])
+  assert.deepEqual(unionCabsForPlaces([], ['gulmarg', 'pahalgam']), [])
+  assert.match(formatSelectedActivities(['gulmarg-skiing'], ['gulmarg']), /Winter; sufficient snow required/)
+  const removedIds = ['srinagar-garden-walk', 'srinagar-heritage-walk', 'srinagar-boulevard-walk', 'gulmarg-sledging', 'gulmarg-meadow-walk', 'gulmarg-golf', 'gulmarg-motorbike', 'sonamarg-walk', 'pahalgam-riverside', 'pahalgam-valley-walk', 'pahalgam-atv']
+  assert.equal(activities.some((activity) => removedIds.includes(activity.id)), false)
+  assert.equal(formatSelectedActivities(removedIds, activityDestinations.map((place) => place.toLowerCase())), '')
+  assert.match(activities.find((activity) => activity.id === 'gulmarg-atv').name, /ATV \/ motorbike/)
+  for (const id of ['srinagar-boat-ride', 'pahalgam-zipline', 'sonamarg-atv', 'sonamarg-pony', 'sonamarg-rafting', 'sonamarg-trek', 'pahalgam-angling', 'pahalgam-trek']) {
+    assert.ok(activities.some((activity) => activity.id === id), `${id} should be available to request`)
+  }
+})
+
+test('activities browse by destination/category/search with incremental results and responsive cards', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  try {
+    await page.goto(`${origin}/activities`)
+    await page.locator('.activity-card').first().waitFor()
+    assert.equal(await page.locator('.activity-card').count(), 12)
+    await page.getByRole('button', { name: 'Load more activities' }).click()
+    assert.equal(await page.locator('.activity-card').count(), activities.length)
+    assert.equal(await page.locator('.activity-card h2 > svg[aria-hidden=true]').count(), activities.length)
+    assert.equal(await page.getByText('About these suggestions and sources', { exact: true }).count(), 0)
+    assert.equal(await page.locator('.activity-card').filter({ hasText: 'Gulmarg Gondola ride' }).locator('h2 .lucide-cable-car').count(), 1)
+    assert.equal(await page.getByRole('button', { name: 'Load more activities' }).count(), 0)
+    await page.getByRole('combobox', { name: 'Destination', exact: true }).selectOption('Gulmarg')
+    await page.getByRole('combobox', { name: 'Activity category', exact: true }).selectOption('Snow')
+    assert.equal(await page.locator('.activity-card').count(), 3)
+    await page.getByLabel('Search activities').fill('skiing')
+    assert.equal(await page.locator('.activity-card').count(), 1)
+    assert.match(await page.locator('.activity-card').innerText(), /Winter; sufficient snow required/)
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+    }
+    await page.getByLabel('Search activities').fill('not-an-activity')
+    await page.getByRole('heading', { name: 'No matching activities' }).waitFor()
+    await page.getByRole('button', { name: 'Clear filters' }).click()
+    assert.equal(await page.locator('.activity-card').count(), 12)
+    await page.getByLabel('Search activities').fill('ATV')
+    assert.equal(await page.locator('.activity-card').count(), 2)
+    for (const card of await page.locator('.activity-card').all()) assert.match(await card.innerText(), /Operator verification required/)
+  } finally { await browser.close() }
+})
+
+test('activity suggestions complete Shi, tolerate typos, and remember choices separately from Places', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+  const page = await context.newPage()
+  try {
+    await page.goto(`${origin}/activities`)
+    const search = page.getByRole('combobox', { name: 'Search activities', exact: true })
+    await page.getByRole('combobox', { name: 'Destination', exact: true }).selectOption('Gulmarg')
+    await page.getByRole('combobox', { name: 'Activity category', exact: true }).selectOption('Snow')
+    await search.fill('S')
+    assert.equal(await page.getByRole('listbox').count(), 0)
+    await search.fill('Shi')
+    await page.getByRole('option', { name: /Dal Lake shikara ride.*Srinagar/ }).waitFor()
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+    }
+    await page.getByRole('option', { name: /Dal Lake shikara ride.*Srinagar/ }).tap()
+    await page.getByRole('heading', { name: 'Dal Lake shikara ride', exact: true }).waitFor()
+    assert.equal(await page.locator('.activity-card').count(), 1)
+    assert.equal(await search.inputValue(), 'Dal Lake shikara ride')
+    assert.equal(await page.getByRole('combobox', { name: 'Destination', exact: true }).inputValue(), '')
+    assert.equal(await page.getByRole('combobox', { name: 'Activity category', exact: true }).inputValue(), '')
+    await search.fill('shikra')
+    await search.press('ArrowDown')
+    await search.press('Enter')
+    await page.waitForFunction(() => document.activeElement?.id === 'activity-srinagar-shikara')
+    await page.reload()
+    await search.click()
+    await page.getByRole('listbox', { name: 'Recent activity searches' }).waitFor()
+    assert.equal(await page.getByRole('listbox', { name: 'Recent activity searches' }).getByRole('option').count(), 1, 'Repeated choices deduplicate')
+    await page.getByRole('option', { name: /Dal Lake shikara ride/ }).tap()
+    assert.equal(await page.locator('.activity-card').count(), 1)
+    await page.goto(`${origin}/destinations`)
+    await page.getByRole('combobox', { name: 'Search places or attractions' }).click()
+    assert.equal(await page.getByRole('listbox').count(), 0, 'Activity history does not leak into place history')
+    await page.goto(`${origin}/activities`)
+    await search.click()
+    await page.getByRole('button', { name: 'Clear history' }).click()
+    await page.reload()
+    await search.click()
+    assert.equal(await page.getByRole('listbox').count(), 0)
+  } finally { await browser.close() }
+})
+
+test('planner activities follow places, survive detail returns, and reach a persisted enquiry only after success', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  const submissions = []
+  let fail = true
+  await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
+  await page.route('**/api/enquiries', (route) => {
+    const submission = route.request().postDataJSON()
+    submissions.push(submission)
+    return route.fulfill(fail ? { status: 503, json: { error: 'Test failure' } } : { status: 201, json: { saved: true, requestReference: submission.reference, reference: 'AVELOF_CSTM_10001' } })
+  })
+  try {
+    await page.goto(origin)
+    const planner = page.locator('.trip-planner')
+    await planner.getByLabel('Start date').fill('2027-01-10')
+    await planner.getByLabel('End date').fill('2027-01-16')
+    await planner.getByRole('button', { name: 'Next: places' }).click()
+    const choices = planner.locator('.planner-activities')
+    assert.equal(await choices.count(), 0, 'Activities have their own step, not Places')
+    await planner.getByRole('button', { name: 'Next: vehicle' }).click()
+    const pahalgamCab = planner.getByRole('checkbox', { name: /Add union cabs in Pahalgam/ })
+    const gulmargCab = planner.getByRole('checkbox', { name: /Add union cabs in Gulmarg/ })
+    assert.equal(await pahalgamCab.isChecked(), false)
+    assert.equal(await gulmargCab.isChecked(), false)
+    await pahalgamCab.check()
+    await gulmargCab.check()
+    const vehicleEstimate = await planner.locator('.planner-vehicle-total').innerText()
+    await planner.getByRole('button', { name: 'Next: activities' }).click()
+    await choices.getByRole('heading', { name: 'Choose your activities Optional' }).waitFor()
+    assert.match(await choices.innerText(), /Skipping paid activities does not remove sightseeing/)
+    assert.equal(await choices.getByRole('group', { name: 'Sonamarg activities', exact: true }).count(), 0)
+    await choices.getByRole('checkbox', { name: /Dal Lake shikara ride/ }).check()
+    await choices.getByRole('checkbox', { name: /Dal Lake boat ride enquiry/ }).check()
+    await choices.getByRole('checkbox', { name: /Zip-line ride enquiry/ }).check()
+    assert.equal(await choices.getByRole('checkbox', { name: /walk|Golf session|Sledging \/ toboggan|Pahalgam.*ATV/i }).count(), 0)
+    await choices.getByRole('checkbox', { name: /Skiing lesson/ }).check()
+    assert.equal(await choices.locator('.activity-choice-heading > svg').count(), await choices.getByRole('checkbox').count())
+    await planner.getByRole('button', { name: /Step 2: Places/ }).click()
+    const gulmarg = planner.locator('.planner-place-card').filter({ hasText: 'Gulmarg' })
+    await gulmarg.getByRole('checkbox').uncheck()
+    await planner.getByRole('button', { name: 'Next: vehicle' }).click()
+    assert.equal(await gulmargCab.count(), 0)
+    await planner.getByRole('button', { name: 'Next: activities' }).click()
+    assert.equal(await choices.getByRole('checkbox', { name: /Skiing lesson/ }).count(), 0)
+    await planner.getByRole('button', { name: /Step 2: Places/ }).click()
+    await gulmarg.getByRole('checkbox').check()
+    await planner.locator('.planner-place-card').filter({ hasText: 'Sonamarg' }).getByRole('checkbox').check()
+    await planner.getByRole('button', { name: 'Next: vehicle' }).click()
+    assert.equal(await gulmargCab.isChecked(), false, 'Removing a place clears its union-cab request')
+    assert.equal(await pahalgamCab.isChecked(), true)
+    await gulmargCab.check()
+    assert.equal(await planner.locator('.planner-vehicle-total').innerText(), vehicleEstimate, 'Union cabs do not invent or add prices')
+    await planner.getByRole('button', { name: 'Next: activities' }).click()
+    assert.equal(await choices.getByRole('checkbox', { name: /Skiing lesson/ }).isChecked(), false)
+    await choices.getByRole('checkbox', { name: /Skiing lesson/ }).check()
+    await choices.getByRole('checkbox', { name: /Thajiwas pony ride/ }).check()
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+    }
+    await planner.getByRole('button', { name: /Step 2: Places/ }).click()
+    await gulmarg.getByRole('link', { name: 'View this place' }).click()
+    await page.getByRole('button', { name: 'Back to your trip' }).click()
+    await planner.getByRole('button', { name: 'Next: vehicle' }).click()
+    assert.equal(await pahalgamCab.isChecked(), true)
+    assert.equal(await gulmargCab.isChecked(), true)
+    await planner.getByRole('button', { name: 'Next: activities' }).click()
+    assert.equal(await choices.getByRole('checkbox', { name: /Skiing lesson/ }).isChecked(), true)
+    assert.equal(await choices.getByRole('checkbox', { name: /Dal Lake shikara ride/ }).isChecked(), true)
+    await planner.getByRole('button', { name: 'Next: hotels' }).click()
+    await planner.getByRole('button', { name: 'Continue with this plan' }).click()
+    assert.match(await planner.getByRole('region', { name: 'Requested activities' }).innerText(), /Gulmarg: Skiing lesson/)
+    assert.match(await planner.getByRole('region', { name: 'Requested union cabs' }).innerText(), /Aru Valley, Betaab Valley and Chandanwari/)
+    assert.match(await planner.getByRole('region', { name: 'Requested union cabs' }).innerText(), /bad weather/)
+    const form = planner.locator('.enquiry-form')
+    await form.getByLabel('Name', { exact: true }).fill('Activity Guest')
+    await form.getByLabel('Phone number').fill('9876543210')
+    await form.getByRole('button', { name: 'Submit enquiry' }).click()
+    await form.getByRole('alert').waitFor()
+    assert.equal(await planner.getByRole('heading', { name: 'Thank you for submitting your details.' }).count(), 0)
+    fail = false
+    await form.getByRole('button', { name: 'Submit enquiry' }).click()
+    await planner.getByRole('heading', { name: 'Thank you for submitting your details.' }).waitFor()
+    assert.match(submissions[1].fields.selectedActivities, /Srinagar: Dal Lake shikara ride/)
+    assert.match(submissions[1].fields.selectedActivities, /Sonamarg: Thajiwas pony ride/)
+    assert.match(submissions[1].fields.selectedActivities, /Gulmarg: Skiing lesson/)
+    assert.match(submissions[1].fields.selectedActivities, /Srinagar: Dal Lake boat ride enquiry/)
+    assert.match(submissions[1].fields.selectedActivities, /Pahalgam: Zip-line ride enquiry/)
+    assert.match(submissions[1].fields.unionCabRequests, /Pahalgam/)
+    assert.match(submissions[1].fields.unionCabRequests, /Gulmarg/)
+    assert.equal(submissions[0].reference, submissions[1].reference)
+  } finally { await browser.close() }
+})
+
+test('both planners can skip activities and union cabs, and older hotel steps restore correctly', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage({ viewport: { width: 320, height: 900 } })
+  const submissions = []
+  await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
+  await page.route('**/api/enquiries', (route) => {
+    const submission = route.request().postDataJSON()
+    submissions.push(submission)
+    return route.fulfill({ status: 201, json: { saved: true, requestReference: submission.reference, reference: 'AVELOF_CSTM_10002' } })
+  })
+  try {
+    for (const path of ['/', '/tour-packages']) {
+      await page.goto(`${origin}${path}`)
+      const planner = page.locator('.trip-planner')
+      await planner.getByLabel('Start date').fill('2027-01-10')
+      await planner.getByLabel('End date').fill('2027-01-16')
+      assert.deepEqual(await planner.locator('.planner-step-label').allTextContents(), ['Date', 'Places', 'Vehicle', 'Activities', 'Hotels', 'Contact details'])
+      await planner.getByRole('button', { name: 'Next: places' }).click()
+      await planner.getByRole('button', { name: 'Next: vehicle' }).click()
+      assert.equal(await planner.locator('.planner-union-cabs input:checked').count(), 0)
+      await planner.getByRole('button', { name: 'Next: activities' }).click()
+      for (const width of [320, 390, 1440]) {
+        await page.setViewportSize({ width, height: 900 })
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+      }
+      assert.equal(await planner.locator('.planner-activities input:checked').count(), 0)
+      await planner.getByRole('button', { name: 'Next: hotels' }).click()
+      await planner.getByRole('button', { name: 'Continue with this plan' }).click()
+      assert.equal(await planner.getByRole('region', { name: 'Requested activities' }).count(), 0)
+      assert.equal(await planner.getByRole('region', { name: 'Requested union cabs' }).count(), 0)
+      await planner.getByLabel('Name', { exact: true }).fill('Optional Extras Guest')
+      await planner.getByLabel('Phone number').fill('9876543210')
+      await planner.getByRole('button', { name: 'Submit enquiry' }).click()
+      await planner.getByRole('heading', { name: 'Thank you for submitting your details.' }).waitFor()
+      assert.equal(submissions.at(-1).fields.selectedActivities, undefined)
+      assert.equal(submissions.at(-1).fields.unionCabRequests, undefined)
+      assert.match(submissions.at(-1).fields.placesToVisit, /Gulmarg/)
+      assert.match(submissions.at(-1).fields.placesToVisit, /Pahalgam/)
+    }
+    for (const oldPlan of [{ stepVersion: 2, step: 3 }, { step: 2 }, { stepVersion: 3, step: 3, unionCabIds: ['gulmarg', 'invalid'] }]) {
+      await page.goto(`${origin}/activities`)
+      await page.evaluate((oldPlan) => {
+        sessionStorage.setItem('avelof:trip-plan:custom-trip', JSON.stringify({
+          savedAt: Date.now(), startDate: '2027-01-10', endDate: '2027-01-16', plans: [],
+          placeIds: ['srinagar', 'gulmarg', 'pahalgam'], activityIds: ['gulmarg-skiing'], ...oldPlan,
+        }))
+        sessionStorage.setItem('avelof:trip-return-section', 'custom-trip')
+      }, oldPlan)
+      await page.goto(`${origin}/`)
+      const planner = page.locator('.trip-planner')
+      await planner.locator('.planner-steps [aria-current=step]').waitFor()
+      assert.equal(await planner.locator('.planner-steps [aria-current=step] .planner-step-label').innerText(), oldPlan.stepVersion === 3 ? 'Activities' : 'Hotels')
+      if (oldPlan.stepVersion === 3) assert.equal(await planner.getByRole('checkbox', { name: /Skiing lesson/ }).isChecked(), true)
+    }
+  } finally { await browser.close() }
+})
+
+test('travel guide uses aligned topic headings and bulleted tips with right-side icons', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage()
+  try {
+    await page.goto(`${origin}/travel-guide`)
+    const cards = page.locator('.travel-guide-card')
+    await cards.first().waitFor()
+    assert.equal(await cards.count(), travelGuideSections.length)
+    assert.equal(await cards.locator('h2 > svg[aria-hidden=true]').count(), travelGuideSections.length)
+    assert.equal(new Set(await cards.locator('h2 > svg').evaluateAll((icons) => icons.map((icon) => icon.getAttribute('class')))).size, travelGuideSections.length)
+    const help = page.getByRole('link', { name: 'Contact us on WhatsApp', exact: true })
+    const floatingHelp = page.getByRole('link', { name: 'Chat with AVELOF on WhatsApp', exact: true })
+    for (const link of [help, floatingHelp]) {
+      const url = new URL(await link.getAttribute('href'))
+      assert.equal(url.hostname, 'wa.me')
+      assert.equal(url.pathname, `/${business.phone.replace(/\D/g, '')}`)
+      assert.ok(url.searchParams.get('text').includes('Hello AVELOF'))
+      assert.equal(await link.getAttribute('target'), '_blank')
+    }
+    assert.equal(await floatingHelp.innerText(), '')
+    assert.equal(await page.getByText('General planning guidance, not live weather or road updates.', { exact: false }).count(), 0)
+    const explore = page.getByRole('link', { name: 'Find places for your trip', exact: true })
+    assert.equal(await explore.getAttribute('href'), '/destinations')
+    assert.ok((await explore.getAttribute('class')).split(' ').includes('button'))
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+      const floatingSize = await floatingHelp.boundingBox()
+      assert.equal(floatingSize.width, 52)
+      assert.equal(floatingSize.height, 52)
+      for (let index = 0; index < travelGuideSections.length; index++) {
+        const card = cards.nth(index)
+        const section = travelGuideSections[index]
+        assert.equal(await card.getByRole('heading', { name: section.title, exact: true }).count(), 1)
+        assert.equal(await card.getByRole('listitem').count(), section.points.length)
+        assert.equal(await card.locator('ul').evaluate((list) => getComputedStyle(list).listStyleType), 'disc')
+        const icon = await card.locator('h2 > svg').boundingBox()
+        const heading = await card.locator('h2 > span').boundingBox()
+        assert.ok(icon.x + icon.width <= heading.x && Math.abs(icon.y - heading.y) <= 5, 'Heading icon aligns with the first line')
+        for (const point of await card.locator('.guide-point').all()) {
+          const text = await point.locator('span').boundingBox()
+          const pointIcon = await point.locator('svg[aria-hidden=true]').boundingBox()
+          assert.ok(pointIcon.x >= text.x + text.width, 'Tip icon stays on the right')
+          assert.ok(pointIcon.x + pointIcon.width <= (await card.boundingBox()).x + (await card.boundingBox()).width, 'Tip icon fits inside the card')
+        }
+      }
+    }
+  } finally { await browser.close() }
+})

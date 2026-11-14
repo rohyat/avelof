@@ -1,12 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { MouseEvent } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom'
-import { Menu, MessageCircle, X } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { business } from '../config'
 import { rentalCars, tourPackages } from '../data/catalog'
 import BookingModal from './BookingModal'
 import OfferBanner from './OfferBanner'
 import { createWhatsAppUrl } from '../services/bookingService'
+import WhatsAppIcon from './WhatsAppIcon'
 import type { BookingKind } from '../types'
 
 export interface SiteContext {
@@ -15,8 +16,8 @@ export interface SiteContext {
 
 const navItems = [
   ['Tour Packages', '/tour-packages'], ['Car Rentals', '/car-rentals'], ['Hotels', '/hotels'],
-  ['Destinations', '/destinations'], ['Reviews', '/reviews'], ['About & Contact', '/about'],
-  ['Check Bookings', '/my-enquiries'],
+  ['Destinations', '/destinations'], ['Check Bookings', '/my-enquiries'],
+  ['About & Contact', '/about'],
 ]
 const currentYear = new Date().getFullYear()
 const scrollStoragePrefix = 'avelof:scroll:'
@@ -57,11 +58,29 @@ function saveScrollPosition(key: string, x: number, y: number) {
 
 export default function SiteLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLElement>(null)
+  const menuToggleRef = useRef<HTMLButtonElement>(null)
   const [booking, setBooking] = useState<{ kind: BookingKind; item?: string } | null>(null)
   const location = useLocation()
   const navigationType = useNavigationType()
   const previousLocation = useRef({ pathname: location.pathname, hash: location.hash })
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const dismissOutside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !menuRef.current?.contains(event.target) && !menuToggleRef.current?.contains(event.target)) setMenuOpen(false)
+    }
+    const dismissEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { setMenuOpen(false); menuToggleRef.current?.focus() }
+    }
+    document.addEventListener('pointerdown', dismissOutside)
+    document.addEventListener('keydown', dismissEscape)
+    return () => {
+      document.removeEventListener('pointerdown', dismissOutside)
+      document.removeEventListener('keydown', dismissEscape)
+    }
+  }, [menuOpen])
 
   useEffect(() => {
     const handleInstallPrompt = (event: Event) => {
@@ -118,7 +137,13 @@ export default function SiteLayout() {
       '/tour-packages': { title: 'Kashmir Tour Packages | AVELOF', description: 'Explore thoughtfully planned Kashmir tour packages with local expertise, flexible itineraries and handpicked stays.' },
       '/car-rentals': { title: 'Kashmir Car Rentals | AVELOF', description: 'Find comfortable vehicles and local drivers for airport transfers, day trips and Kashmir journeys.' },
       '/hotels': { title: 'Kashmir Hotels & Stays | AVELOF', description: 'Discover houseboats, boutique hotels, family stays and mountain retreats across Kashmir.' },
-      '/destinations': { title: 'Kashmir Places & Visit Planner | AVELOF', description: 'Compare Srinagar driving distances, discover Kashmir attractions and select destinations for a personalised visit enquiry.' },
+      '/destinations': { title: 'Kashmir Places & Destination Guide | AVELOF', description: 'Explore Kashmir places, main attractions, seasonal guidance and optional activities, then customise your journey in the trip planner.' },
+      '/activities': { title: 'Kashmir Activities | AVELOF', description: 'Browse Kashmir activity inspiration by destination and category, then request your favourites when planning a trip. Suggestions are not a live availability feed.' },
+      '/food-and-shopping': { title: 'Kashmir Restaurants & Shops | AVELOF', description: 'Discover AVELOF-approved restaurants and local shops across Kashmir by destination. In-person discovery only; no online ordering or checkout.' },
+      '/register-business': { title: 'Register Your Restaurant or Shop | AVELOF', description: 'Submit your Kashmir restaurant or shop for private review and approval before it appears in the Food & Shopping directory.' },
+      '/business-status': { title: 'Private Business Status | AVELOF', description: 'Check and edit your restaurant or shop registration with your private status access code.' },
+      '/admin/panel/businesses': { title: 'Food & Shopping Registrations | AVELOF', description: 'Private AVELOF business registration approval and moderation dashboard.' },
+      '/travel-guide': { title: 'Kashmir Travel Guide | AVELOF', description: 'Prepare for your Kashmir holiday with seasonal advice, packing tips and practical travel essentials.' },
       '/reviews': { title: 'Guest Reviews | AVELOF', description: 'Read guest reviews and share your Kashmir experience for publication after consent.' },
       '/about': { title: 'About AVELOF | Your Kashmir Travel Companion', description: 'Discover AVELOF: locally rooted travel expertise, quality stays, comfortable transportation and personalised Kashmir holiday planning.' },
       '/contact': { title: 'Contact AVELOF | Plan a Kashmir Trip', description: 'Call, email or WhatsApp AVELOF to start planning your Kashmir journey.' },
@@ -157,13 +182,13 @@ export default function SiteLayout() {
       <OfferBanner />
       <header className="site-header">
         <Link className="brand" to="/" aria-label="AVELOF home" onClick={closeMenu}><span className="brand-mark">A</span><span>AVELOF<small>BEYOND EXPECTATIONS</small></span></Link>
-        <button className="icon-button menu-toggle" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => { const next = !menuOpen; setMenuOpen(next); if (next) window.dispatchEvent(new Event('avelof:pause-review-carousel')) }}>{menuOpen ? <X /> : <Menu />}</button>
-        <nav className={menuOpen ? 'main-nav is-open' : 'main-nav'} aria-label="Main navigation">
+        <button ref={menuToggleRef} className="icon-button menu-toggle" aria-expanded={menuOpen} aria-controls="main-navigation" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => { const next = !menuOpen; setMenuOpen(next); if (next) window.dispatchEvent(new Event('avelof:pause-review-carousel')) }}>{menuOpen ? <X /> : <Menu />}</button>
+        <nav ref={menuRef} id="main-navigation" className={menuOpen ? 'main-nav is-open' : 'main-nav'} aria-label="Main navigation">
           {navItems.map(([label, href]) => <NavLink key={href} to={href} onClick={closeMenu}>{label}</NavLink>)}
         </nav>
       </header>
       <main><Outlet context={{ openBooking } satisfies SiteContext} /></main>
-      <a className="whatsapp-float" href={createWhatsAppUrl('Hello AVELOF, I would like help planning my Kashmir journey.')} target="_blank" rel="noreferrer" aria-label="Chat with AVELOF on WhatsApp" title="Chat with AVELOF on WhatsApp"><MessageCircle size={25} strokeWidth={2.2} /><span>Chat with us</span></a>
+      <a className="whatsapp-float" href={createWhatsAppUrl('Hello AVELOF, I would like help planning my Kashmir journey.')} target="_blank" rel="noreferrer" aria-label="Chat with AVELOF on WhatsApp" title="Chat with AVELOF on WhatsApp"><WhatsAppIcon size={28} /></a>
       <footer className="site-footer">
         <div className="footer-main">
           <div className="footer-brand"><Link className="brand brand-light" to="/"><span className="brand-mark">A</span><span>AVELOF<small>YOUR KASHMIR EXPERIENCE</small></span></Link><p>Your stay. Your journey.<br />Your Kashmir experience.</p></div>

@@ -16,6 +16,9 @@ import { hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration
 import NumberStepper from './NumberStepper'
 import { EnquiryForm } from './BookingModal'
 import { enquiryPath } from '../services/bookingService'
+import { activitiesForPlaces, formatSelectedActivities } from '../data/activities'
+import ActivityChoices from './ActivityChoices'
+import { unionCabOptions, unionCabsForPlaces } from '../data/unionCabs'
 
 interface DayPlan {
   routeTo?: string
@@ -38,6 +41,8 @@ interface SavedTripPlan {
   stepVersion?: number
   adults?: string
   children?: string
+  activityIds?: string[]
+  unionCabIds?: string[]
 }
 
 interface TripPlannerProps {
@@ -115,8 +120,11 @@ function readTripPlan(sectionId: string): SavedTripPlan {
       }
     })
     const placeIds = Array.isArray(parsed.placeIds) ? [...new Set(parsed.placeIds.filter((id): id is string => typeof id === 'string').map(destinationOptionId).filter((id) => plannerStops.some((place) => place.id === id)))] : []
-    const restoredStep = parsed.stepVersion === 2 ? parsed.step : parsed.step === 1 || parsed.step === 2 ? parsed.step + 1 : 0
-    return { savedAt: parsed.savedAt, startDate: parsed.startDate, endDate: parsed.endDate, plans, placeIds, adults: typeof parsed.adults === 'string' && /^(?:[1-9]\d?|100)$/.test(parsed.adults) ? parsed.adults : '2', children: typeof parsed.children === 'string' && /^(?:0|[1-9]\d?|100)$/.test(parsed.children) ? parsed.children : '0', step: restoredStep === 1 || restoredStep === 2 || restoredStep === 3 ? restoredStep : 0, vehicleId: rentalCars.some((car) => car.id === parsed.vehicleId) || typeof parsed.vehicleId === 'string' && /^[a-f0-9-]{36}$/.test(parsed.vehicleId) ? parsed.vehicleId : undefined }
+    const restoredStep = parsed.stepVersion === 3 ? parsed.step : parsed.stepVersion === 2 ? (typeof parsed.step === 'number' && parsed.step >= 3 ? parsed.step + 1 : parsed.step) : parsed.step === 1 ? 2 : parsed.step === 2 ? 4 : 0
+    const savedActivityIds = Array.isArray(parsed.activityIds) ? parsed.activityIds.filter((id): id is string => typeof id === 'string') : []
+    const activityIds = activitiesForPlaces(placeIds).filter((activity) => savedActivityIds.includes(activity.id)).map((activity) => activity.id)
+    const unionCabIds = unionCabsForPlaces(Array.isArray(parsed.unionCabIds) ? parsed.unionCabIds.filter((id): id is string => typeof id === 'string') : [], placeIds).map((option) => option.id)
+    return { savedAt: parsed.savedAt, startDate: parsed.startDate, endDate: parsed.endDate, plans, placeIds, activityIds, unionCabIds, adults: typeof parsed.adults === 'string' && /^(?:[1-9]\d?|100)$/.test(parsed.adults) ? parsed.adults : '2', children: typeof parsed.children === 'string' && /^(?:0|[1-9]\d?|100)$/.test(parsed.children) ? parsed.children : '0', step: restoredStep === 1 || restoredStep === 2 || restoredStep === 3 || restoredStep === 4 ? restoredStep : 0, vehicleId: rentalCars.some((car) => car.id === parsed.vehicleId) || typeof parsed.vehicleId === 'string' && /^[a-f0-9-]{36}$/.test(parsed.vehicleId) ? parsed.vehicleId : undefined }
   } catch {
     clearSavedTripPlan(sectionId)
     return emptyPlan
@@ -246,6 +254,10 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
   const recommendedVehicle = [...rentalCars].filter((car) => car.seats >= people).sort((a, b) => a.seats - b.seats || a.price - b.price)[0]
   const [vehicleId, setVehicleId] = useState(rentalCars.some((car) => car.id === savedPlan.vehicleId) ? savedPlan.vehicleId! : rentalCars[0].id)
   const [placeIds, setPlaceIds] = useState<string[]>(savedPlan.placeIds ?? defaultPlaceIds)
+  const [activityIds, setActivityIds] = useState<string[]>(savedPlan.activityIds ?? [])
+  const selectedActivities = formatSelectedActivities(activityIds, placeIds)
+  const [unionCabIds, setUnionCabIds] = useState<string[]>(savedPlan.unionCabIds ?? [])
+  const unionCabRequests = unionCabsForPlaces(unionCabIds, placeIds).map((option) => `${option.label}. ${option.description}`).join('\n')
   const [placeNotice, setPlaceNotice] = useState('')
   const [step, setStep] = useState(savedPlan.step ?? 0)
   const [receipt, setReceipt] = useState<PreparedRequest | null>(null)
@@ -295,11 +307,11 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
 
   useEffect(() => {
     try {
-      saveTripPlan(sectionId, { startDate, endDate, plans, vehicleId, placeIds, step, stepVersion: 2, adults, children })
+      saveTripPlan(sectionId, { startDate, endDate, plans, vehicleId, placeIds, activityIds, unionCabIds, step, stepVersion: 3, adults, children })
     } catch {
       return
     }
-  }, [endDate, plans, sectionId, startDate, vehicleId, placeIds, step, adults, children])
+  }, [endDate, plans, sectionId, startDate, vehicleId, placeIds, activityIds, unionCabIds, step, adults, children])
 
   useEffect(() => () => {
     try {
@@ -323,7 +335,7 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
       return
     }
     try {
-      saveTripPlan(sectionId, { startDate, endDate, plans, vehicleId, placeIds, step, stepVersion: 2, adults, children })
+      saveTripPlan(sectionId, { startDate, endDate, plans, vehicleId, placeIds, activityIds, unionCabIds, step, stepVersion: 3, adults, children })
       sessionStorage.setItem(tripReturnStorageKey, sectionId)
     } catch {
       return
@@ -350,7 +362,10 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
 
   function toggleDestination(id: string) {
     if (placeIds.includes(id)) {
-      setPlaceIds(placeIds.filter((placeId) => placeId !== id))
+      const nextPlaces = placeIds.filter((placeId) => placeId !== id)
+      setPlaceIds(nextPlaces)
+      setActivityIds(activitiesForPlaces(nextPlaces).filter((activity) => activityIds.includes(activity.id)).map((activity) => activity.id))
+      setUnionCabIds(unionCabsForPlaces(unionCabIds, nextPlaces).map((option) => option.id))
       setPlaceNotice('')
       setPlans([])
       return
@@ -452,9 +467,11 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
       vehicleRentalEstimate: `₹${vehicleTotal.toLocaleString('en-IN')} for ${tripDays} days; excludes hotel costs and optional extras`,
       placesToVisit: itinerary,
       selectedDestinations: placeIds.map(stopName).join(', '),
+      ...(selectedActivities ? { selectedActivities } : {}),
+      ...(unionCabRequests ? { unionCabRequests } : {}),
       planningNote: `${estimateSummary} Destination day allocations are provisional. Please confirm route order, travel times, access and destination-specific charges.`,
     })
-    changeStep(4)
+    changeStep(5)
   }
 
   return <section className="custom-trip-section" id={sectionId}>
@@ -473,7 +490,7 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
           <span className="planner-local"><MapPin size={15} /> Planned with local care</span>
         </div>
         <TripPlannerSteps step={step} onStepChange={changeStep} disabled={submitting || Boolean(receipt)} />
-        {!receipt && step > 0 && <button className="button button-outline planner-back" type="button" disabled={submitting} onClick={() => changeStep(step - 1)}><ArrowLeft size={16} /> {step === 4 ? 'Back to hotels' : 'Back'}</button>}
+        {!receipt && step > 0 && <button className="button button-outline planner-back" type="button" disabled={submitting} onClick={() => changeStep(step - 1)}><ArrowLeft size={16} /> {step === 5 ? 'Back to hotels' : 'Back'}</button>}
         {step !== 1 && (step === 0 ? placeNotice : selectionError) && <p className="planner-place-notice" role="alert">{step === 0 ? placeNotice : selectionError}</p>}
         {step === 0 && <div className="trip-dates">
           <label><span><CalendarDays size={15} /> Start date</span><input type="date" min={minDate} value={startDate} onChange={(event) => changeStartDate(event.target.value)} /></label>
@@ -497,6 +514,7 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
             <Link to={`/destinations?place=${encodeURIComponent(place.name)}`} state={{ tripReturn: { sectionId, returnPath: sectionId === 'package-planner' ? '/tour-packages' : '/' } }} onClick={preservePlanForHotelReturn}>View this place <ArrowRight size={13} /></Link>
           </article>)}</div>
         </fieldset>}
+        {step === 3 && <ActivityChoices placeIds={placeIds} selectedIds={activityIds} onChange={setActivityIds} />}
         {step === 2 && <div className="planner-vehicle-section">
           <p className="privacy-note" role="status">{recommendedVehicle ? `Suggested for ${people} people: ${recommendedVehicle.name} (${recommendedVehicle.seats} seats). You can choose a larger vehicle.` : 'No single listed vehicle fits your group. Contact AVELOF to arrange multiple vehicles.'}</p>
           <fieldset className="planner-vehicle-picker"><legend>Choose your vehicle</legend>
@@ -519,9 +537,13 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
             })}</div>
           </fieldset>
           <div className="planner-vehicle-total" role="status"><OfferPrice price={vehicleTotal} /><strong>Vehicle rental estimate: ₹{vehicleTotal.toLocaleString('en-IN')}</strong><span>₹{selectedVehicle.price.toLocaleString('en-IN')} × {tripDays} days · vehicle only, not the full package price</span></div>
+          <fieldset className="planner-union-cabs"><legend>Optional union cabs</legend>
+            {unionCabOptions.filter((option) => placeIds.includes(option.id)).map((option) => <label className="activity-choice" key={option.id}><input type="checkbox" checked={unionCabIds.includes(option.id)} onChange={(event) => setUnionCabIds(event.target.checked ? [...unionCabIds, option.id] : unionCabIds.filter((id) => id !== option.id))} /><span><strong>{option.label}</strong><small>{option.description}</small></span></label>)}
+            {!unionCabOptions.some((option) => placeIds.includes(option.id)) && <p>Select Pahalgam or Gulmarg in Places to request union cabs there.</p>}
+          </fieldset>
         </div>}
         </div>}
-        {step === 3 && (tripDays > 0 && !capacityError ? <div className="day-plans">
+        {step === 4 && (tripDays > 0 && !capacityError ? <div className="day-plans">
           {dayPlans.map((day, index) => {
             const routeLabel = dayRouteLabel(day, index, dayPlans.length)
             const date = formatDate(addDays(startDate, index))
@@ -594,10 +616,10 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
           })}
         </div> : <p className="planner-empty">{capacityError ? 'Your itinerary will appear once your selected places fit within your dates.' : 'Choose your start and end dates to build your day-by-day plan.'}</p>)}
 
-        {step === 3 && invalidRooms && <p className="enquiry-error" role="alert">Enter a whole number of rooms with enough capacity for everyone, including children.</p>}
-        {step === 3 && !invalidRooms && dayPlans.length > 0 && <div className="planner-trip-estimate" role="status"><strong>Vehicle + selected stays: INR {(vehicleTotal + hotelTotal).toLocaleString('en-IN')}</strong><span>Vehicle: INR {vehicleTotal.toLocaleString('en-IN')} · Selected stays: INR {hotelTotal.toLocaleString('en-IN')} ({selectedStays.length}/{nights} nights)</span><span>{stayOccupancyNote} Selected meals are included. {pendingNights > 0 ? `${pendingNights} unselected hotel nights are not included. ` : ''}Optional extras and charges outside the listed rates are excluded. Estimate only; AVELOF will confirm a final quote.</span></div>}
-        {step === 4 && (receipt ? <section className="review-ready" role="status"><h3>Thank you for submitting your details.</h3><p>Your enquiry has been saved. This is not a confirmed booking.</p><p>Booking enquiry ID: <strong>{receipt.reference}</strong></p><a className="text-link" href={enquiryPath(receipt)}>View your bookings <ArrowRight size={16} /></a></section> : <><h3>Contact details</h3><p>Your selected dates, guests, vehicle and hotel rooms will be included automatically.</p><EnquiryForm kind="package" selectedItem="Custom package" additionalFields={enquiryFields} onSubmittingChange={setSubmitting} onPrepared={(saved) => { setReceipt(saved); requestAnimationFrame(() => { plannerRef.current?.focus(); plannerRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) }) }} /></>)}
-        {step < 4 && <div className="planner-footer"><p>Your route is a starting point. Our local team will help check travel times, access and availability.</p>{step < 3 ? <button className="button button-dark" type="button" disabled={!tripDays} onClick={() => changeStep(step + 1)}>Next: {step === 0 ? 'places' : step === 1 ? 'vehicle' : 'hotels'} <ArrowRight size={16} /></button> : <button className="button button-dark" type="button" disabled={!tripDays || invalidRooms} onClick={continueToEnquiry}>Continue with this plan <ArrowRight size={16} /></button>}</div>}
+        {step === 4 && invalidRooms && <p className="enquiry-error" role="alert">Enter a whole number of rooms with enough capacity for everyone, including children.</p>}
+        {step === 4 && !invalidRooms && dayPlans.length > 0 && <div className="planner-trip-estimate" role="status"><strong>Vehicle + selected stays: INR {(vehicleTotal + hotelTotal).toLocaleString('en-IN')}</strong><span>Vehicle: INR {vehicleTotal.toLocaleString('en-IN')} · Selected stays: INR {hotelTotal.toLocaleString('en-IN')} ({selectedStays.length}/{nights} nights)</span><span>{stayOccupancyNote} Selected meals are included. {pendingNights > 0 ? `${pendingNights} unselected hotel nights are not included. ` : ''}Optional extras and charges outside the listed rates are excluded. Estimate only; AVELOF will confirm a final quote.</span></div>}
+        {step === 5 && (receipt ? <section className="review-ready" role="status"><h3>Thank you for submitting your details.</h3><p>Your enquiry has been saved. This is not a confirmed booking.</p><p>Booking enquiry ID: <strong>{receipt.reference}</strong></p><a className="text-link" href={enquiryPath(receipt)}>View your bookings <ArrowRight size={16} /></a></section> : <><h3>Contact details</h3><p>Your selected dates, guests, vehicle, hotel rooms, activity and union-cab requests will be included automatically.</p>{selectedActivities && <section className="planner-activity-summary" aria-label="Requested activities"><h4>Requested activities</h4><p>{selectedActivities}</p><small>Subject to confirmation. Activity costs are separate from the estimate.</small></section>}{unionCabRequests && <section className="planner-activity-summary" aria-label="Requested union cabs"><h4>Requested union cabs</h4><p>{unionCabRequests}</p><small>Subject to confirmation. Union-cab charges are separate from the estimate.</small></section>}<EnquiryForm kind="package" selectedItem="Custom package" additionalFields={enquiryFields} onSubmittingChange={setSubmitting} onPrepared={(saved) => { setReceipt(saved); requestAnimationFrame(() => { plannerRef.current?.focus(); plannerRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) }) }} /></>)}
+        {step < 5 && <div className="planner-footer"><p>Your route is a starting point. Our local team will help check travel times, access and availability.</p>{step < 4 ? <button className="button button-dark" type="button" disabled={!tripDays} onClick={() => changeStep(step + 1)}>Next: {step === 0 ? 'places' : step === 1 ? 'vehicle' : step === 2 ? 'activities' : 'hotels'} <ArrowRight size={16} /></button> : <button className="button button-dark" type="button" disabled={!tripDays || invalidRooms} onClick={continueToEnquiry}>Continue with this plan <ArrowRight size={16} /></button>}</div>}
       </div>
     </div>
   </section>

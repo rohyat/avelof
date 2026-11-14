@@ -1,4 +1,4 @@
-import { destinations } from './catalog'
+import { destinations } from './catalog.ts'
 
 export const combinedExcursionId = 'aharbal-peer-ki-gali'
 
@@ -22,6 +22,12 @@ export const destinationOptions = destinations.filter((place) => place.id !== 'a
   suggestedVisit: '1 full day, starting and ending in Srinagar',
   season: peerKiGali.season,
   accessNote: `${aharbal.accessNote} ${peerKiGali.accessNote}`,
-  attractions: [...aharbal.attractions, ...peerKiGali.attractions],
+  attractions: [
+    aharbal.attractions[0],
+    aharbal.attractions[1],
+    { name: 'Forest & meadow excursions', detail: 'Kungwattan is a separate guided trekking outing, not an automatic stop on this long combined road day.' },
+    peerKiGali.attractions[0],
+    { name: 'Mughal Road & Dubjan', detail: 'Forest, river and mountain viewpoints on the Shopian approach; stop only where safe and permitted.' },
+  ],
   includedPlaces: [aharbal, peerKiGali],
 } : { ...place, includedPlaces: [place] })

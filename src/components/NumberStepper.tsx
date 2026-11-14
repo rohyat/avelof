@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { Minus, Plus } from 'lucide-react'
+import { RegistrationValidationContext } from './registrationValidationContext'
 
 export default function NumberStepper({ label, name, min = 0, max = 1000000, step = 1, defaultValue = '', currency = false, value: controlledValue, onChange }: {
   label: string; name: string; min?: number; max?: number; step?: number; defaultValue?: string | number; currency?: boolean; value?: string | number; onChange?: (value: string) => void
@@ -8,7 +9,13 @@ export default function NumberStepper({ label, name, min = 0, max = 1000000, ste
   const value = String(controlledValue ?? localValue)
   function setValue(next: string) { setLocalValue(next); onChange?.(next) }
   const inputRef = useRef<HTMLInputElement>(null)
-  useEffect(() => { inputRef.current?.setCustomValidity(value === '' || Number(value) < min || Number(value) > max ? `Enter a number from ${min} to ${max}.` : '') }, [value, min, max])
+  const revalidate = useContext(RegistrationValidationContext)
+  useEffect(() => {
+    const input = inputRef.current
+    if (!input) return
+    input.setCustomValidity(value === '' || Number(value) < min || Number(value) > max ? `Enter a number from ${min} to ${max}.` : '')
+    revalidate?.(input)
+  }, [value, min, max, revalidate])
   function change(direction: number) {
     const next = Math.min(max, Math.max(min, (Number(value) || min) + direction * step))
     setValue(String(Math.round(next * 100) / 100))

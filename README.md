@@ -11,6 +11,169 @@ npm run dev
 
 Create a production build with `npm run build`. Run the configured linter with `npm run lint`.
 
+Unused styles from the retired About layout, removed contact form and Travel
+Guide footnote have been removed. Keep image attribution/source records and
+licences: the current destination and vehicle assets are referenced by the site.
+Styles generated dynamically by booking status and Leaflet are intentionally
+retained even when their full class names do not appear in JSX.
+
+## Homepage discovery tiles
+
+About & Contact (`/about`) combines a responsive introduction, linked service
+cards, a brand-story panel with three concise icon-led bullet cards instead of
+long introductory paragraphs, a concise approach section and direct
+contact options (WhatsApp, phone, email and Instagram). There is no enquiry form
+on this page; Plan a trip leads to the existing planner. WhatsApp remains an
+optional help channel, not the enquiry submission flow.
+
+Tile order: Plan a trip, Packages, Hotels, Cabs, Drivers, Bookings, Places,
+Activities, Reviews, Food & Shopping, Travel Guide, Partner.
+
+The Travel Guide offers optional WhatsApp help using the business phone in
+`src/config.ts`. The site-wide floating help link is an accessible, icon-only
+WhatsApp button on all screen sizes. Enquiry submission remains separate.
+The guide ends with a button linking to destination discovery, without the
+former general-planning guidance footnote.
+
+Package detail pages use a journey overview with route chips, stay cards and
+transport information, illustrated day-by-day itinerary cards, experience icons,
+and distinct inclusion/exclusion panels. Package terms, itinerary text and prices
+remain sourced from `src/data/catalog.ts`. Book Now sits at the end of the package
+details, after the FAQs, only in the single-column layout (820px and below)
+where the price card moves above the details. Wider screens keep only the sticky
+price-card booking action. Four introductory highlights show duration, hotels with breakfast and dinner,
+private vehicle with local driver, and sightseeing. Practical notes use icon
+cards, and the FAQs use keyboard-accessible expandable cards.
+The highlights align in an equal-sized two-column grid on mobile and tablet
+(up to 1060px), keeping the flexible desktop row unchanged.
+`node --test tests/package-details.test.mjs` verifies both published package
+layouts, content, responsive sizing and booking selections against port 8791
+(or `AVELOF_HOTEL_TEST_URL`).
+
+Places (`/destinations`) is a destination guide, not a second enquiry form.
+Every destination uses the same layout: overview, travel/time/season facts,
+five main attraction highlights, activities and experiences, access guidance
+and a **Customise your trip** link to the main planner. Links from an existing
+trip return to that planner without automatically changing selected places.
+Activity entries reuse `src/data/activities.ts`, including seasonal and operator
+checks; destinations without catalogue activities say so rather than inventing
+paid experiences. Search includes aliases, attractions and listed activities.
+Search suggestions appear after two letters and tolerate common spelling
+mistakes. Choosing an attraction (for example Chandanwari or Drung Waterfall)
+opens its parent destination, without creating a separate destination. Keyboard
+arrows/Enter and touch selection are supported. Up to eight chosen suggestions
+are saved as catalogue IDs in browser-local storage, shown when an empty search
+is focused, and removable with **Clear history**. Searches are not sent to a
+third-party provider. Storage errors show a notice without blocking search.
+Places and Activities share the same autocomplete component and spelling
+matching. Activity suggestions include the destination/category, appear after
+two letters (for example `Shi` suggests the Dal Lake shikara ride), and have
+their own eight-item local history. Selecting an activity resets destination
+and category filters to show that experience, even if a previous filter
+excluded it. Private booking-ID lookup remains exact and is not saved locally.
+The introductory travel notice and distance filter are omitted; approximate
+Srinagar distances and one-way times remain on each destination card.
+Run `node --test tests/destinations.test.mjs` against the built local preview on
+port 8791 (or set `AVELOF_HOTEL_TEST_URL`) to check consistent highlights,
+responsive layouts, search, shared activities and planner-return links.
+
+The homepage has 12 shortcuts, including Activities (`/activities`),
+Food & Shopping (`/food-and-shopping`) and Travel Guide (`/travel-guide`).
+Activities provides destination/category/search filters and incremental results.
+The catalogue in `src/data/activities.ts` focuses on paid experiences in Srinagar,
+Gulmarg, Sonamarg and Pahalgam, not general sightseeing walks. Gulmarg has one
+combined ATV/motorbike request; Pahalgam lists zip-lining rather than ATV rides.
+Dal Lake boat options beyond shikaras and zip-line sites require operator and
+local-permission verification. Tourism source references are retained in the catalogue data; they describe general experiences,
+not live opening status. ATV/motorbike and other unverified operator enquiries
+are explicitly marked for local verification. Seasonal access, snow, tickets,
+permits and safety arrangements must be confirmed. No prices or live inventory
+are invented. Cabs is unchanged.
+
+Both Plan a trip entry points use Date, Places, Vehicle, Activities, Hotels and
+Contact details steps. The separate Activities step follows Vehicle and is
+optional, limited to selected destinations. Skipping paid experiences does not
+remove planned sightseeing; travellers can ask to add activities later, subject
+to availability. Removing a destination removes its
+activity requests. Selections survive destination/hotel detail returns, appear
+before contact submission, and are saved as `selectedActivities` with the enquiry.
+Activity costs are not part of vehicle/stay estimates. These are preferences for
+follow-up, never confirmed bookings. Private activity text is not added to public
+reference-only booking summaries.
+
+The Vehicle step offers unchecked optional union-cab requests for selected
+Pahalgam and Gulmarg destinations. Pahalgam guidance covers Aru Valley, Betaab
+Valley and Chandanwari; Gulmarg explains that union cabs may be required in bad
+weather, subject to road conditions and local rules. These requests survive
+detail-page returns, clear when their destination is removed, appear before
+submission and persist as `unionCabRequests` for the private admin enquiry.
+Union-cab charges are separate from the estimate and require confirmation.
+Saved planner version 3 maps older vehicle/hotel steps to the six-step flow.
+
+Food & Shopping is discovery-only: there is no ordering, checkout or payment.
+Restaurant/shop owners can register at `/register-business`, also linked from
+Partners. Public business information and photos require explicit publication
+consent. Owner contact name, phone and email stay private. Registration confirms
+receipt only after storage succeeds; nothing is advertised automatically.
+The existing admin session protects `/admin/panel/businesses`, where AVELOF can
+edit, approve, hide or delete submissions. The public directory shows approved
+records only and supports business-type and destination filters.
+Businesses can add up to 20 product/dish names (100 characters each), displayed
+as item chips on approved listings, with dish icons for restaurants and shopping
+icons for shops. The former About your business field is
+removed from registration; existing descriptions remain readable and editable
+in the admin panel. Address guidance asks for a nearby attraction or landmark;
+the optional map pin identifies the exact entrance.
+Business registrations require 1-5 shop, restaurant or product photos (JPEG,
+PNG or WebP, up to 5 MB original each); invalid counts are rejected with feedback.
+Every photo is compressed and validated, saved transactionally in D1, private
+until approval, visible in the approved gallery and deleted with its listing.
+Apply `0023_business_photo_gallery.sql` before deploying these gallery changes;
+it preserves existing single-photo listings. Only the local migration has been
+applied during development.
+
+Restaurant/shop owners can check and edit details at `/business-status`, linked
+from Partners and the registration receipt. Use the business ID (or registered
+phone) and private status access code: the first four alphanumeric characters of
+the business name, uppercased, plus the final four phone digits, matching hotel
+and driver access. If multiple businesses share a phone and code, use the ID.
+Credentials travel only in POST bodies, never URLs or browser storage. Public
+listings do not expose owner contacts or access codes; pending photos remain
+private. Edits keep existing photos unless 1-5 replacements are selected,
+preserve legacy descriptions, and hide the listing pending fresh approval.
+Name/phone changes can change the access code shown on the saved receipt.
+Version checks prevent stale edits, and unchanged retries recover saved updates
+without duplicating photo bytes. No additional database migration is needed
+beyond the gallery migration above.
+
+The mobile navigation closes on outside taps or Escape without blocking page
+scrolling; its toggle exposes expanded state to assistive technology.
+
+Hotel, driver and business registration/edit forms show stars on required fields
+and inline feedback on leaving a field, updating as it is corrected. Optional
+fields remain unstarred. Driver registration accepts `JK13J7748`,
+`JK 13 J 7748` and `JK13J-7748`, formatting them as `JK13J-7748` on blur and
+server-side. Complete registration-number validation remains; a typed dash
+is not required. `node --test tests/registration-validation.test.mjs` verifies
+required markers, feedback, correction and formatting in the local preview.
+
+Apply the pending business migrations (`0020_business_registrations.sql` and
+`0021_business_registration_integrity.sql`) using the normal D1 migration
+workflow before deploying this feature. Local migration uses
+`npm run db:migrate:local`; production migration is a separate release action.
+No production migration or deployment is performed by local verification.
+
+New feature checks: `npm run test:activities-ui` and
+`npm run test:businesses-ui` exercise the activity catalogue/planner and business
+registration/directory/moderation UI respectively. They use isolated browser
+requests; backend registration tests run through `npm test`.
+
+Travel Guide provides general preparation advice from `src/data/travelGuide.ts`,
+not live weather or road updates. Guide headings have topic-specific icons, with
+bulleted tips and matching icons on the right. Activity headings and planner
+choices share experience icons. The public activities page does not display a
+sources accordion; availability and operator-verification notices remain visible.
+
 ## Image Storage
 
 Catalog images are local files in `public/images/` and are delivered directly by
@@ -619,6 +782,15 @@ Submitting validates the form and saves it to D1. Failed or timed-out requests r
 Email notifications are not included. The owner dashboard provides authenticated full-record access and booking-status updates. Customer ID/phone lookup returns only limited masked summaries; the customer website has no private-code or full-detail controls. Provider credentials remain server-side. The database is accessed through a server-side binding, never directly from the browser.
 
 Catalog photography remains illustrative. Owner-approved guest reviews and published website submissions are displayed from D1 without an independently verified claim. Any future sample content must remain preview-only and outside live ratings. Images are served locally through Pages with source/license records retained; replace illustrative photography with approved images before presenting it as actual destinations, hotels or allocated vehicles.
+
+## Exact business map pins
+
+- Hotels, restaurants and shops can optionally confirm their public entrance on a shared map during registration. Hotel partners can update or remove their pin during private editing, and administrators can review and edit pins before approval. Existing listings without pins still work.
+- Open the map, tap the entrance (or pan and choose **Use map centre**), then press **Confirm pin**. **Use my current location** requests high-accuracy GPS only on demand. Device-reported accuracy is shown; owners must check the entrance because GPS accuracy cannot be guaranteed. Coordinate fields provide a keyboard/offline fallback.
+- The picker works in mobile browsers and the installed web app. Geolocation requires HTTPS (localhost is allowed), device support and permission. Permission denial or unavailable tiles show explicit guidance and do not prevent manual coordinates.
+- OpenStreetMap tiles load only after opening the map. The tile provider receives the IP address and viewed area, not registration contacts. Attribution remains visible. Image CSP permits OpenStreetMap tiles and Leaflet's transparent data-image placeholder; script CSP still prohibits unsafe eval and inline scripts. Browser Zod validation uses its non-JIT runtime to avoid blocked code-generation probes.
+- Pins are saved server-side as validated, paired coordinates and become public only on approved listings. Hotel cards/details and Food & Shopping listings offer **View on Google Maps**, preserving the exact saved coordinates. Private contact details are not included.
+- Apply `0022_business_map_coordinates.sql` using the existing D1 migration workflow before deploying this feature. Local migration does not update production. `npm run test:maps-ui` exercises GPS, touch placement, explicit confirmation, clearing, denied permissions, tile failure, mobile layouts and production CSP; registration suites cover payloads and public links.
 
 # React + TypeScript + Vite
 

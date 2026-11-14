@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { heatingOptions, hotelAmenities, hotelCategories, hotelIdPattern, hotelMealPlans, hotelPhotoCount, hotelRoomTypes, hotelTaxOptions, registrationLocations } from '../data/hotelRegistration.ts'
 import { indianPhoneNumber } from './phoneNumbers.ts'
 import { partnerStatusAccessCodePattern } from './partnerAccessCode.ts'
+import { coordinateFields, coordinatePairError, coordinatesPaired } from './locationSchema.ts'
 
 const text = (max: number) => z.string().trim().min(1).max(max)
 export const hotelStatusSchema = z.enum(['pending', 'approved', 'rejected'])
@@ -20,7 +21,7 @@ export function validHotelRoomRates(details: { roomRates?: HotelRoomRate[]; room
     && details.roomTypes.length === rates.length
     && rates.every(({ roomType, count }) => details.roomTypes.includes(`${roomType} (${count} ${count === 1 ? 'room' : 'rooms'})`))
 }
-export const hotelDetailsSchema = z.object({
+const hotelDetailsObject = z.object({
   name: text(120), location: z.enum(registrationLocations), category: z.enum(hotelCategories),
   description: text(1600).min(20), price: hotelPriceSchema,
   mealPlan: z.enum(hotelMealPlans), taxDetails: z.enum(hotelTaxOptions),
@@ -33,35 +34,40 @@ export const hotelDetailsSchema = z.object({
   checkIn: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
   checkOut: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
   totalRooms: z.number().int().min(1).max(10000),
+  ...coordinateFields,
 }).strict()
-export const hotelSubmissionSchema = hotelDetailsSchema.extend({
+export const hotelDetailsSchema = hotelDetailsObject.refine(coordinatesPaired, coordinatePairError)
+export const hotelSubmissionSchema = hotelDetailsObject.extend({
   id: z.uuidv4().toLowerCase(), contactName: text(80),
   phone: text(30).transform(indianPhoneNumber).refine(Boolean, 'Enter a valid 10-digit Indian phone number.'),
   publicationConsent: z.literal(true), website: z.string().max(200).default(''),
-}).strict()
-export const publicHotelSchema = hotelDetailsSchema.extend({
+}).strict().refine(coordinatesPaired, coordinatePairError)
+const publicHotelObject = hotelDetailsObject.extend({
   id: z.uuidv4().toLowerCase(), hotelId: z.string().regex(hotelIdPattern),
   photos: z.array(z.string().regex(/^\/api\/hotel-images\/[a-f0-9-]{36}\/[0-4]$/)).min(1).max(hotelPhotoCount),
   averageRating: z.number().min(1).max(5).nullable().default(null), reviewCount: z.number().int().min(0).default(0),
 })
-export const adminHotelSchema = publicHotelSchema.extend({
+export const publicHotelSchema = publicHotelObject.refine(coordinatesPaired, coordinatePairError)
+export const adminHotelSchema = publicHotelObject.extend({
   contactName: z.string(), phone: z.string(), submittedPrice: hotelPriceSchema,
   status: hotelStatusSchema, version: z.number().int().min(0),
   ownerNote: z.string(), createdAt: z.string(), updatedAt: z.string(),
-})
-export const hotelStatusResultSchema = publicHotelSchema.omit({ photos: true, averageRating: true, reviewCount: true }).extend({
+}).refine(coordinatesPaired, coordinatePairError)
+export const hotelStatusResultSchema = publicHotelObject.omit({ photos: true, averageRating: true, reviewCount: true }).extend({
   status: hotelStatusSchema, contactName: z.string(), phone: z.string(), version: z.number().int().min(0),
-})
+}).refine(coordinatesPaired, coordinatePairError)
 export const hotelReceiptSchema = z.object({
   saved: z.literal(true), id: z.uuidv4(), hotelId: z.string().regex(hotelIdPattern),
   accessCode: z.string().regex(partnerStatusAccessCodePattern), status: hotelStatusSchema,
 })
-export const hotelModerationSchema = z.object({
+export const hotelModerationObject = z.object({
   id: z.uuidv4().toLowerCase(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
   status: hotelStatusSchema, price: hotelPriceSchema, ownerNote: z.string().trim().max(1000),
   breakfastPrice: mealPriceSchema.optional(), dinnerPrice: mealPriceSchema.optional(),
   roomRates: hotelRoomRatesSchema.optional(),
+  ...coordinateFields,
 }).strict()
+export const hotelModerationSchema = hotelModerationObject.refine(coordinatesPaired, coordinatePairError)
 export const hotelLookupSchema = z.object({
   identifier: text(80), accessCode: z.string().trim().toUpperCase().regex(partnerStatusAccessCodePattern),
 }).strict()

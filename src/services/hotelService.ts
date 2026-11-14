@@ -4,6 +4,8 @@ import { adminHotelSchema, hotelReceiptSchema, hotelStatusResultSchema, publicHo
 import { hotelPhotoCount, hotelPhotoDimension, hotelPhotoLimit, hotelRoomMealMultiplier, hotelRoomRateBasis } from '../data/hotelRegistration'
 import type { HotelRoomRate, HotelSubmission, HotelStatus, PublicHotel } from './hotelSchema'
 import type { Hotel } from '../types'
+import type { MapCoordinates } from './mapLocation'
+import { locationFields } from './mapLocation'
 
 const pagination = { total: z.number().int().min(0), page: z.number().int().min(1), pageSize: z.literal(25) }
 const publicList = z.object({ ...pagination, hotels: z.array(publicHotelSchema) })
@@ -60,8 +62,8 @@ export async function updateHotel(details: HotelSubmission, version: number, acc
 export async function loadAdminHotels(page: number, status: HotelStatus | 'all', signal?: AbortSignal) {
   return adminList.parse(await requestHotel(`/api/hotels?${new URLSearchParams({ scope: 'admin', page: String(page), status })}`, 'GET', undefined, signal))
 }
-export async function moderateHotel(id: string, version: number, status: HotelStatus, price: number, ownerNote: string, breakfastPrice?: number, dinnerPrice?: number, roomRates?: HotelRoomRate[]) {
-  return z.object({ hotel: adminHotelSchema }).parse(await requestHotel('/api/hotels', 'PATCH', { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice, roomRates })).hotel
+export async function moderateHotel(id: string, version: number, status: HotelStatus, price: number, ownerNote: string, breakfastPrice?: number, dinnerPrice?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null) {
+  return z.object({ hotel: adminHotelSchema }).parse(await requestHotel('/api/hotels', 'PATCH', { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice, roomRates, ...(coordinates === undefined ? {} : locationFields(coordinates ?? undefined)) })).hotel
 }
 export async function deleteHotel(id: string, version: number) {
   return z.object({ deleted: z.literal(true), id: z.uuidv4() }).parse(await requestHotel('/api/hotels', 'DELETE', { id, version }))
@@ -82,6 +84,7 @@ export function toCatalogHotel(hotel: PublicHotel): Hotel {
     kind: 'hotel', id: hotel.id, registeredHotelId: hotel.hotelId,
     hotelAverageRating: hotel.averageRating, hotelReviewCount: hotel.reviewCount,
     name: hotel.name, location: hotel.location, category: hotel.category, price: hotel.price,
+    latitude: hotel.latitude, longitude: hotel.longitude,
     image: hotel.photos[0], gallery: hotel.photos,
     description: hotel.description, rateBasis: hotelRoomRateBasis(selectedHotelRoom(hotel)?.roomType),
     mealPlan: hotel.mealPlan, taxDetails: hotel.taxDetails, totalRooms: hotel.totalRooms,

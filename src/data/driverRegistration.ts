@@ -4,7 +4,7 @@ export const driverDistricts = [
   'Kupwara', 'Leh', 'Poonch', 'Pulwama', 'Rajouri', 'Ramban', 'Reasi', 'Samba', 'Shopian', 'Srinagar', 'Udhampur',
 ] as const
 export const driverVehicleNumberPattern = /^JK[0-9]{2}[A-Z]{1,2}-[0-9]{4}$/
-export const normalizeDriverVehicleNumber = (value: string) => value.trim().toUpperCase().replace(/\s+/g, '')
+export const normalizeDriverVehicleNumber = (value: string) => value.trim().toUpperCase().replace(/[\s-]+/g, '').replace(/^(JK[0-9]{2}[A-Z]{1,2})([0-9]{1,4})$/, '$1-$2')
 export const driverVehicleOptions = driverVehicleIds.map((id) => ({
   id, label: id === 'swift-dzire' ? 'Sedan' : ({
     ertiga: 'Maruti Suzuki Ertiga',

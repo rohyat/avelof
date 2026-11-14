@@ -10,9 +10,10 @@ export interface HotelRow {
   details_json: string; photo_keys_json: string; submitted_price: number; price: number;
   status: 'pending' | 'approved' | 'rejected'; version: number; owner_note: string;
   payload_hash: string; created_at: string; updated_at: string;
+  latitude: number | null; longitude: number | null;
   average_rating?: number | null; review_count?: number;
 }
-export const hotelColumns = 'id, hotel_id, phone, contact_name, details_json, photo_keys_json, submitted_price, price, status, version, owner_note, payload_hash, created_at, updated_at'
+export const hotelColumns = 'id, hotel_id, phone, contact_name, details_json, photo_keys_json, submitted_price, price, status, version, owner_note, payload_hash, created_at, updated_at, latitude, longitude'
 export const legacyHotelId = (id: string) => `AVELOF_HTL_${id.replaceAll('-', '').toUpperCase()}`
 export async function assignHotelId(DB: D1Database, row: HotelRow) {
   const details = hotelDetailsSchema.parse(JSON.parse(row.details_json))
@@ -28,8 +29,10 @@ export async function resolveHotelId(DB: D1Database, hotelId: string) {
 }
 export const photoKeys = (row: Pick<HotelRow, 'photo_keys_json'>) => z.array(z.string().regex(/^hotels\/[a-f0-9-]{36}\/[a-f0-9-]{36}\/[0-4]\.jpg$/)).min(1).max(hotelPhotoCount).parse(JSON.parse(row.photo_keys_json))
 export function publicHotel(row: HotelRow) {
+  const { latitude: _latitude, longitude: _longitude, ...details } = hotelDetailsSchema.parse(JSON.parse(row.details_json))
   return {
-    ...hotelDetailsSchema.parse(JSON.parse(row.details_json)), id: row.id, hotelId: row.hotel_id, price: row.price,
+    ...details, ...(row.latitude != null && row.longitude != null ? { latitude: row.latitude, longitude: row.longitude } : {}),
+    id: row.id, hotelId: row.hotel_id, price: row.price,
     photos: photoKeys(row).map((_, index) => `/api/hotel-images/${row.id}/${index}`),
     averageRating: row.average_rating ?? null, reviewCount: row.review_count ?? 0,
   }

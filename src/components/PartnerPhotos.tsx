@@ -22,7 +22,7 @@ export default function PartnerPhotos({ onChange }: { onChange: (photos: Blob[],
     finally { if (current === sequence.current) setProcessing(false) }
   }
   return <div className="review-text-field">
-    <label className="photo-upload-field"><span className="photo-upload-heading"><FileImage size={24} aria-hidden="true" /> Driver portrait (one photo required)</span><small>Choose a portrait photo to upload.</small><input aria-label="Driver portrait (one photo required)" type="file" accept="image/jpeg,image/png,image/webp" required onChange={(event) => { void select(Array.from(event.target.files ?? [])) }} /></label>
+    <label className="photo-upload-field"><span className="photo-upload-heading"><FileImage size={24} aria-hidden="true" /> Driver portrait (one photo required)</span><small>Choose a portrait photo to upload.</small><input name="portrait" aria-label="Driver portrait (one photo required)" type="file" accept="image/jpeg,image/png,image/webp" required onChange={(event) => { void select(Array.from(event.target.files ?? [])) }} /></label>
     <p className="privacy-note">Up to 5 MB original; resized to 1920 px and 1 MB. Upload a clear photo of yourself only; do not include another person's face, readable number plates or documents.</p>
     <p role="status">{processing ? 'Preparing portrait...' : photos.length ? 'Portrait ready to upload.' : ''}</p>
     {error && <p role="alert" className="enquiry-error">{error}</p>}

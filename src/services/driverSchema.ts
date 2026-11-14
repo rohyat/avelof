@@ -15,7 +15,7 @@ export const driverPrivateSchema = z.object({
   vehicleNumber: text(30).regex(/^[A-Za-z0-9 -]{5,30}$/),
 })
 export const driverVehicleNumberSchema = z.string().trim().transform(normalizeDriverVehicleNumber)
-  .refine((value) => driverVehicleNumberPattern.test(value), 'Use JK13B-1444 or JK01AB-1485 format.')
+  .refine((value) => driverVehicleNumberPattern.test(value), 'Enter a complete registration number, for example JK13J7748 or JK 13 J 7748.')
 export const driverSubmissionSchema = driverDetailsSchema.extend({
   ...driverPrivateSchema.shape, location: z.enum(driverDistricts), vehicleNumber: driverVehicleNumberSchema, id: z.uuidv4().toLowerCase(),
   publicationConsent: z.literal(true), website: z.string().max(200).default(''),
