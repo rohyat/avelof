@@ -5,12 +5,12 @@ import { rentalCars } from '../../src/data/catalog.ts'
 import { partnerStatusAccessCode } from '../../src/services/partnerAccessCode.ts'
 export interface DriverRow {
   id: string; driver_id: string; phone: string; private_json: string; details_json: string;
-  photo_keys_json: string; submitted_price: number; price: number; status: 'pending' | 'approved' | 'rejected';
+  photo_keys_json: string; status: 'pending' | 'approved' | 'rejected';
   version: number; owner_note: string; payload_hash: string; created_at: string;
   directory_credentials_consent: number; directory_credentials_consented_at: string | null;
   average_rating?: number | null; review_count?: number;
 }
-export const driverColumns = 'id, driver_id, phone, private_json, details_json, photo_keys_json, submitted_price, price, status, version, owner_note, payload_hash, created_at, directory_credentials_consent, directory_credentials_consented_at'
+export const driverColumns = 'id, driver_id, phone, private_json, details_json, photo_keys_json, status, version, owner_note, payload_hash, created_at, directory_credentials_consent, directory_credentials_consented_at'
 export const driverPhotoKeys = (row: Pick<DriverRow, 'photo_keys_json'>) => z.array(z.string().regex(/^drivers\/[a-f0-9-]{36}\/[a-f0-9-]{36}\/0\.jpg$/)).length(1).parse(JSON.parse(row.photo_keys_json))
 export function maskedDriverPhone(phone: string) {
   const digits = phone.replace(/\D/g, '')
@@ -30,7 +30,7 @@ export function publicDriver(row: DriverRow) {
   const publicVehicleNumber = driverVehicleNumberSchema.safeParse(privateDetails.vehicleNumber)
   return { ...details, id: row.id, driverId: row.driver_id, vehicleName: vehicle.label, maskedPhone: maskedDriverPhone(row.phone),
     ...(row.directory_credentials_consent ? { maskedLicenceNumber: maskedDriverLicence(privateDetails.licenceNumber), ...(publicVehicleNumber.success ? { vehicleNumber: publicVehicleNumber.data } : {}) } : {}),
-    price: row.price, photo: `/api/driver-images/${row.id}/0`, averageRating: row.average_rating ?? null, reviewCount: row.review_count ?? 0 }
+    photo: `/api/driver-images/${row.id}/0`, averageRating: row.average_rating ?? null, reviewCount: row.review_count ?? 0 }
 }
 export function adminDriver(row: DriverRow) {
   return { ...publicDriver(row), ...driverPrivateSchema.parse(JSON.parse(row.private_json)), status: row.status, version: row.version, ownerNote: row.owner_note, createdAt: row.created_at }

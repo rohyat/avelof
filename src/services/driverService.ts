@@ -23,8 +23,8 @@ export async function lookupDriver(identifier: string, accessCode: string) {
 export async function loadAdminDrivers(page: number, status: HotelStatus | 'all', signal?: AbortSignal) {
   return adminList.parse(await requestHotel(`/api/drivers?${new URLSearchParams({ scope: 'admin', page: String(page), status })}`, 'GET', undefined, signal))
 }
-export async function moderateDriver(id: string, version: number, status: HotelStatus, price: number, ownerNote: string, vehicleNumber: string) {
-  return z.object({ driver: adminDriverSchema }).parse(await requestHotel('/api/drivers', 'PATCH', { id, version, status, price, ownerNote, vehicleNumber })).driver
+export async function moderateDriver(id: string, version: number, status: HotelStatus, ownerNote: string, vehicleNumber: string) {
+  return z.object({ driver: adminDriverSchema }).parse(await requestHotel('/api/drivers', 'PATCH', { id, version, status, ownerNote, vehicleNumber })).driver
 }
 export async function deleteDriver(id: string, version: number) {
   return z.object({ deleted: z.literal(true), id: z.uuidv4() }).parse(await requestHotel('/api/drivers', 'DELETE', { id, version }))
@@ -44,7 +44,7 @@ function catalogDriver(driver: PublicDriver): RentalCar {
     driverPhoto: driver.photo, maskedPhone: driver.maskedPhone, vehicleNumber: driver.vehicleNumber, maskedLicenceNumber: driver.maskedLicenceNumber,
     name: driver.vehicleName, category: driver.vehicleName,
     driverAverageRating: driver.averageRating, driverReviewCount: driver.reviewCount,
-    location: driver.location, seats: driver.seats, price: driver.price,
+    location: driver.location, seats: driver.seats, price: vehicle.price, priceOnEnquiry: true,
     image: vehicle.image, gallery: vehicle.gallery,
     description: `${driver.fullName} · ${driver.location}`,
     luggage: 'Confirm with AVELOF', ac: true, tripTypes: [], conditions: [] }

@@ -1,13 +1,12 @@
 import { z } from 'zod'
 import { driverDistricts, driverVehicleIds, driverVehicleNumberPattern, normalizeDriverVehicleNumber } from '../data/driverRegistration.ts'
-import { hotelPriceSchema, hotelStatusSchema } from './hotelSchema.ts'
+import { hotelStatusSchema } from './hotelSchema.ts'
 import { indianPhoneNumber } from './phoneNumbers.ts'
 import { partnerStatusAccessCodePattern } from './partnerAccessCode.ts'
 const text = (max: number) => z.string().trim().min(1).max(max)
 export const driverDetailsSchema = z.object({
   fullName: text(100), vehicleId: z.enum(driverVehicleIds),
   location: text(80), seats: z.number().int().min(1).max(60),
-  price: hotelPriceSchema.optional(),
 }).strict()
 export const driverPrivateSchema = z.object({
   age: z.number().int().min(18).max(100),
@@ -17,13 +16,12 @@ export const driverPrivateSchema = z.object({
 })
 export const driverVehicleNumberSchema = z.string().trim().transform(normalizeDriverVehicleNumber)
   .refine((value) => driverVehicleNumberPattern.test(value), 'Use JK13B-1444 or JK01AB-1485 format.')
-export const driverSubmissionSchema = driverDetailsSchema.omit({ price: true }).extend({
+export const driverSubmissionSchema = driverDetailsSchema.extend({
   ...driverPrivateSchema.shape, location: z.enum(driverDistricts), vehicleNumber: driverVehicleNumberSchema, id: z.uuidv4().toLowerCase(),
   publicationConsent: z.literal(true), website: z.string().max(200).default(''),
 }).strict()
 export const publicDriverSchema = driverDetailsSchema.extend({
   id: z.uuidv4(), driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/),
-  price: hotelPriceSchema,
   vehicleName: text(120), maskedPhone: z.string().regex(/^[0-9*]+$/),
   vehicleNumber: driverPrivateSchema.shape.vehicleNumber.optional(),
   maskedLicenceNumber: z.string().regex(/^[A-Z0-9*]+$/).optional(),

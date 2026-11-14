@@ -10,7 +10,7 @@ const driver = {
   id, driverId, fullName: 'Public Driver Name', maskedPhone: '987*****10', vehicleId: 'innova-crysta', age: 30,
   phone: '9876543210', licenceNumber: 'JK01 123456789', vehicleNumber: 'JK01AB-1234',
   vehicleName: 'Toyota Innova Crysta', location: 'Srinagar', seats: 6,
-  price: 3200, status: 'pending', version: 0,
+  status: 'pending', version: 0,
   ownerNote: '', createdAt: '2026-11-13T10:00:00Z', photo: `/api/driver-images/${id}/0`,
   averageRating: 4.5, reviewCount: 2,
 }
@@ -114,12 +114,12 @@ test('partner onboarding and approved listings work separately from customer nav
       try {
         await page.goto(`${origin}/admin/panel/drivers`)
         await page.getByRole('heading', { name: `${driver.fullName} · ${driver.vehicleName}` }).waitFor()
-        await page.getByLabel('Daily rate (INR)', { exact: true }).fill('2900.25')
+        assert.equal(await page.getByLabel('Daily rate (INR)', { exact: true }).count(), 0)
         await page.getByLabel('Driver listing status').selectOption('approved')
         await page.getByLabel('Note to driver').fill('Reviewed and approved.')
-        await page.getByRole('button', { name: 'Save driver price and status' }).click()
-        await page.getByRole('status').filter({ hasText: 'Driver price, vehicle registration and status saved.' }).waitFor()
-        assert.deepEqual(update, { id, version: 0, status: 'approved', price: 2900.25, ownerNote: 'Reviewed and approved.', vehicleNumber: driver.vehicleNumber })
+        await page.getByRole('button', { name: 'Save driver status' }).click()
+        await page.getByRole('status').filter({ hasText: 'Driver vehicle registration and status saved.' }).waitFor()
+        assert.deepEqual(update, { id, version: 0, status: 'approved', ownerNote: 'Reviewed and approved.', vehicleNumber: driver.vehicleNumber })
         await page.goto(`${origin}/driver-status`)
         await page.getByLabel('Driver ID or phone number').fill(driver.phone)
         await page.getByLabel('Status access code').fill(accessCode)
@@ -254,6 +254,10 @@ test('partner onboarding and approved listings work separately from customer nav
         assert.equal(enquiry.fields.breakfast, 'Included')
         assert.equal(enquiry.fields.dinner, 'Included')
         assert.equal(enquiry.fields.nightlyRate, 'INR 5,200 per room per night for 2 adults; breakfast included, dinner included; Taxes included')
+        await page.goto(`${origin}/car-rentals/${id}`)
+        await page.getByRole('heading', { name: driver.vehicleName, exact: true }).waitFor()
+        assert.equal(await page.locator('.detail-aside').getByText('Price on enquiry', { exact: true }).count(), 1)
+        assert.equal(await page.locator('.detail-aside .offer-price').count(), 0)
         await page.goto(`${origin}/tour-packages`)
         const planner = page.locator('.trip-planner')
         await planner.getByLabel('Start date').fill('2027-01-10')

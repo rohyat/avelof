@@ -24,11 +24,11 @@ import { requestedBooking } from '../../src/services/bookingDetails.ts'
 import { buildOwnerReviewImport } from '../../scripts/import-owner-reviews.mjs'
 import { ownerGuestReviewMonths, ownerProvidedGuestReviews } from '../../src/data/catalog.ts'
 
-function database() {
+function database(beforeMigration) {
   const sqlite = new DatabaseSync(':memory:')
   sqlite.exec('PRAGMA foreign_keys = ON')
   const migrations = new URL('../../migrations/', import.meta.url)
-  for (const migration of readdirSync(migrations).filter((name) => name.endsWith('.sql')).sort()) {
+  for (const migration of readdirSync(migrations).filter((name) => name.endsWith('.sql') && (!beforeMigration || name < beforeMigration)).sort()) {
     sqlite.exec(readFileSync(new URL(migration, migrations), 'utf8'))
   }
   return {
@@ -122,10 +122,10 @@ test('driver registration is private, idempotent and unique by phone, with prote
     assert.equal(receipt.driverId, 'AVELOF-DRV-10001')
     const storedDriver = DB.sqlite.prepare('SELECT phone, details_json FROM driver_registrations WHERE id = ?').get(input.id)
     assert.equal(receipt.accessCode, driverAccessCode(storedDriver))
-    const stored = DB.sqlite.prepare('SELECT details_json, submitted_price, price FROM driver_registrations WHERE id = ?').get(input.id)
+    const stored = DB.sqlite.prepare('SELECT * FROM driver_registrations WHERE id = ?').get(input.id)
     assert.equal(JSON.parse(stored.details_json).price, undefined)
-    assert.equal(stored.submitted_price, 1)
-    assert.equal(stored.price, 1)
+    assert.equal(Object.hasOwn(stored, 'submitted_price'), false)
+    assert.equal(Object.hasOwn(stored, 'price'), false)
     assert.deepEqual(await (await driverRequest(DB, bucket, 'POST', input)).json(), receipt)
     assert.equal(photoCount(DB), 1)
     assert.equal((await driverRequest(DB, bucket, 'POST', { ...input, id: crypto.randomUUID(), phone: '9876543210' })).status, 409)
@@ -145,6 +145,7 @@ test('driver registration is private, idempotent and unique by phone, with prote
       assert.equal(owner.licenceNumber, undefined)
       assert.equal(owner.ownerNote, undefined)
       assert.equal(owner.photo, undefined)
+      assert.equal(Object.hasOwn(owner, 'price'), false)
       assert.equal(owner.accessCode, undefined)
     }
     assert.equal((await driverRequest(DB, bucket, 'POST', { identifier: receipt.driverId, accessCode: 'WRNG0000' }, { lookup: true })).status, 404)
@@ -173,7 +174,50 @@ test('driver migrations retain legacy access, linked reviews and recorded direct
     const consent = sqlite.prepare('SELECT directory_credentials_consent, directory_credentials_consented_at FROM driver_registrations WHERE id = ?').get(id)
     assert.equal(consent.directory_credentials_consent, 1)
     assert.ok(consent.directory_credentials_consented_at)
+    for (const migration of readdirSync(migrations).filter((name) => name.endsWith('.sql') && name > '0017_driver_directory_credentials.sql').sort()) {
+      sqlite.exec(readFileSync(new URL(migration, migrations), 'utf8'))
+    }
+    assert.equal(sqlite.prepare('SELECT driver_id FROM reviews').get().driver_id, 'AVELOF-DRV-10001')
+    assert.equal(sqlite.prepare('SELECT legacy_driver_id FROM driver_reference_numbers WHERE registration_id = ?').get(id).legacy_driver_id, legacyId)
+    assert.deepEqual(sqlite.prepare('SELECT directory_credentials_consent, directory_credentials_consented_at FROM driver_registrations WHERE id = ?').get(id), consent)
   } finally { sqlite.close() }
+})
+
+test('removing legacy driver prices preserves registrations and allows approval of INR 1 records', async () => {
+  const DB = database('0019')
+  try {
+    const inputs = []
+    for (const [index, status] of ['pending', 'approved', 'rejected'].entries()) {
+      const input = { ...driverPayload(), phone: `987654321${index}` }
+      const { id, age, phone, licenceNumber, vehicleNumber, publicationConsent, website, ...details } = input
+      void publicationConsent; void website
+      const privateDetails = JSON.stringify({ age, phone, licenceNumber, vehicleNumber })
+      const price = index === 0 ? 1 : 3200
+      DB.sqlite.prepare("INSERT INTO driver_registrations (id, driver_id, phone, private_json, details_json, photo_keys_json, submitted_price, price, publication_consent, payload_hash, status, version, owner_note) VALUES (?, ?, ?, ?, ?, '[]', ?, ?, 1, 'original-hash', ?, 2, 'Reviewed')")
+        .run(id, `AVELOF-DRV-${10001 + index}`, phone, privateDetails, JSON.stringify({ ...details, ...(index === 0 ? {} : { price }) }), price, price, status)
+      inputs.push({ input, before: DB.sqlite.prepare('SELECT * FROM driver_registrations WHERE id = ?').get(id) })
+    }
+    DB.sqlite.exec(readFileSync(new URL('../../migrations/0019_remove_driver_prices.sql', import.meta.url), 'utf8'))
+    for (const { input, before } of inputs) {
+      const after = DB.sqlite.prepare('SELECT * FROM driver_registrations WHERE id = ?').get(input.id)
+      const { submitted_price, price, details_json, ...preserved } = before
+      void submitted_price; void price
+      const details = JSON.parse(details_json)
+      delete details.price
+      assert.deepEqual({ ...after }, { ...preserved, details_json: JSON.stringify(details) })
+    }
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    const input = inputs[0].input
+    const approval = await driverRequest(DB, hotelBucket(), 'PATCH', {
+      id: input.id, version: 2, status: 'approved', vehicleNumber: input.vehicleNumber, ownerNote: 'Approved without a rate.',
+    }, { headers: { Cookie } })
+    assert.equal(approval.status, 200)
+    const approved = (await approval.json()).driver
+    assert.equal(approved.status, 'approved')
+    assert.equal(approved.version, 3)
+    assert.equal(Object.hasOwn(approved, 'price'), false)
+  } finally { DB.sqlite.close() }
 })
 
 test('hotel reference migration assigns sequential location IDs and preserves legacy references', () => {
@@ -197,7 +241,7 @@ test('hotel reference migration assigns sequential location IDs and preserves le
   } finally { sqlite.close() }
 })
 
-test('driver approval edits rates, excludes private data and hides photos on rejection', async () => {
+test('driver approval needs no price, excludes private data and hides photos on rejection', async () => {
   const DB = database(), bucket = hotelBucket()
   try {
     const input = driverPayload()
@@ -206,17 +250,22 @@ test('driver approval edits rates, excludes private data and hides photos on rej
     const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
     const Cookie = login.headers.get('Set-Cookie').split(';')[0]
     const adminHash = await hashText('123456789012345678901234567890123456789012345678')
-    const edit = { id: input.id, version: 0, status: 'approved', price: 2900.25, ownerNote: 'Approved after manual review.', vehicleNumber: input.vehicleNumber }
+    const edit = { id: input.id, version: 0, status: 'approved', ownerNote: 'Approved after manual review.', vehicleNumber: input.vehicleNumber }
     const photo = (index = '0', headers = {}) => onDriverImageRequest({ request: new Request(`https://avelof.test/api/driver-images/${input.id}/${index}`, { headers }), params: { id: input.id, index }, env: { DB, ENQUIRY_ACCESS_SECRET: secret, ENQUIRY_ADMIN_CODE_HASH: adminHash } })
     assert.equal((await photo()).status, 404)
     assert.equal((await photo('0', { Cookie })).status, 200)
     assert.equal((await driverRequest(DB, bucket, 'PATCH', edit)).status, 401)
     assert.equal((await driverRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie, Origin: 'https://elsewhere.test' } })).status, 403)
     assert.equal((await driverRequest(DB, bucket, 'PATCH', { ...edit, price: 1 }, { headers: { Cookie } })).status, 400)
-    assert.equal((await driverRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })).status, 200)
+    for (const invalid of [{ vehicleNumber: 'JK01AB1234' }, { status: 'invalid' }, { ownerNote: 'a'.repeat(1001) }]) {
+      assert.equal((await driverRequest(DB, bucket, 'PATCH', { ...edit, ...invalid }, { headers: { Cookie } })).status, 400)
+    }
+    const approval = await driverRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })
+    assert.equal(approval.status, 200)
+    assert.equal(Object.hasOwn((await approval.json()).driver, 'price'), false)
     assert.equal((await driverRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })).status, 409)
     const driver = (await (await driverRequest(DB, bucket, 'GET')).json()).drivers[0]
-    assert.equal(driver.price, 2900.25)
+    assert.equal(Object.hasOwn(driver, 'price'), false)
     assert.equal(driver.fullName, input.fullName)
     assert.equal(driver.maskedPhone, '987*****10')
     assert.equal(driver.maskedLicenceNumber, 'JK0********89')

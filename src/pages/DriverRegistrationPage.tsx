@@ -89,15 +89,14 @@ export function DriverStatusPage() {
     {driver && <section className="admin-review-record hotel-owner-status"><h2>{driver.fullName}</h2><p>{driver.vehicleName} · {driver.location} · {driver.seats} seats</p><p className="hotel-identifier">{driver.driverId}</p><p role="status">{hotelStatusLabels[driver.status]}</p>{driver.status === 'approved' ? <Link to="/drivers">View driver listing</Link> : <p>Not publicly listed. Contact AVELOF for changes.</p>}</section>}
   </section>
 }
-function DriverRecord({ driver, disabled, save, remove }: { driver: AdminDriver; disabled: boolean; save: (driver: AdminDriver, status: HotelStatus, price: number, note: string, vehicleNumber: string) => Promise<void>; remove: (driver: AdminDriver) => Promise<void> }) {
+function DriverRecord({ driver, disabled, save, remove }: { driver: AdminDriver; disabled: boolean; save: (driver: AdminDriver, status: HotelStatus, note: string, vehicleNumber: string) => Promise<void>; remove: (driver: AdminDriver) => Promise<void> }) {
   const [status, setStatus] = useState<HotelStatus>(driver.status)
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const fields = new FormData(event.currentTarget); await save(driver, status, Number(fields.get('price')), String(fields.get('ownerNote')), String(fields.get('vehicleNumber'))) }
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const fields = new FormData(event.currentTarget); await save(driver, status, String(fields.get('ownerNote')), String(fields.get('vehicleNumber'))) }
   return <article className="admin-review-record"><h2>{driver.fullName} · {driver.vehicleName}</h2><p className="hotel-identifier">{driver.driverId} · {hotelStatusLabels[driver.status]}</p><p>Private: age {driver.age}, phone {driver.phone}, licence {driver.licenceNumber}, vehicle registration {driver.vehicleNumber}</p><p>Public listing: {driver.fullName} · {driver.maskedPhone} · {driver.location} · {driver.seats} passenger seats</p><div className="hotel-photo-grid"><a href={driver.photo} target="_blank" rel="noreferrer"><img src={driver.photo} alt={`Portrait of ${driver.fullName}`} /></a></div>
     <form onSubmit={submit} className="review-submission-form"><fieldset className="hotel-form-fields" disabled={disabled}>
-      <NumberStepper label="Daily rate (INR)" name="price" min={1} step={100} defaultValue={driver.price} currency />
       <label>Vehicle registration number<input name="vehicleNumber" required defaultValue={driver.vehicleNumber} pattern="JK[0-9]{2}[A-Za-z]{1,2}-[0-9]{4}" placeholder="JK13B-1444 or JK01AB-1485" title="Use JK13B-1444 or JK01AB-1485 format." onBlur={(event) => { event.currentTarget.value = normalizeDriverVehicleNumber(event.currentTarget.value) }} /></label>
       <label>Driver listing status<select value={status} onChange={(event) => setStatus(hotelStatusSchema.parse(event.target.value))}><option value="pending">Awaiting approval</option><option value="approved">Approve and publish</option><option value="rejected">Reject / hide</option></select></label>
-      <label className="review-text-field">Note to driver<textarea name="ownerNote" maxLength={1000} defaultValue={driver.ownerNote} /></label><button className="button button-dark">Save driver price and status</button>
+      <label className="review-text-field">Note to driver<textarea name="ownerNote" maxLength={1000} defaultValue={driver.ownerNote} /></label><button className="button button-dark">Save driver status</button>
     </fieldset></form>
     <button type="button" className="button admin-record-delete" disabled={disabled} onClick={() => void remove(driver)}><Trash2 size={16} /> Delete driver registration</button>
   </article>
@@ -117,10 +116,10 @@ export function AdminDriversPage() {
     loadAdminDrivers(filters.page, filters.status, controller.signal).then((data) => { setListing(data); setSignedOut(false) }).catch((failure: unknown) => { if (!controller.signal.aborted) { setListing(null); if (failure instanceof HotelError && failure.status === 401) setSignedOut(true); else setError(hotelErrorText(failure)) } }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
   }, [filters])
-  async function save(driver: AdminDriver, status: HotelStatus, price: number, note: string, vehicleNumber: string) {
+  async function save(driver: AdminDriver, status: HotelStatus, note: string, vehicleNumber: string) {
     if (inFlight.current) return
     inFlight.current = true; setSaving(true); setError('')
-    try { await moderateDriver(driver.id, driver.version, status, price, note, vehicleNumber); setNotice('Driver price, vehicle registration and status saved.'); refresh() }
+    try { await moderateDriver(driver.id, driver.version, status, note, vehicleNumber); setNotice('Driver vehicle registration and status saved.'); refresh() }
     catch (failure) { if (failure instanceof HotelError && failure.status === 401) { setSignedOut(true); setListing(null) } else setError(hotelErrorText(failure)) }
     finally { setSaving(false); inFlight.current = false }
   }
@@ -139,7 +138,7 @@ export function AdminDriversPage() {
   return <section className="enquiry-access-page page-width"><h1>Driver registrations</h1>
     {signedOut ? <p><Link to="/admin/panel">Sign in to the owner dashboard</Link> to manage drivers.</p> : <>
       <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><Link to="/admin/panel/reviews">Reviews</Link><Link to="/admin/panel/hotels">Hotels</Link><span aria-current="page">Drivers</span></nav><OwnerPushNotifications />
-      <p>Verify driver identity, licence validity, commercial eligibility, vehicle permits, insurance, photos and rates before approval. Do not publish licence numbers, contacts or readable plates.</p>
+      <p>Verify driver identity, licence validity, commercial eligibility, vehicle permits, insurance and photos before approval. No driver rate is required. Full phone and driving-licence numbers remain private.</p>
       <div className="admin-enquiry-toolbar"><label>Driver status<select disabled={loading || saving} value={filters.status} onChange={(event) => refresh(1, event.target.value === 'all' ? 'all' : hotelStatusSchema.parse(event.target.value))}><option value="pending">Awaiting approval</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="all">All</option></select></label><button className="button button-outline" disabled={loading || saving} onClick={() => refresh()}>Refresh drivers</button></div>
       {loading && <p role="status">Loading drivers...</p>}{error && <p role="alert" className="enquiry-error">{error}</p>}{notice && <p role="status">{notice}</p>}
       <div className="admin-review-list">{listing?.drivers.map((driver) => <DriverRecord key={`${driver.id}-${driver.version}`} driver={driver} disabled={loading || saving} save={save} remove={remove} />)}</div>

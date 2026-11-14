@@ -11,9 +11,7 @@ import type { HotelEnv } from '../_lib/hotelRegistration.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 
 const listSchema = z.object({ scope: z.enum(['public', 'admin']).default('public'), page: z.coerce.number().int().min(1).max(10000).default(1), id: z.uuidv4().optional(), driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/).optional(), status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all') }).strict()
-const unpricedDriverRate = 1
-const moderationSchema = hotelModerationSchema.omit({ breakfastPrice: true, dinnerPrice: true }).extend({ vehicleNumber: driverVehicleNumberSchema })
-  .refine(({ price, status }) => status !== 'approved' || price > unpricedDriverRate, { path: ['price'], message: 'Set the daily rate before approval.' })
+const moderationSchema = hotelModerationSchema.omit({ price: true, breakfastPrice: true, dinnerPrice: true }).extend({ vehicleNumber: driverVehicleNumberSchema })
 const deletionSchema = z.object({ id: z.uuidv4(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
 const legacyDriverId = (id: string) => `AVELOF_DRV_${id.replaceAll('-', '').toUpperCase()}`
 
@@ -69,9 +67,9 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       }
       if (request.method === 'PATCH') {
         const parsed = moderationSchema.safeParse(input)
-        if (!parsed.success) return privateReply({ error: 'Check driver price, vehicle registration and status.' }, 400)
-        const { id, version, status, price, ownerNote, vehicleNumber } = parsed.data
-        const row = await DB.prepare(`UPDATE driver_registrations SET status = ?, price = ?, owner_note = ?, private_json = json_set(private_json, '$.vehicleNumber', ?), version = version + 1 WHERE id = ? AND version = ? RETURNING ${driverColumns}`).bind(status, price, ownerNote, vehicleNumber, id, version).first<DriverRow>()
+        if (!parsed.success) return privateReply({ error: 'Check driver vehicle registration, status and note.' }, 400)
+        const { id, version, status, ownerNote, vehicleNumber } = parsed.data
+        const row = await DB.prepare(`UPDATE driver_registrations SET status = ?, owner_note = ?, private_json = json_set(private_json, '$.vehicleNumber', ?), version = version + 1 WHERE id = ? AND version = ? RETURNING ${driverColumns}`).bind(status, ownerNote, vehicleNumber, id, version).first<DriverRow>()
         return row ? privateReply({ driver: adminDriver(row) }) : privateReply({ error: 'This driver changed. Refresh before updating.' }, 409)
       }
       if (!await allowAccessAttempt(request, DB, 'driver-lookup', 10)) return privateReply({ error: 'Too many attempts. Try again in ten minutes.' }, 429)
@@ -121,8 +119,8 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     const { id, phone, age, licenceNumber, vehicleNumber, publicationConsent, website, ...details } = data
     void publicationConsent; void website
     insertingId = id
-    const row = await DB.prepare(`INSERT INTO driver_registrations (id, driver_id, phone, private_json, details_json, photo_keys_json, submitted_price, price, publication_consent, payload_hash, directory_credentials_consent, directory_credentials_consented_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 1, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ON CONFLICT DO NOTHING RETURNING ${driverColumns}`)
-      .bind(id, legacyDriverId(id), phone, JSON.stringify({ phone, age, licenceNumber, vehicleNumber }), JSON.stringify(details), JSON.stringify(keys), unpricedDriverRate, unpricedDriverRate, payloadHash).first<DriverRow>()
+    const row = await DB.prepare(`INSERT INTO driver_registrations (id, driver_id, phone, private_json, details_json, photo_keys_json, publication_consent, payload_hash, directory_credentials_consent, directory_credentials_consented_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?, 1, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ON CONFLICT DO NOTHING RETURNING ${driverColumns}`)
+      .bind(id, legacyDriverId(id), phone, JSON.stringify({ phone, age, licenceNumber, vehicleNumber }), JSON.stringify(details), JSON.stringify(keys), payloadHash).first<DriverRow>()
     if (!row) {
       await deleteRegistrationPhotos(DB, keys); keys = []
       const concurrent = await DB.prepare(`SELECT ${driverColumns} FROM driver_registrations WHERE id = ?`).bind(id).first<DriverRow>()

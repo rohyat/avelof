@@ -325,9 +325,10 @@ invitation-only portal.
 `/register-driver` collects a driver's full legal name, age (18+), Indian phone
 number, licence number and vehicle registration number. Only the name, masked
 phone number, one driver portrait, vehicle selected from the current rental
-catalog, base location, passenger seats and reviewed daily INR rate are public
-after consent and owner approval. Age, full phone, licence and vehicle
-registration remain private. Vehicle model photos, taxes, luggage, trip types,
+catalog, base location, passenger seats and vehicle registration are public
+after consent and owner approval. Phone and driving-licence numbers are masked;
+age and full contact details remain private. Driver prices are not collected,
+stored, returned by the API or required for approval. Vehicle model photos, taxes, luggage, trip types,
 descriptions and fare-condition fields are not collected. The portrait uses the
 same image resizing limits and private `HOTEL_PHOTOS` R2 binding, under a
 separate `drivers/` prefix. Migration
@@ -336,7 +337,13 @@ preview before deployment. No extra photo bucket is required.
 
 A successful save returns a unique driver ID and private access code.
 `/driver-status` requires the ID or phone plus that code. Owners review private
-records and portraits at `/admin/panel/drivers`, edit rates and approve/reject.
+records and portraits at `/admin/panel/drivers`, correct vehicle registration
+and approve/reject without entering a price. Apply
+`0019_remove_driver_prices.sql` to production and preview D1 databases before
+deploying this version. It removes the old price columns (including placeholder
+INR 1 rates) and prices embedded in legacy driver details, preserving driver
+registrations, IDs, statuses, portraits and linked reviews. Hotel and catalog
+vehicle pricing is unchanged; registered-driver detail pages show price on enquiry.
 Licence, eligibility, permits, insurance and portrait ownership need manual
 review; the form does not automatically verify them. Approved names and
 portraits appear in `/drivers`; the existing generic vehicle photos are used for
