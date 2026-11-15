@@ -1,10 +1,12 @@
 import { business } from '../../src/config.ts'
 import { indianPhoneNumber } from '../../src/services/phoneNumbers.ts'
+import { validTotpSecret } from './adminTotp.ts'
 
 export interface AccessEnv {
   DB?: D1Database
   ENQUIRY_ACCESS_SECRET?: string
   ENQUIRY_ADMIN_CODE_HASH?: string
+  ENQUIRY_ADMIN_TOTP_SECRET?: string
   ENQUIRY_VAPID_PUBLIC_KEY?: string
   ENQUIRY_VAPID_PRIVATE_KEY?: string
   ENQUIRY_VAPID_SUBJECT?: string
@@ -88,15 +90,17 @@ export function adminCookie(request: Request, token: string, clear = false) {
 }
 
 export async function createAdminSession(env: AccessEnv) {
+  if (env.ENQUIRY_ADMIN_TOTP_SECRET !== undefined && !validTotpSecret(env.ENQUIRY_ADMIN_TOTP_SECRET)) throw new Error('Invalid authenticator configuration.')
   const expires = Math.floor(Date.now() / 1000) + sessionLifetime
   const payload = `v1.${expires}.${crypto.randomUUID()}`
-  const signature = await crypto.subtle.sign('HMAC', await signingKey(`${env.ENQUIRY_ACCESS_SECRET}:${env.ENQUIRY_ADMIN_CODE_HASH}`), encoder.encode(payload))
+  const signature = await crypto.subtle.sign('HMAC', await signingKey(adminSigningSecret(env)), encoder.encode(payload))
   const encoded = btoa(String.fromCharCode(...new Uint8Array(signature))).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
   return `${payload}.${encoded}`
 }
 
 export async function isAdmin(request: Request, env: AccessEnv) {
   if (!accessConfigured(env) || !validAdminHash(env.ENQUIRY_ADMIN_CODE_HASH ?? '')) return false
+  if (env.ENQUIRY_ADMIN_TOTP_SECRET !== undefined && !validTotpSecret(env.ENQUIRY_ADMIN_TOTP_SECRET)) return false
   const token = request.headers.get('Cookie')?.split(';').map((cookie) => cookie.trim()).find((cookie) => cookie.startsWith(`${cookieName(request)}=`))?.split('=').slice(1).join('=')
   if (!token || token.length > 256) return false
   const [version, expiry, nonce, signature, extra] = token.split('.')
@@ -105,10 +109,15 @@ export async function isAdmin(request: Request, env: AccessEnv) {
   if (extra || version !== 'v1' || !Number.isInteger(expires) || expires <= now || expires > now + sessionLifetime || !/^[a-f0-9-]{36}$/.test(nonce ?? '') || !/^[A-Za-z0-9_-]{43}$/.test(signature ?? '')) return false
   try {
     const bytes = Uint8Array.from(atob(signature.replaceAll('-', '+').replaceAll('_', '/') + '='), (character) => character.charCodeAt(0))
-    return await crypto.subtle.verify('HMAC', await signingKey(`${env.ENQUIRY_ACCESS_SECRET}:${env.ENQUIRY_ADMIN_CODE_HASH}`), bytes, encoder.encode(`${version}.${expiry}.${nonce}`))
+    return await crypto.subtle.verify('HMAC', await signingKey(adminSigningSecret(env)), bytes, encoder.encode(`${version}.${expiry}.${nonce}`))
   } catch {
     return false
   }
+}
+
+function adminSigningSecret(env: AccessEnv) {
+  const passwordKey = `${env.ENQUIRY_ACCESS_SECRET}:${env.ENQUIRY_ADMIN_CODE_HASH}`
+  return env.ENQUIRY_ADMIN_TOTP_SECRET === undefined ? passwordKey : `${passwordKey}:totp:${env.ENQUIRY_ADMIN_TOTP_SECRET}`
 }
 
 export async function allowAccessAttempt(request: Request, database: D1Database, scope: string, maximumAttempts = 10) {

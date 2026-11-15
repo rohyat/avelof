@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { isAdmin, privateReply, sameOrigin } from '../_lib/enquiryAccess.ts'
 import type { AccessEnv } from '../_lib/enquiryAccess.ts'
+import { sendDeviceTestPush } from '../_lib/pushNotifications.ts'
 
 const endpointSchema = z.string().url().max(2048).refine((value) => new URL(value).protocol === 'https:')
 const subscriptionSchema = z.object({
@@ -11,6 +12,7 @@ const subscriptionSchema = z.object({
 const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('subscribe'), subscription: subscriptionSchema }).strict(),
   z.object({ action: z.literal('unsubscribe'), endpoint: endpointSchema }).strict(),
+  z.object({ action: z.literal('test'), endpoint: endpointSchema }).strict(),
 ])
 
 async function readSubscriptionCount(database: D1Database) {
@@ -36,6 +38,13 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env }) => {
     try { input = JSON.parse(text) } catch { return privateReply({ error: 'Invalid notification request.' }, 400) }
     const parsed = actionSchema.safeParse(input)
     if (!parsed.success) return privateReply({ error: 'Invalid notification subscription.' }, 400)
+    if (parsed.data.action === 'test') {
+      if (request.method !== 'POST') return privateReply({ error: 'Use POST to send a test notification.' }, 405, { Allow: 'POST' })
+      if (!env.ENQUIRY_VAPID_PUBLIC_KEY || !env.ENQUIRY_VAPID_PRIVATE_KEY || !env.ENQUIRY_VAPID_SUBJECT) return privateReply({ error: 'Mobile notifications are not configured yet.' }, 503)
+      const outcome = await sendDeviceTestPush(env, parsed.data.endpoint)
+      if (outcome !== 'sent') return privateReply({ error: 'This device subscription is missing or expired. Enable alerts on this device again.' }, 409)
+      return privateReply({ sent: true })
+    }
     if (parsed.data.action === 'unsubscribe') {
       await env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(parsed.data.endpoint).run()
       return privateReply({ enabled: false, subscriptionCount: await readSubscriptionCount(env.DB) })
@@ -46,6 +55,7 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env }) => {
       .bind(endpoint, keys.p256dh, keys.auth).run()
     return privateReply({ enabled: true, subscriptionCount: await readSubscriptionCount(env.DB) })
   } catch {
+    console.error('Admin notification request failed.')
     return privateReply({ error: 'Notification settings are temporarily unavailable.' }, 503)
   }
 }

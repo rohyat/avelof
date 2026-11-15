@@ -30,6 +30,7 @@ async function main() {
   const settings = {
     ENQUIRY_ACCESS_SECRET: existing.ENQUIRY_ACCESS_SECRET || randomBytes(32).toString('hex'),
     ENQUIRY_ADMIN_CODE_HASH: adminHash,
+    ...(existing.ENQUIRY_ADMIN_TOTP_SECRET !== undefined ? { ENQUIRY_ADMIN_TOTP_SECRET: existing.ENQUIRY_ADMIN_TOTP_SECRET } : {}),
   }
   if (settings.ENQUIRY_ACCESS_SECRET.length < 32) throw new Error('The existing access secret is too short. Do not rotate it without planning customer-code recovery.')
   if (!savedCode && !passwordConfigured) await writeFile(codePath, `${adminCode}\n`, { flag: 'wx', mode: 0o600 })
@@ -80,6 +81,7 @@ async function main() {
 
   const verifyIndex = process.argv.indexOf('--verify')
   if (verifyIndex >= 0) {
+    if (existing.ENQUIRY_ADMIN_TOTP_SECRET !== undefined) throw new Error('Authenticator sign-in is active. Verify interactively in the admin panel; this command cannot bypass its code requirement.')
     if (passwordConfigured) throw new Error('A chosen admin password is active. Verify by signing in directly, or use the hidden password-setting command, which verifies the new password without printing it.')
     const assets = await readdir(resolve('dist'), { recursive: true })
     for (const asset of assets.filter((name) => /\.(js|html|css)$/.test(name))) {

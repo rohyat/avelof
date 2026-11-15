@@ -42,3 +42,7 @@ export async function savePushSubscription(subscription: PushSubscription) {
 export async function removePushSubscription(endpoint: string) {
   return subscriptionResultSchema.parse(await requestPush('DELETE', { action: 'unsubscribe', endpoint }))
 }
+
+export async function sendTestNotification(endpoint: string) {
+  return z.object({ sent: z.literal(true) }).parse(await requestPush('POST', { action: 'test', endpoint }))
+}

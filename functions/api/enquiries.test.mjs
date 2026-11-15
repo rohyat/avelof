@@ -20,6 +20,7 @@ import { customerHotelRate, hotelAccessCode, registrationPhotoBytes, validHotelJ
 import { hotelPhotoLimit, hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 import { adminCookie, correctAdminUsername, createAdminSession, customerAccessCode, hashText, isAdmin, phoneCandidates, verifyAdminPassword } from '../_lib/enquiryAccess.ts'
+import { matchingTotpCounter, totpCode, validTotpSecret } from '../_lib/adminTotp.ts'
 import { indianPhoneNumber } from '../../src/services/phoneNumbers.ts'
 import { hotelSubmissionSchema, hotelModerationSchema } from '../../src/services/hotelSchema.ts'
 import { businessSubmissionSchema } from '../../src/services/businessSchema.ts'
@@ -1257,7 +1258,7 @@ async function access(DB, body, options = {}) {
     headers: { Origin: 'https://avelof.test', 'Content-Type': 'application/json', ...options.headers },
     ...(input ? { body: typeof input === 'string' ? input : JSON.stringify(input) } : {}),
   })
-  return onAccessRequest({ request, env: { DB, ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters', ENQUIRY_ADMIN_CODE_HASH: await hashText('123456789012345678901234567890123456789012345678') } })
+  return onAccessRequest({ request, env: { DB, ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters', ENQUIRY_ADMIN_CODE_HASH: await hashText('123456789012345678901234567890123456789012345678'), ...options.env } })
 }
 
 async function pushRequest(DB, method, body, options = {}) {
@@ -1273,6 +1274,7 @@ async function pushRequest(DB, method, body, options = {}) {
     ENQUIRY_VAPID_PUBLIC_KEY: 'test-public-key',
     ENQUIRY_VAPID_PRIVATE_KEY: 'test-private-key',
     ENQUIRY_VAPID_SUBJECT: 'mailto:info@avelof.in',
+    ...options.env,
   } })
 }
 
@@ -1414,6 +1416,78 @@ test('only the current admin session can permanently delete an enquiry and its r
   } finally { DB.sqlite.close() }
 })
 
+test('authenticator uses RFC 6238 six-digit vectors and a bounded thirty-second window', async () => {
+  const secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'
+  assert.equal(validTotpSecret(secret), true)
+  assert.equal(validTotpSecret(secret.toLowerCase()), false)
+  assert.equal(validTotpSecret(''), false)
+  for (const [seconds, expected] of [[59, '287082'], [1111111109, '081804'], [1111111111, '050471'], [1234567890, '005924'], [2000000000, '279037'], [20000000000, '353130']]) {
+    assert.equal(await totpCode(secret, Math.floor(seconds / 30)), expected)
+    assert.equal(await matchingTotpCounter(secret, expected, seconds * 1000), Math.floor(seconds / 30))
+  }
+  const counter = 1000
+  const code = await totpCode(secret, counter)
+  assert.equal(await matchingTotpCounter(secret, code, (counter - 1) * 30000), counter)
+  assert.equal(await matchingTotpCounter(secret, code, (counter + 1) * 30000), counter)
+  assert.equal(await matchingTotpCounter(secret, code, (counter + 2) * 30000), null)
+  assert.equal(await matchingTotpCounter(secret, '12345', counter * 30000), null)
+  assert.equal(await matchingTotpCounter(secret, 'ABCDEF', counter * 30000), null)
+})
+
+test('authenticator is mandatory after enrollment, codes cannot be replayed and old sessions are invalidated', async () => {
+  const DB = database()
+  const secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'
+  const env = { ENQUIRY_ADMIN_TOTP_SECRET: secret }
+  const credentials = { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' }
+  try {
+    const oldLogin = await access(DB, credentials)
+    const oldCookie = oldLogin.headers.get('Set-Cookie').split(';')[0]
+    assert.equal((await access(DB, undefined, { env, headers: { Cookie: oldCookie } })).status, 401)
+    const first = await access(DB, credentials, { env })
+    assert.equal(first.status, 200)
+    assert.deepEqual(await first.json(), { requiresAuthenticator: true })
+    assert.equal(first.headers.get('Set-Cookie'), null)
+    const incorrectPassword = await access(DB, { ...credentials, code: 'bad-password' }, { env })
+    assert.equal(incorrectPassword.status, 401)
+    assert.equal(incorrectPassword.headers.get('Set-Cookie'), null)
+    const wrongCode = await access(DB, { ...credentials, authenticatorCode: 'abcdef' }, { env })
+    assert.equal(wrongCode.status, 400)
+    const expiredCode = await totpCode(secret, Math.floor(Date.now() / 30000) - 10)
+    assert.equal((await access(DB, { ...credentials, authenticatorCode: expiredCode }, { env })).status, 401)
+    const code = await totpCode(secret, Math.floor(Date.now() / 30000))
+    const input = { ...credentials, authenticatorCode: code }
+    const responses = await Promise.all([access(DB, input, { env }), access(DB, input, { env })])
+    assert.deepEqual(responses.map((response) => response.status).sort(), [200, 401])
+    const success = responses.find((response) => response.status === 200)
+    assert.deepEqual(await success.json(), { signedIn: true })
+    const Cookie = success.headers.get('Set-Cookie').split(';')[0]
+    assert.equal((await access(DB, undefined, { env, headers: { Cookie } })).status, 200)
+    assert.equal((await access(DB, undefined, { headers: { Cookie } })).status, 401)
+    assert.equal((await access(DB, undefined, { env: { ENQUIRY_ADMIN_TOTP_SECRET: 'A'.repeat(32) }, headers: { Cookie } })).status, 401)
+    assert.equal((await access(DB, input, { env })).status, 401)
+    assert.equal((await access(DB, credentials, { env: { ENQUIRY_ADMIN_TOTP_SECRET: '' } })).status, 503)
+    assert.equal((await access(DB, undefined, { env: { ENQUIRY_ADMIN_TOTP_SECRET: '' }, headers: { Cookie: oldCookie } })).status, 401)
+    assert.equal(JSON.stringify(DB.sqlite.prepare('SELECT * FROM admin_totp_counters').all()).includes(secret), false)
+  } finally { DB.sqlite.close() }
+})
+
+test('authenticator login is rate limited and fails closed if replay storage is unavailable', async () => {
+  const DB = database()
+  const env = { ENQUIRY_ADMIN_TOTP_SECRET: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ' }
+  const credentials = { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' }
+  try {
+    DB.sqlite.exec('DROP TABLE admin_totp_counters')
+    const code = await totpCode(env.ENQUIRY_ADMIN_TOTP_SECRET, Math.floor(Date.now() / 30000))
+    const failed = await access(DB, { ...credentials, authenticatorCode: code }, { env })
+    assert.equal(failed.status, 503)
+    assert.equal(failed.headers.get('Set-Cookie'), null)
+    for (let index = 0; index < 9; index++) assert.equal((await access(DB, { ...credentials, code: 'bad-password' }, { env })).status, 401)
+    const limited = await access(DB, credentials, { env })
+    assert.equal(limited.status, 429)
+    assert.equal(limited.headers.get('Retry-After'), '600')
+  } finally { DB.sqlite.close() }
+})
+
 test('push subscriptions are private to the owner and can be enabled or removed per device', async () => {
   const DB = database()
   try {
@@ -1432,6 +1506,64 @@ test('push subscriptions are private to the owner and can be enabled or removed 
     assert.deepEqual(await (await pushRequest(DB, 'DELETE', { action: 'unsubscribe', endpoint }, { headers: { Cookie } })).json(), { enabled: false, subscriptionCount: 0 })
     assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM push_subscriptions').get().total, 0)
   } finally { DB.sqlite.close() }
+})
+
+test('device test notifications require admin access and a saved subscription, reporting delivery failures', async () => {
+  const DB = database()
+  const originalFetch = globalThis.fetch
+  const vapidKey = createECDH('prime256v1')
+  const deviceKey = createECDH('prime256v1')
+  vapidKey.generateKeys()
+  deviceKey.generateKeys()
+  const env = {
+    ENQUIRY_VAPID_PUBLIC_KEY: vapidKey.getPublicKey(undefined, 'uncompressed').toString('base64url'),
+    ENQUIRY_VAPID_PRIVATE_KEY: vapidKey.getPrivateKey().toString('base64url'),
+  }
+  const endpoint = 'https://push.example.test/device/test'
+  const otherEndpoint = 'https://push.example.test/device/other'
+  const subscription = {
+    endpoint, keys: {
+      p256dh: deviceKey.getPublicKey(undefined, 'uncompressed').toString('base64url'),
+      auth: randomBytes(16).toString('base64url'),
+    },
+  }
+  let deliveries = 0
+  let deliveryStatus = 201
+  globalThis.fetch = async (input, init) => {
+    deliveries++
+    assert.equal(String(input), endpoint)
+    assert.match(new Headers(init.headers).get('authorization'), /^vapid t=/)
+    assert.equal(new Headers(init.headers).get('content-encoding'), 'aes128gcm')
+    assert.ok(init.body.byteLength > 0)
+    return new Response(null, { status: deliveryStatus })
+  }
+  try {
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    const options = { headers: { Cookie }, env }
+    const action = { action: 'test', endpoint }
+    assert.equal((await pushRequest(DB, 'POST', action)).status, 401)
+    assert.equal((await pushRequest(DB, 'POST', action, { ...options, headers: { Cookie, Origin: 'https://evil.test' } })).status, 403)
+    assert.equal((await pushRequest(DB, 'DELETE', action, options)).status, 405)
+    assert.equal((await pushRequest(DB, 'POST', action, options)).status, 409)
+    assert.equal(deliveries, 0)
+    await pushRequest(DB, 'POST', { action: 'subscribe', subscription }, options)
+    await pushRequest(DB, 'POST', { action: 'subscribe', subscription: { ...subscription, endpoint: otherEndpoint } }, options)
+    const success = await pushRequest(DB, 'POST', action, options)
+    assert.equal(success.status, 200)
+    assert.deepEqual(await success.json(), { sent: true })
+    assert.equal(deliveries, 1)
+    deliveryStatus = 403
+    assert.equal((await pushRequest(DB, 'POST', action, options)).status, 503)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM push_subscriptions').get().total, 2)
+    deliveryStatus = 410
+    assert.equal((await pushRequest(DB, 'POST', action, options)).status, 409)
+    assert.equal(DB.sqlite.prepare('SELECT count(*) AS total FROM push_subscriptions').get().total, 1)
+    assert.ok(DB.sqlite.prepare('SELECT endpoint FROM push_subscriptions WHERE endpoint = ?').get(otherEndpoint))
+    assert.equal(deliveries, 3)
+    assert.equal((await pushRequest(DB, 'POST', action, options)).status, 409)
+    assert.equal(deliveries, 3)
+  } finally { globalThis.fetch = originalFetch; DB.sqlite.close() }
 })
 
 test('new bookings, reviews and hotels queue one owner push only after a new insert', async () => {

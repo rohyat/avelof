@@ -36,8 +36,11 @@ async function requestAccess(query = '', body?: Record<string, string | number>,
   return data
 }
 
-export async function signInAdmin(username: string, code: string) {
-  z.object({ signedIn: z.literal(true) }).parse(await requestAccess('', { action: 'admin-login', username, code }))
+export async function signInAdmin(username: string, code: string, authenticatorCode?: string) {
+  return z.union([
+    z.object({ signedIn: z.literal(true) }),
+    z.object({ requiresAuthenticator: z.literal(true) }),
+  ]).parse(await requestAccess('', { action: 'admin-login', username, code, ...(authenticatorCode ? { authenticatorCode } : {}) }))
 }
 
 export async function signOutAdmin() {

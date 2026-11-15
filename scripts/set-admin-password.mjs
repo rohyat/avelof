@@ -1,27 +1,9 @@
 import { pbkdf2Sync, randomBytes } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { createInterface } from 'node:readline/promises'
-import { Writable } from 'node:stream'
-import { spawnSync } from 'node:child_process'
 import { parseEnv } from 'node:util'
 import { business } from '../src/config.ts'
-
-async function hiddenQuestion(prompt) {
-  if (!process.stdin.isTTY || !process.stdout.isTTY) throw new Error('Use an interactive local terminal. Passwords must not be passed as arguments or pasted into chat.')
-  const muted = new Writable({ write(_chunk, _encoding, callback) { callback() } })
-  const reader = createInterface({ input: process.stdin, output: muted, terminal: true })
-  process.stdout.write(prompt)
-  try { return await reader.question('') }
-  finally { reader.close(); process.stdout.write('\n') }
-}
-
-function runWrangler(argumentsList, input) {
-  const result = spawnSync(process.execPath, [resolve('node_modules/wrangler/bin/wrangler.js'), ...argumentsList], {
-    ...(input ? { input } : {}), encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'],
-  })
-  if (result.status !== 0) throw new Error('The Cloudflare operation failed. Check Wrangler sign-in and trusted system certificates; no password or secret output was printed.')
-}
+import { hiddenQuestion, runWrangler } from './adminSetupTools.mjs'
 
 async function main() {
   if (process.argv.slice(2).some((argument) => argument !== '--cloudflare')) throw new Error('Only --cloudflare is supported. Never pass a password as a command argument.')
@@ -46,7 +28,8 @@ async function main() {
     const origin = 'https://avelof.pages.dev'
     const endpoint = `${origin}/api/enquiry-access`
     const post = (body, Cookie = '') => fetch(endpoint, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', ...(Cookie ? { Cookie } : {}) }, body: JSON.stringify(body) })
-    const login = await post({ action: 'admin-login', username: business.phone, code: password })
+    const authenticatorCode = settings.ENQUIRY_ADMIN_TOTP_SECRET ? (await hiddenQuestion('Current authenticator code for live verification (hidden): ')).trim() : undefined
+    const login = await post({ action: 'admin-login', username: business.phone, code: password, ...(authenticatorCode ? { authenticatorCode } : {}) })
     if (login.status !== 200) throw new Error('Password settings were uploaded, but live sign-in could not be verified. No password was printed. Check the owner sign-in directly.')
     const cookie = login.headers.get('set-cookie')
     if (!cookie || !cookie.includes('HttpOnly') || !cookie.includes('Secure')) throw new Error('Live session verification failed. No credentials were printed.')

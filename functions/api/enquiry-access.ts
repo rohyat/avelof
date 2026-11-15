@@ -9,6 +9,7 @@ import { driverDetailsSchema } from '../../src/services/driverSchema.ts'
 import { driverVehicleOptions } from '../../src/data/driverRegistration.ts'
 import { rentalCars, tourPackages } from '../../src/data/catalog.ts'
 import type { BookingKind } from '../../src/types.ts'
+import { matchingTotpCounter, validTotpSecret } from '../_lib/adminTotp.ts'
 
 const referencePattern = /^AVELOF_(DLX|PRM|CSTM|HTL|CAB|INQ)_[1-9]\d{4,}$/
 const bookingStatus = z.enum(['received', 'booked', 'running', 'completed'])
@@ -16,7 +17,7 @@ const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('booking-summary'), reference: z.string().regex(referencePattern) }).strict(),
   z.object({ action: z.literal('booking-search'), identifier: z.string().trim().min(7).max(40) }).strict(),
   z.object({ action: z.literal('lookup'), reference: z.string().regex(referencePattern), accessCode: z.string().regex(/^[a-f0-9]{64}$/) }).strict(),
-  z.object({ action: z.literal('admin-login'), username: z.string().trim().min(7).max(25), code: z.string().min(1).max(256) }).strict(),
+  z.object({ action: z.literal('admin-login'), username: z.string().trim().min(7).max(25), code: z.string().min(1).max(256), authenticatorCode: z.string().regex(/^\d{6}$/).optional() }).strict(),
   z.object({ action: z.literal('admin-status'), reference: z.string().regex(referencePattern), status: bookingStatus, version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict(),
   z.object({ action: z.literal('admin-delete'), reference: z.string().regex(referencePattern), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict(),
   z.object({ action: z.literal('logout') }).strict(),
@@ -170,8 +171,21 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env }) => {
     if (!await allowAccessAttempt(request, env.DB, scope, scope === 'booking-summary' ? 60 : 10)) return privateReply({ error: 'Too many attempts. Please try again in ten minutes.' }, 429, { 'Retry-After': '600' })
     if (action.action === 'admin-login') {
       if (!validAdminHash(env.ENQUIRY_ADMIN_CODE_HASH ?? '')) return privateReply({ error: 'Admin sign-in is unavailable.' }, 503)
+      if (env.ENQUIRY_ADMIN_TOTP_SECRET !== undefined && !validTotpSecret(env.ENQUIRY_ADMIN_TOTP_SECRET)) {
+        console.error('Admin authenticator configuration is invalid.')
+        return privateReply({ error: 'Admin authenticator setup is unavailable. Contact the site owner.' }, 503)
+      }
       const passwordMatches = await verifyAdminPassword(action.code, env.ENQUIRY_ADMIN_CODE_HASH!)
       if (!correctAdminUsername(action.username) || !passwordMatches) return privateReply({ error: 'Invalid admin credentials.' }, 401)
+      if (env.ENQUIRY_ADMIN_TOTP_SECRET !== undefined) {
+        if (!action.authenticatorCode) return privateReply({ requiresAuthenticator: true })
+        const counter = await matchingTotpCounter(env.ENQUIRY_ADMIN_TOTP_SECRET, action.authenticatorCode)
+        if (counter === null) return privateReply({ error: 'Invalid or expired authenticator code. Use the current code from your app.' }, 401)
+        const credentialHash = await hashText(`admin-totp:${env.ENQUIRY_ADMIN_TOTP_SECRET}`)
+        const consumed = await env.DB.prepare('INSERT INTO admin_totp_counters (credential_hash, last_counter) VALUES (?, ?) ON CONFLICT (credential_hash) DO UPDATE SET last_counter = excluded.last_counter WHERE admin_totp_counters.last_counter < excluded.last_counter RETURNING last_counter')
+          .bind(credentialHash, counter).first<{ last_counter: number }>()
+        if (!consumed) return privateReply({ error: 'This authenticator code was already used. Wait for the next code in your app.' }, 401)
+      }
       return privateReply({ signedIn: true }, 200, { 'Set-Cookie': adminCookie(request, await createAdminSession(env)) })
     }
     if (action.action === 'booking-search') {
@@ -196,6 +210,7 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env }) => {
     if (!row?.access_code_hash || !equalHashes(suppliedHash, row.access_code_hash)) return privateReply({ error: 'No matching enquiry. Check the ID and private code.' }, 404)
     return privateReply({ enquiry: summary(row, true) })
   } catch {
+    console.error('Enquiry access request failed.')
     return privateReply({ error: 'Enquiries are temporarily unavailable. Please try again.' }, 503)
   }
 }

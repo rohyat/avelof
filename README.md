@@ -32,6 +32,9 @@ avoid serving the original image-embedded, 3.8 MB SVG.
 Logo URLs are versioned across the website, manifest, Apple touch icon and push
 notifications so new requests do not reuse the old cached artwork. Existing
 home-screen icons may require removing and re-adding the app after deployment.
+Google Search refreshes its own favicon cache after recrawling the homepage;
+this can take days to weeks. Request homepage indexing in Google Search Console
+to request a recrawl, not to guarantee an immediate icon update.
 
 The footer's Install app button opens browser-specific installation help rather
 than navigating back to the homepage when no automatic prompt is available.
@@ -44,6 +47,78 @@ still requires internet access. Run `node --test tests/logo.test.mjs
 tests/app-installation.test.mjs` against the Pages preview for branding,
 registration, install-event and mobile fallback checks. Physical phone installs
 remain a manual check.
+
+Owner alerts are opt-in on each device, independently of app installation.
+After reinstalling, open `/admin/panel`, sign in and Enable on this device.
+Admin sign-in links in the navigation menu and footer reach that panel within
+the installed app, without changing its homepage launch or bypassing sign-in.
+Setup waits for the service worker to activate and resaves an existing valid
+subscription; changed push keys can be reconnected with Enable. Recheck settings
+retries setup errors and refreshes permissions after returning from phone settings.
+Blocked Chrome/phone notification permissions must be changed manually;
+iPhone/iPad push requires the home-screen app on iOS/iPadOS 16.4 or later.
+Send test notification sends a private admin-only test through the server to
+that saved device subscription. Success means the push service accepted it,
+not proof that the phone displayed it. Missing/expired subscriptions require
+enabling again; delivery failures are reported without affecting enquiry saves.
+The manifest keeps `start_url: "/"`: ordinary app launches open the homepage,
+while tapping an owner alert opens the admin panel. Customer installs never
+subscribe to owner alerts. Test with `node --test tests/owner-notifications.test.mjs`
+and the push-related cases in `functions/api/enquiries.test.mjs`.
+
+## Admin authenticator verification
+
+Admin sign-in supports password plus a free TOTP authenticator (for example,
+Google Authenticator or Microsoft Authenticator), with no SMS/email service.
+After a correct password, an enrolled environment asks for a six-digit code.
+No admin cookie is issued until both checks pass. Codes change every 30 seconds;
+the server accepts one step of clock drift and atomically prevents code reuse
+in D1. Login attempts share the existing ten-attempt/ten-minute per-IP limit.
+Enabling/replacing the authenticator invalidates old admin sessions without
+rotating customer access secrets or changing the app homepage.
+
+Enrollment must happen in a **private interactive terminal**, never in chat:
+
+```bash
+npm run setup:admin-authenticator
+npm run db:migrate:local
+```
+
+The setup command checks your current admin password, generates a private
+manual-entry setup key, and requires a valid code from the new authenticator
+before saving `ENQUIRY_ADMIN_TOTP_SECRET` in ignored local settings. Use a
+time-based account with SHA-1, six digits and a 30-second interval. Enable
+automatic time on the phone. Keep a secure offline/password-manager backup of
+the setup key; do not share it, OTPs, passwords, screenshots or terminal logs.
+Restart the local Pages server after local enrollment/migration.
+
+For production, once the updated code is tested and ready to deploy:
+
+```bash
+npm run setup:admin-authenticator -- --cloudflare
+npm run build
+npm run deploy
+```
+
+The Cloudflare option applies pending production D1 migrations, uploads only
+the authenticator secret, and saves local settings after verification. It does
+not deploy code. Complete deployment and test sign-in on the intended phone.
+Until the secret is configured in an environment, existing password-only
+sign-in remains available for rollout; simply deploying code does not activate
+two-factor authentication. Invalid configured secrets or unavailable replay
+storage fail closed. Admin APIs use the same authenticated session checks.
+
+If the phone is lost, restore the backed-up setup key in another authenticator.
+If no backup exists, use your trusted local settings, admin password and
+Cloudflare account access to intentionally re-enroll:
+`npm run setup:admin-authenticator -- --cloudflare --replace`, then redeploy.
+There is no public password-only recovery/bypass endpoint. Existing push device
+subscriptions remain saved, but you must sign in again to manage them.
+
+Validate using `node --test tests/admin-authenticator.test.mjs` against the
+Pages preview and the authenticator cases in `functions/api/enquiries.test.mjs`.
+Tests cover RFC 6238 vectors, clock drift, replay/concurrency, rate limits,
+session invalidation, setup failures, login retries and password-only rollout.
 All current destination and vehicle photos are used.
 Styles generated dynamically by booking status are intentionally
 retained even when their full class names do not appear in JSX.

@@ -17,7 +17,7 @@ export interface SiteContext {
 const navItems = [
   ['Tour Packages', '/tour-packages'], ['Local Trips', '/local-trips'], ['Car Rentals', '/car-rentals'], ['Hotels', '/hotels'],
   ['Destinations', '/destinations'], ['Check Bookings', '/my-enquiries'],
-  ['About & Contact', '/about'],
+  ['About & Contact', '/about'], ['Admin sign-in', '/admin/panel'],
 ]
 const currentYear = new Date().getFullYear()
 const scrollStoragePrefix = 'avelof:scroll:'
@@ -170,7 +170,7 @@ export default function SiteLayout() {
         <div className="footer-main">
           <div className="footer-brand"><Link className="brand brand-light" to="/" aria-label="AVELOF home"><img className="brand-logo" src="/app-icon-512.png?v=chinar-1" alt="" width={44} height={44} /><span>AVELOF<small>YOUR KASHMIR EXPERIENCE</small></span></Link><p>Your stay. Your journey.<br />Your Kashmir experience.</p></div>
           <div><h3>Explore</h3><Link to="/tour-packages">Tour packages</Link><Link to="/local-trips">Local Trips</Link><Link to="/car-rentals">Car rentals</Link><Link to="/drivers">Our drivers</Link><Link to="/hotels">Hotels & stays</Link><Link to="/destinations">Destinations</Link><Link to="/partners">Partner with AVELOF</Link></div>
-          <div><h3>AVELOF</h3><Link to="/about">About & Contact</Link><Link to="/reviews">Reviews</Link><Link to="/my-enquiries">Check bookings</Link><a href={business.instagram} target="_blank" rel="noreferrer">Instagram</a><InstallApp /></div>
+          <div><h3>AVELOF</h3><Link to="/about">About & Contact</Link><Link to="/reviews">Reviews</Link><Link to="/my-enquiries">Check bookings</Link><Link to="/admin/panel">Admin sign-in</Link><a href={business.instagram} target="_blank" rel="noreferrer">Instagram</a><InstallApp /></div>
           <div><h3>Email our team</h3><a href={`mailto:${business.email}`}>{business.email}</a><span>Kashmir, India</span></div>
         </div>
         <div className="footer-bottom"><span>© {currentYear} AVELOF. All journeys begin with a conversation.</span><a href={business.website}>avelof.in</a></div>

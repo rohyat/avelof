@@ -17,6 +17,7 @@
     "test:businesses-ui": "node --test tests/business-registration.test.mjs",
     "setup:access": "node scripts/setup-enquiry-access.mjs",
     "setup:admin-password": "node scripts/set-admin-password.mjs",
+    "setup:admin-authenticator": "node scripts/setup-admin-authenticator.mjs",
     "setup:push-notifications": "node scripts/setup-push-notifications.mjs",
     "sync:images": "node scripts/sync-catalog-images.mjs",
     "import:reviews": "node scripts/import-owner-reviews.mjs",

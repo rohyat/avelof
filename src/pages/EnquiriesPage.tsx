@@ -176,6 +176,8 @@ export function AdminEnquiriesPage() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null)
   const [username, setUsername] = useState('')
   const [code, setCode] = useState('')
+  const [requiresAuthenticator, setRequiresAuthenticator] = useState(false)
+  const [authenticatorCode, setAuthenticatorCode] = useState('')
   const [busy, setBusy] = useState(true)
   const [error, setError] = useState('')
   const [records, setRecords] = useState<EnquirySummary[]>([])
@@ -212,14 +214,25 @@ export function AdminEnquiriesPage() {
     if (busy) return
     setBusy(true)
     setError('')
-    try { await signInAdmin(indianPhoneNumber(username) || username.trim(), code); setCode(''); setSignedIn(true); reload({ page: 1, status: '', reference: '' }) }
-    catch (failure) { setError(errorText(failure)); setBusy(false) }
+    try {
+      const result = await signInAdmin(indianPhoneNumber(username) || username.trim(), code, requiresAuthenticator ? authenticatorCode : undefined)
+      setAuthenticatorCode('')
+      if ('requiresAuthenticator' in result) {
+        setRequiresAuthenticator(true)
+        setBusy(false)
+        return
+      }
+      setCode('')
+      setRequiresAuthenticator(false)
+      setSignedIn(true)
+      reload({ page: 1, status: '', reference: '' })
+    } catch (failure) { setAuthenticatorCode(''); setError(errorText(failure)); setBusy(false) }
   }
 
   async function logout() {
     setBusy(true)
     setError('')
-    try { await signOutAdmin(); setSignedIn(false); setRecords([]); setTotal(0); setCode('') }
+    try { await signOutAdmin(); setSignedIn(false); setRecords([]); setTotal(0); setCode(''); setAuthenticatorCode(''); setRequiresAuthenticator(false) }
     catch (failure) { setError(errorText(failure)) }
     finally { setBusy(false) }
   }
@@ -249,9 +262,15 @@ export function AdminEnquiriesPage() {
     {error && <p className="enquiry-error" role="alert">{error}</p>}
     {signedIn && notice && <p className="booking-admin-notice" role="status">{notice}</p>}
     {signedIn === null ? <p role="status">Checking your session...</p> : !signedIn ? <form className="enquiry-lookup-form admin-login-form" onSubmit={login} aria-busy={busy}>
-      <label className="full-field">Business phone number<input type="tel" inputMode="tel" value={username} onChange={(event) => setUsername(event.target.value)} onBlur={(event) => { const phone = indianPhoneNumber(event.target.value); if (phone) setUsername(phone) }} required maxLength={25} autoComplete="username" placeholder={indianPhoneNumber(business.phone)} /></label>
-      <label className="full-field">Password<input type="password" value={code} onChange={(event) => setCode(event.target.value)} required maxLength={256} autoComplete="current-password" /></label>
-      <button className="button button-dark" disabled={busy} type="submit"><LockKeyhole size={17} /> {busy ? 'Signing in...' : 'Sign in'}</button>
+      {!requiresAuthenticator ? <>
+        <label className="full-field">Business phone number<input type="tel" inputMode="tel" value={username} onChange={(event) => setUsername(event.target.value)} onBlur={(event) => { const phone = indianPhoneNumber(event.target.value); if (phone) setUsername(phone) }} required maxLength={25} autoComplete="username" placeholder={indianPhoneNumber(business.phone)} /></label>
+        <label className="full-field">Password<input type="password" value={code} onChange={(event) => setCode(event.target.value)} required maxLength={256} autoComplete="current-password" /></label>
+      </> : <>
+        <p role="status">Enter the current six-digit code from your authenticator app to finish signing in.</p>
+        <label className="full-field">Authenticator code<input type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" required minLength={6} maxLength={6} value={authenticatorCode} onChange={(event) => setAuthenticatorCode(event.target.value.replace(/\D/g, ''))} placeholder="6-digit code" /></label>
+        <button className="button button-outline" type="button" disabled={busy} onClick={() => { setRequiresAuthenticator(false); setAuthenticatorCode(''); setCode(''); setError('') }}>Back to password sign-in</button>
+      </>}
+      <button className="button button-dark" disabled={busy} type="submit"><LockKeyhole size={17} /> {busy ? 'Signing in...' : requiresAuthenticator ? 'Verify and sign in' : 'Sign in'}</button>
     </form> : <>
       <nav className="admin-section-nav" aria-label="Owner sections"><span aria-current="page">Enquiries</span><Link to="/admin/panel/reviews">Reviews</Link><Link to="/admin/panel/hotels">Hotels</Link><Link to="/admin/panel/drivers">Drivers</Link><Link to="/admin/panel/businesses">Food & Shopping</Link></nav>
       <OwnerPushNotifications />
