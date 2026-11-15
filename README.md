@@ -138,8 +138,10 @@ Activities, Reviews, Food & Shopping, Travel Guide, Partner, Local Trips.
 Local Trips (`/local-trips`) offers sourced trek ideas and picnic/day-trip
 requests using destination attractions and vehicle choices from the existing
 catalogue. Trek and picnic discovery use swipeable photo cards with position
-dots, arrow buttons and keyboard navigation. Trek descriptions and highlights
-are visible directly, without expandable details or external reading links.
+dots, arrow buttons and keyboard navigation. Carousel dots use compact spacing
+and shrink on narrow phones so all positions and both arrow controls stay on
+one row. Trek descriptions and highlights are visible directly, without
+expandable details or external reading links.
 Trek photos show the named route where available, otherwise its starting region.
 Each card links to the enquiry flow with that trek or picnic place selected.
 Discovery starts directly below the Kashmir hero with two combined tiles:

@@ -175,6 +175,16 @@ test('local trek and place carousels show photos, position dots and preselect pl
         const first = await cards.first().boundingBox()
         assert.ok(first.width < bounds.width)
         assert.ok(next.width < bounds.width)
+        const controls = await carousel.locator('.local-carousel-controls').evaluate((element) => {
+          const container = element.getBoundingClientRect()
+          const buttons = [...element.querySelectorAll('button')].map((button) => button.getBoundingClientRect())
+          return {
+            rows: new Set(buttons.map((button) => Math.round(button.y + button.height / 2))).size,
+            contained: buttons.every((button) => button.left >= container.left && button.right <= container.right),
+          }
+        })
+        assert.equal(controls.rows, 1, `${section} controls should stay on one row at ${width}px`)
+        assert.ok(controls.contained, `${section} controls should fit at ${width}px`)
       }
     }
     await page.locator('#local-picnics').getByRole('button', { name: 'Show places card 3', exact: true }).click()
