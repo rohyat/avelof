@@ -26,7 +26,25 @@ licences: the current destination and vehicle assets are referenced by the site.
 The retired map-pin picker, its styles and Leaflet dependencies are removed.
 Previously saved coordinates and public Google Maps links remain supported.
 Unused SVG app/favicon icons are removed; the active PNG app, favicon and
-Apple touch icons remain. All current destination and vehicle photos are used.
+Apple touch icons use the owner-supplied Chinar leaf/A logo. The header and
+footer reuse the 512px logo icon alongside the AVELOF wordmark. Web-sized PNGs
+avoid serving the original image-embedded, 3.8 MB SVG.
+Logo URLs are versioned across the website, manifest, Apple touch icon and push
+notifications so new requests do not reuse the old cached artwork. Existing
+home-screen icons may require removing and re-adding the app after deployment.
+
+The footer's Install app button opens browser-specific installation help rather
+than navigating back to the homepage when no automatic prompt is available.
+Regular visitors register the root service worker without enabling notifications.
+Supported Chromium browsers use `beforeinstallprompt` when available; iPhone/iPad
+visitors receive Safari Share / Add to Home Screen instructions, including iPads
+using desktop user agents. In-app browsers must open the site in a supported
+browser. Installation is browser-controlled, not an APK download, and the app
+still requires internet access. Run `node --test tests/logo.test.mjs
+tests/app-installation.test.mjs` against the Pages preview for branding,
+registration, install-event and mobile fallback checks. Physical phone installs
+remain a manual check.
+All current destination and vehicle photos are used.
 Styles generated dynamically by booking status are intentionally
 retained even when their full class names do not appear in JSX.
 

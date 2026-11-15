@@ -74,7 +74,7 @@ img { display: block; max-width: 100%; }
 @media (max-width: 480px) { .offer-banner { gap: 2px; padding-block: 4px; } .offer-tile { grid-template-columns: 72px minmax(0, 1fr); gap: 2px 8px; padding: 4px; } .offer-image-frame { width: 72px; height: 76px; grid-row: 1 / span 2; } .offer-explore { grid-column: 2; justify-self: start; min-height: 28px; padding: 4px 8px; font-size: 11px; } .offer-controls button { height: 24px; } }
 .site-header { position: sticky; z-index: 20; top: 0; height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 34px; padding: 0 max(36px, calc((100% - 1200px) / 2)); background: rgba(255,255,255,.97); border-bottom: 1px solid var(--line); backdrop-filter: blur(14px); }
 .brand { display: inline-flex; align-items: center; gap: 11px; color: var(--forest); font-weight: 700; font-size: 19px; line-height: 1; letter-spacing: 1.6px; flex: 0 0 auto; }
-.brand-mark { width: 35px; height: 35px; display: grid; place-items: center; border: 1px solid currentColor; border-radius: 50%; font-family: var(--serif); font-size: 22px; font-weight: 500; letter-spacing: 0; }
+.brand-logo { flex: 0 0 auto; width: 44px; height: 44px; object-fit: contain; border-radius: 7px; background: #fff; }
 .brand small { display: block; margin-top: 6px; color: #42665d; font-size: 9px; font-weight: 700; line-height: 1.2; letter-spacing: 0; }
 .main-nav { display: flex; align-items: center; gap: clamp(13px, 1.65vw, 23px); }
 .main-nav > a { position: relative; padding-block: 9px; color: #203a3a; font-size: 12px; font-weight: 600; white-space: nowrap; }
@@ -875,6 +875,16 @@ body.enquiry-open { overflow: hidden; }
 .success-mark { width: 43px; height: 43px; display: grid; place-items: center; margin-bottom: 17px; border-radius: 50%; color: #fff; background: var(--forest); }
 
 .site-footer { color: #e6ebe4; background: #19382e; }
+.footer-install { padding: 0; border: 0; background: transparent; color: rgba(233,239,231,.73); font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
+.footer-install:hover { color: #fff; }
+.footer-install:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+.install-dialog { width: min(480px, calc(100% - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: 28px 24px; overflow-y: auto; border: 0; border-top: 5px solid var(--forest); border-radius: 8px; background: #fff; color: var(--forest); box-shadow: 0 24px 90px rgba(11,28,21,.35); }
+.install-dialog::backdrop { background: rgba(16,33,26,.66); backdrop-filter: blur(5px); }
+.install-dialog h2 { margin: 16px 25px 12px 0; font-size: 26px; }
+.install-dialog p, .install-dialog li { font-size: 15px; line-height: 1.6; }
+.install-dialog ol { padding-left: 22px; list-style: decimal; }
+.install-dialog li + li { margin-top: 10px; }
+.install-logo { display: block; object-fit: contain; border-radius: 7px; background: #fff; }
 .footer-main { width: min(1200px, calc(100% - 72px)); display: grid; grid-template-columns: 1.3fr .8fr .8fr 1fr; gap: 45px; margin: auto; padding-block: 55px 46px; }
 .brand-light { color: #f0eee3; }
 .footer-brand p { margin: 18px 0 0; color: rgba(233,239,231,.66); font-size: 10px; line-height: 1.8; }
@@ -1104,7 +1114,7 @@ body.enquiry-open { overflow: hidden; }
   .page-width { width: calc(100% - 36px); }
   .site-header { height: 66px; padding-inline: 18px; }
   .brand { gap: 8px; font-size: 17px; }
-  .brand-mark { width: 32px; height: 32px; font-size: 19px; }
+  .brand-logo { width: 40px; height: 40px; }
   .brand small { font-size: 6px; letter-spacing: 1.45px; }
   .main-nav { top: 65px; padding-inline: 18px; }
   .offer-banner-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 2px 8px; }

@@ -18,8 +18,8 @@ self.addEventListener('push', (event) => {
   const url = typeof message.url === 'string' && message.url.startsWith('/') ? message.url : '/admin/panel'
   event.waitUntil(self.registration.showNotification(message.title || 'AVELOF update', {
     body: message.body || 'There is a new update in your owner dashboard.',
-    icon: '/app-icon-192.png',
-    badge: '/app-icon-192.png',
+    icon: '/app-icon-192.png?v=chinar-1',
+    badge: '/app-icon-192.png?v=chinar-1',
     tag: message.tag || 'avelof-update',
     data: { url },
   }))

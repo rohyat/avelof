@@ -1,16 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Bell, BellOff } from 'lucide-react'
 import { loadPushSettings, PushNotificationError, removePushSubscription, savePushSubscription } from '../services/pushNotifications'
+import { isAppInstalled, isAppleMobile } from '../services/appInstallation'
 
 type NotificationState = 'loading' | 'unavailable' | 'install-required' | 'permission-denied' | 'ready' | 'enabled' | 'error'
-
-function isInstalled() {
-  return window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
-}
-
-function isAppleMobile() {
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-}
 
 function applicationServerKey(value: string) {
   const base64 = value.replaceAll('-', '+').replaceAll('_', '/')
@@ -36,7 +29,7 @@ export default function OwnerPushNotifications() {
         setMessage('This browser does not support push notifications.')
         return
       }
-      if (isAppleMobile() && !isInstalled()) {
+      if (isAppleMobile() && !isAppInstalled()) {
         setState('install-required')
         setMessage('Add AVELOF to your Home Screen, then open the installed app to enable alerts.')
         return

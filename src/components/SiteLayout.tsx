@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { MouseEvent } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { business } from '../config'
@@ -8,6 +7,7 @@ import BookingModal from './BookingModal'
 import OfferBanner from './OfferBanner'
 import { createWhatsAppUrl } from '../services/bookingService'
 import WhatsAppIcon from './WhatsAppIcon'
+import InstallApp from './InstallApp'
 import type { BookingKind } from '../types'
 
 export interface SiteContext {
@@ -26,11 +26,6 @@ interface SavedScrollPosition {
   x: number
   y: number
   savedAt: number
-}
-
-interface InstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
 function readScrollPosition(key: string): SavedScrollPosition | null {
@@ -64,7 +59,6 @@ export default function SiteLayout() {
   const location = useLocation()
   const navigationType = useNavigationType()
   const previousLocation = useRef({ pathname: location.pathname, hash: location.hash })
-  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -81,15 +75,6 @@ export default function SiteLayout() {
       document.removeEventListener('keydown', dismissEscape)
     }
   }, [menuOpen])
-
-  useEffect(() => {
-    const handleInstallPrompt = (event: Event) => {
-      event.preventDefault()
-      setInstallPrompt(event as InstallPromptEvent)
-    }
-    window.addEventListener('beforeinstallprompt', handleInstallPrompt)
-    return () => window.removeEventListener('beforeinstallprompt', handleInstallPrompt)
-  }, [])
 
   useLayoutEffect(() => {
     window.history.scrollRestoration = 'manual'
@@ -168,21 +153,12 @@ export default function SiteLayout() {
 
   const openBooking = (kind: BookingKind, selectedItem?: string) => setBooking({ kind, item: selectedItem })
   const closeMenu = () => setMenuOpen(false)
-  const downloadApp = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (!installPrompt) return
-    event.preventDefault()
-    void (async () => {
-      await installPrompt.prompt()
-      await installPrompt.userChoice
-      setInstallPrompt(null)
-    })()
-  }
 
   return (
     <>
       <OfferBanner />
       <header className="site-header">
-        <Link className="brand" to="/" aria-label="AVELOF home" onClick={closeMenu}><span className="brand-mark">A</span><span>AVELOF<small>BEYOND EXPECTATIONS</small></span></Link>
+        <Link className="brand" to="/" aria-label="AVELOF home" onClick={closeMenu}><img className="brand-logo" src="/app-icon-512.png?v=chinar-1" alt="" width={44} height={44} /><span>AVELOF<small>BEYOND EXPECTATIONS</small></span></Link>
         <button ref={menuToggleRef} className="icon-button menu-toggle" aria-expanded={menuOpen} aria-controls="main-navigation" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => { const next = !menuOpen; setMenuOpen(next); if (next) window.dispatchEvent(new Event('avelof:pause-review-carousel')) }}>{menuOpen ? <X /> : <Menu />}</button>
         <nav ref={menuRef} id="main-navigation" className={menuOpen ? 'main-nav is-open' : 'main-nav'} aria-label="Main navigation">
           {navItems.map(([label, href]) => <NavLink key={href} to={href} onClick={closeMenu}>{label}</NavLink>)}
@@ -192,9 +168,9 @@ export default function SiteLayout() {
       <a className="whatsapp-float" href={createWhatsAppUrl('Hello AVELOF, I would like help planning my Kashmir journey.')} target="_blank" rel="noreferrer" aria-label="Chat with AVELOF on WhatsApp" title="Chat with AVELOF on WhatsApp"><WhatsAppIcon size={28} /></a>
       <footer className="site-footer">
         <div className="footer-main">
-          <div className="footer-brand"><Link className="brand brand-light" to="/"><span className="brand-mark">A</span><span>AVELOF<small>YOUR KASHMIR EXPERIENCE</small></span></Link><p>Your stay. Your journey.<br />Your Kashmir experience.</p></div>
+          <div className="footer-brand"><Link className="brand brand-light" to="/" aria-label="AVELOF home"><img className="brand-logo" src="/app-icon-512.png?v=chinar-1" alt="" width={44} height={44} /><span>AVELOF<small>YOUR KASHMIR EXPERIENCE</small></span></Link><p>Your stay. Your journey.<br />Your Kashmir experience.</p></div>
           <div><h3>Explore</h3><Link to="/tour-packages">Tour packages</Link><Link to="/local-trips">Local Trips</Link><Link to="/car-rentals">Car rentals</Link><Link to="/drivers">Our drivers</Link><Link to="/hotels">Hotels & stays</Link><Link to="/destinations">Destinations</Link><Link to="/partners">Partner with AVELOF</Link></div>
-          <div><h3>AVELOF</h3><Link to="/about">About & Contact</Link><Link to="/reviews">Reviews</Link><Link to="/my-enquiries">Check bookings</Link><a href={business.instagram} target="_blank" rel="noreferrer">Instagram</a><a href="/" onClick={downloadApp}>Download app</a></div>
+          <div><h3>AVELOF</h3><Link to="/about">About & Contact</Link><Link to="/reviews">Reviews</Link><Link to="/my-enquiries">Check bookings</Link><a href={business.instagram} target="_blank" rel="noreferrer">Instagram</a><InstallApp /></div>
           <div><h3>Email our team</h3><a href={`mailto:${business.email}`}>{business.email}</a><span>Kashmir, India</span></div>
         </div>
         <div className="footer-bottom"><span>© {currentYear} AVELOF. All journeys begin with a conversation.</span><a href={business.website}>avelof.in</a></div>
