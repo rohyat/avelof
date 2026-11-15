@@ -42,18 +42,24 @@ export const hotelSubmissionSchema = hotelDetailsObject.extend({
   phone: text(30).transform(indianPhoneNumber).refine(Boolean, 'Enter a valid 10-digit Indian phone number.'),
   publicationConsent: z.literal(true), website: z.string().max(200).default(''),
 }).strict().refine(coordinatesPaired, coordinatePairError)
-const publicHotelObject = hotelDetailsObject.extend({
+const customerPriceSchema = z.number().min(1).max(1090000).refine((price) => Math.abs(price * 100 - Math.round(price * 100)) < 0.00001, 'Use at most two decimal places.')
+const customerRoomRateSchema = hotelRoomRateSchema.extend({ price: customerPriceSchema })
+const customerRoomRatesSchema = z.array(customerRoomRateSchema).min(1).max(hotelRoomTypes.length)
+  .refine((rates) => new Set(rates.map(({ roomType }) => roomType)).size === rates.length, 'Room types must be unique.')
+const hotelListingFields = {
   id: z.uuidv4().toLowerCase(), hotelId: z.string().regex(hotelIdPattern),
   photos: z.array(z.string().regex(/^\/api\/hotel-images\/[a-f0-9-]{36}\/[0-4]$/)).min(1).max(hotelPhotoCount),
   averageRating: z.number().min(1).max(5).nullable().default(null), reviewCount: z.number().int().min(0).default(0),
-})
+}
+const publicHotelObject = hotelDetailsObject.extend({ ...hotelListingFields, price: customerPriceSchema, roomRates: customerRoomRatesSchema.optional() })
 export const publicHotelSchema = publicHotelObject.refine(coordinatesPaired, coordinatePairError)
-export const adminHotelSchema = publicHotelObject.extend({
+const privateHotelObject = hotelDetailsObject.extend(hotelListingFields)
+export const adminHotelSchema = privateHotelObject.extend({
   contactName: z.string(), phone: z.string(), submittedPrice: hotelPriceSchema,
   status: hotelStatusSchema, version: z.number().int().min(0),
   ownerNote: z.string(), createdAt: z.string(), updatedAt: z.string(),
 }).refine(coordinatesPaired, coordinatePairError)
-export const hotelStatusResultSchema = publicHotelObject.omit({ photos: true, averageRating: true, reviewCount: true }).extend({
+export const hotelStatusResultSchema = privateHotelObject.omit({ photos: true, averageRating: true, reviewCount: true }).extend({
   status: hotelStatusSchema, contactName: z.string(), phone: z.string(), version: z.number().int().min(0),
 }).refine(coordinatesPaired, coordinatePairError)
 export const hotelReceiptSchema = z.object({

@@ -16,7 +16,7 @@ import { driverAccessCode, maskedDriverLicence } from '../_lib/driverRegistratio
 import { onRequest as onHotelStatusRequest } from './hotel-status.ts'
 import { onRequest as onHotelUpdateRequest } from './hotel-update.ts'
 import { onRequest as onHotelImageRequest } from './hotel-images/[id]/[index].ts'
-import { hotelAccessCode, registrationPhotoBytes, validHotelJpeg } from '../_lib/hotelRegistration.ts'
+import { customerHotelRate, hotelAccessCode, registrationPhotoBytes, validHotelJpeg } from '../_lib/hotelRegistration.ts'
 import { hotelPhotoLimit, hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 import { adminCookie, correctAdminUsername, createAdminSession, customerAccessCode, hashText, isAdmin, phoneCandidates, verifyAdminPassword } from '../_lib/enquiryAccess.ts'
@@ -452,7 +452,7 @@ test('hotel room-only and meal add-on rates survive approval, including free mea
     assert.equal((await hotelRequest(DB, bucket, 'PATCH', { ...edit, dinnerPrice: undefined }, { headers: { Cookie } })).status, 400)
     assert.equal((await hotelRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })).status, 200)
     const published = (await (await hotelRequest(DB, bucket, 'GET')).json()).hotels[0]
-    assert.equal(published.price, 3800)
+    assert.equal(published.price, 4142)
     assert.equal(published.breakfastPrice, 0)
     assert.equal(published.dinnerPrice, 700)
     assert.equal(published.mealPlan, 'Room only')
@@ -559,6 +559,12 @@ test('coordinate schemas reject non-finite numbers and migration preserves old r
   } finally { DB.sqlite.close() }
 })
 
+test('customer hotel room rates add nine percent and round up without floating-point errors', () => {
+  for (const [base, expected] of [[1, 2], [100, 109], [100.01, 110], [2000, 2180], [2600.50, 2835], [1000000, 1090000]]) {
+    assert.equal(customerHotelRate(base), expected)
+  }
+})
+
 test('room-type rates persist, require consistent minimum prices and remain editable during moderation', async () => {
   const DB = database(), bucket = hotelBucket()
   try {
@@ -584,9 +590,13 @@ test('room-type rates persist, require consistent minimum prices and remain edit
     }
     assert.equal((await hotelRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })).status, 200)
     const published = (await (await hotelRequest(DB, bucket, 'GET')).json()).hotels[0]
-    assert.deepEqual(published.roomRates, reviewed)
-    assert.equal(published.price, 2600.50)
+    assert.deepEqual(published.roomRates, [{ ...reviewed[0], price: 2835 }, { ...reviewed[1], price: 6649 }])
+    assert.equal(published.price, 2835)
     assert.equal(published.breakfastPrice, 0)
+    assert.equal(published.dinnerPrice, 700)
+    const admin = (await (await hotelRequest(DB, bucket, 'GET', undefined, { query: '?scope=admin', headers: { Cookie } })).json()).hotels[0]
+    assert.deepEqual(admin.roomRates, reviewed)
+    assert.equal(admin.price, 2600.50)
     const lookup = (await (await hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: receipt.accessCode }, { lookup: true })).json()).hotel
     assert.deepEqual(lookup.roomRates, reviewed)
     const enquiry = payload('hotel')
@@ -665,7 +675,7 @@ test('hotel moderation publishes edited prices only with owner auth and hides ph
     const feed = (await (await hotelRequest(DB, bucket, 'GET')).json()).hotels
     assert.equal(feed.length, 1)
     assert.equal(feed[0].photos.length, 5)
-    assert.equal(feed[0].price, edit.price)
+    assert.equal(feed[0].price, 4252)
     assert.equal(feed[0].hotelId, receipt.hotelId)
     for (const key of ['phone', 'contactName', 'ownerNote', 'payload_hash', 'photo_keys_json', 'accessCode', 'version']) assert.equal(feed[0][key], undefined)
     const image = await photoRequest()
@@ -990,6 +1000,32 @@ async function send(DB, body, options = {}) {
   })
   return onRequest({ request, env: { DB, ENQUIRY_ACCESS_SECRET: 'test-secret-with-more-than-thirty-two-characters', ...options.env }, ...(options.waitUntil ? { waitUntil: options.waitUntil } : {}) })
 }
+
+test('local trip enquiries save choices, retry safely and show a private-safe summary', async () => {
+  const DB = database()
+  try {
+    for (const [index, preference] of ['Local trek', 'Local picnic / day trip'].entries()) {
+      const body = payload('contact')
+      Object.assign(body.fields, { packagePreference: preference, arrivalDate: '2099-06-01', carRental: 'Maruti Suzuki Ertiga', selectedDestinations: index ? 'Pahalgam' : 'Kashmir Great Lakes (Sonamarg)', selectedActivities: index ? 'Aru Valley' : '', customDetails: 'Pickup location: Private address\nCampfire requested: Yes, subject to permission and conditions' })
+      if (index) Object.assign(body.fields, { departureDate: '2099-06-02', checkInDate: '2099-06-01', checkOutDate: '2099-06-02', tripNights: '1', preferredStay: 'Private preferred hotel (AVELOF_HTL_10001PHL)' })
+      const response = await send(DB, body)
+      assert.equal(response.status, 201)
+      const receipt = await response.json()
+      assert.equal((await send(DB, body)).status, 200)
+      const row = DB.sqlite.prepare('SELECT fields_json FROM enquiries WHERE reference = ?').get(body.reference)
+      assert.deepEqual(JSON.parse(row.fields_json), body.fields)
+      const summary = await (await access(DB, { action: 'booking-summary', reference: receipt.reference })).json()
+      assert.equal(summary.booking.bookingDetails.type, 'Local trip enquiry')
+      assert.equal(summary.booking.bookingDetails.name, preference)
+      assert.equal(summary.booking.bookingDetails.startDate, '2099-06-01')
+      assert.equal(JSON.stringify(summary).includes('Private address'), false)
+      if (index) {
+        assert.equal(summary.booking.bookingDetails.endDate, '2099-06-02')
+        assert.equal(JSON.stringify(summary).includes('Private preferred hotel'), false)
+      }
+    }
+  } finally { DB.sqlite.close() }
+})
 
 test('all enquiry types save with unique references and preserve custom itinerary text', async () => {
   const DB = database()

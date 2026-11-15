@@ -28,7 +28,7 @@ export async function resolveHotelId(DB: D1Database, hotelId: string) {
     .bind(hotelId, hotelId).first<{ hotel_id: string }>()
 }
 export const photoKeys = (row: Pick<HotelRow, 'photo_keys_json'>) => z.array(z.string().regex(/^hotels\/[a-f0-9-]{36}\/[a-f0-9-]{36}\/[0-4]\.jpg$/)).min(1).max(hotelPhotoCount).parse(JSON.parse(row.photo_keys_json))
-export function publicHotel(row: HotelRow) {
+function hotelDetails(row: HotelRow) {
   const { latitude: _latitude, longitude: _longitude, ...details } = hotelDetailsSchema.parse(JSON.parse(row.details_json))
   return {
     ...details, ...(row.latitude != null && row.longitude != null ? { latitude: row.latitude, longitude: row.longitude } : {}),
@@ -37,8 +37,17 @@ export function publicHotel(row: HotelRow) {
     averageRating: row.average_rating ?? null, reviewCount: row.review_count ?? 0,
   }
 }
+export const customerHotelRate = (price: number) => Math.ceil(Math.round(price * 100) * 109 / 10000)
+export function publicHotel(row: HotelRow) {
+  const hotel = hotelDetails(row)
+  return {
+    ...hotel,
+    price: customerHotelRate(hotel.price),
+    ...(hotel.roomRates ? { roomRates: hotel.roomRates.map((room) => ({ ...room, price: customerHotelRate(room.price) })) } : {}),
+  }
+}
 export function adminHotel(row: HotelRow) {
-  return { ...publicHotel(row), contactName: row.contact_name, phone: row.phone, submittedPrice: row.submitted_price, status: row.status, version: row.version, ownerNote: row.owner_note, createdAt: row.created_at, updatedAt: row.updated_at }
+  return { ...hotelDetails(row), contactName: row.contact_name, phone: row.phone, submittedPrice: row.submitted_price, status: row.status, version: row.version, ownerNote: row.owner_note, createdAt: row.created_at, updatedAt: row.updated_at }
 }
 export const hotelAccessCode = (row: Pick<HotelRow, 'phone' | 'details_json'>) =>
   partnerStatusAccessCode(hotelDetailsSchema.parse(JSON.parse(row.details_json)).name, row.phone)

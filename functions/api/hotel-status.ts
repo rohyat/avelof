@@ -2,7 +2,7 @@ import { hotelLookupSchema } from '../../src/services/hotelSchema.ts'
 import { allowAccessAttempt, equalHashes, privateReply, sameOrigin } from '../_lib/enquiryAccess.ts'
 import { indianPhoneNumber } from '../../src/services/phoneNumbers.ts'
 import { hotelLookupIdPattern } from '../../src/data/hotelRegistration.ts'
-import { hotelAccessCode, hotelColumns, limitedBody, publicHotel, resolveHotelId } from '../_lib/hotelRegistration.ts'
+import { adminHotel, hotelAccessCode, hotelColumns, limitedBody, resolveHotelId } from '../_lib/hotelRegistration.ts'
 import type { HotelEnv, HotelRow } from '../_lib/hotelRegistration.ts'
 
 export const onRequest: PagesFunction<HotelEnv> = async ({ request, env }) => {
@@ -24,9 +24,9 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env }) => {
     const currentHotelId = !phone ? (await resolveHotelId(env.DB, identifier))?.hotel_id ?? identifier : identifier
     const row = await env.DB.prepare(`SELECT ${hotelColumns} FROM hotel_registrations WHERE hotel_id = ? OR phone = ?`).bind(currentHotelId, phone || null).first<HotelRow>()
     if (!row || !equalHashes(hotelAccessCode(row), parsed.data.accessCode)) return privateReply({ error: 'No matching hotel and access code. Check your details.' }, 404)
-    const { photos, averageRating, reviewCount, ...hotel } = publicHotel(row)
-    void photos; void averageRating; void reviewCount
-    return privateReply({ hotel: { ...hotel, status: row.status, contactName: row.contact_name, phone: row.phone, version: row.version } })
+    const { photos, averageRating, reviewCount, submittedPrice, ownerNote, createdAt, updatedAt, ...hotel } = adminHotel(row)
+    void photos; void averageRating; void reviewCount; void submittedPrice; void ownerNote; void createdAt; void updatedAt
+    return privateReply({ hotel })
   } catch (error) {
     console.error('Private hotel lookup failed', error)
     return privateReply({ error: 'Could not load your hotel status. Please try again.' }, 503)

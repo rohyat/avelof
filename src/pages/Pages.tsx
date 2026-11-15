@@ -99,6 +99,7 @@ export function HomePage() {
         <Link className="home-shortcut-link" to="/food-and-shopping"><span className="home-shortcut-icon"><ShoppingBag size={20} aria-hidden="true" /></span><span>Food &amp; Shopping</span></Link>
         <Link className="home-shortcut-link" to="/travel-guide"><span className="home-shortcut-icon"><BookOpen size={20} aria-hidden="true" /></span><span>Travel Guide</span></Link>
         <Link className="home-shortcut-link" to="/partners"><span className="home-shortcut-icon"><Users size={20} aria-hidden="true" /></span><span>Partner</span></Link>
+        <Link className="home-shortcut-link local-trips-shortcut" to="/local-trips"><span className="home-shortcut-icon"><MountainSnow size={20} aria-hidden="true" /></span><span>Local Trips</span></Link>
       </nav>
     </section>
     <section className="section page-width reasons-section">

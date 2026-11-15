@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, FileImage, RefreshCw, Trash2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, FileImage, Handshake, Heart, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
 import RegistrationReceipt from '../components/RegistrationReceipt'
 import RegistrationForm from '../components/RegistrationForm'
 import PartnerRegistrationLayout from '../components/PartnerRegistrationLayout'
@@ -13,7 +13,6 @@ import { hotelPriceSchema, hotelStatusSchema, hotelSubmissionSchema } from '../s
 import type { AdminHotel, HotelRoomRate, HotelStatus } from '../services/hotelSchema'
 import { compressHotelPhotos, deleteHotel, hotelErrorText, HotelError, loadAdminHotels, lookupHotel, moderateHotel, saveHotel, selectedHotelRoom, updateHotel } from '../services/hotelService'
 import type { HotelReceipt, OwnerHotel } from '../services/hotelService'
-import LocationPicker from '../components/LocationPicker'
 import MapLocationLink from '../components/MapLocationLink'
 import { locationFields, mapCoordinates } from '../services/mapLocation'
 import type { MapCoordinates } from '../services/mapLocation'
@@ -36,7 +35,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
   const [photoNotice, setPhotoNotice] = useState('')
   const [receipt, setReceipt] = useState<HotelReceipt | null>(null)
   const [destination, setDestination] = useState(editing?.location ?? '')
-  const [coordinates, setCoordinates] = useState<MapCoordinates | undefined>(() => mapCoordinates(editing ?? {}))
+  const coordinates = mapCoordinates(editing ?? {})
   const pending = useRef({ fingerprint: '', id: crypto.randomUUID() })
   const inFlight = useRef(false)
   const photoVersion = useRef(0)
@@ -66,6 +65,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
       count: Number(fields.get(`roomCount_${roomType.toLowerCase()}`)),
       price: Number(fields.get(`roomPrice_${roomType.toLowerCase()}`)),
     })).filter(({ count }) => count > 0)
+    if (!legacyRooms && !roomCounts.length) { setError('Add at least one room to a room type you offer.'); return }
     const details = {
       name: fields.get('name'), contactName: fields.get('contactName'), phone: fields.get('phone'),
       category: fields.get('category'), location: fields.get('location'),
@@ -113,30 +113,22 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
         <label>Contact person's name (private)<input name="contactName" maxLength={80} autoComplete="name" required defaultValue={editing?.contactName} /></label>
         <label>Phone number (private)<input name="phone" type="tel" autoComplete="tel" maxLength={30} required placeholder="10-digit Indian phone number" defaultValue={editing?.phone} /><small>One hotel per phone number. You can use this number for private status lookup.</small></label>
         <label>Location<select name="location" required value={destination} onChange={(event) => setDestination(event.target.value)}><option value="" disabled>Select location</option>{registrationLocations.map((location) => <option key={location}>{location}</option>)}</select></label>
-        <LocationPicker value={coordinates} onChange={setCoordinates} destination={destination} disabled={busy} />
         <label>AVELOF category<select name="category" required defaultValue={editing?.category ?? ''}><option value="" disabled>Select category</option>{hotelCategories.map((category) => <option key={category} value={category}>{hotelCategoryLabels[category]}</option>)}</select><small>Our accommodation categories are not official star certifications.</small></label>
         {editing && <label className="review-text-field">Hotel description<textarea name="description" required minLength={20} maxLength={1600} defaultValue={editing.description} /></label>}
         </section>
         <section className="hotel-form-fields registration-section" aria-labelledby="hotel-rooms-title">
         <div className="registration-section-heading"><span>02</span><div><h2 id="hotel-rooms-title">Rooms & rates</h2><p>Tell us what you offer. Meals are optional add-ons.</p></div></div>
-        <div className="privacy-note review-text-field hotel-commission-note">
-          <strong>Customer price & commission:</strong>
+        <div className="privacy-note review-text-field hotel-partnership-note">
+          <strong>AVELOF</strong>
+          <p>Born in Kashmir, built for Kashmir</p>
+          <strong>Let's grow together</strong>
           <ul>
-            <li><strong>The room price you enter is the price shown directly to customers once approved.</strong></li>
-            <li>AVELOF's 10% commission is deducted from the amount you enter.</li>
-            <li>You receive the remaining 90%. Please set your price accordingly.</li>
+            <li><Heart size={16} aria-hidden="true" /><span>AVELOF is a new local Kashmiri brand, created to help local businesses reach more travellers.</span></li>
+            <li><Sparkles size={16} aria-hidden="true" /><span>Please share the best rates you can, ideally better than those on national platforms.</span></li>
+            <li><Handshake size={16} aria-hidden="true" /><span>Together, we can grow our local brand and help your hotel reach more guests as we prepare for our launch.</span></li>
           </ul>
-          <div className="hotel-commission-examples">
-            <table>
-              <caption>Price examples (INR)</caption>
-              <thead><tr><th scope="col">You enter / Customer sees</th><th scope="col">You receive (90%)</th><th scope="col">AVELOF retains (10%)</th></tr></thead>
-              <tbody>
-                {[2000, 3000, 5000].map((price) => <tr key={price}><td>{price.toLocaleString('en-IN')}</td><td>{(price * 0.9).toLocaleString('en-IN')}</td><td>{(price * 0.1).toLocaleString('en-IN')}</td></tr>)}
-              </tbody>
-            </table>
-          </div>
         </div>
-        {legacyRooms ? <><label className="review-text-field">Room types (one per line)<textarea name="legacyRoomTypes" required defaultValue={editing?.roomTypes.join('\n')} /></label><NumberStepper label="Total rooms" name="totalRooms" min={1} max={10000} defaultValue={editing?.totalRooms} /><NumberStepper label="Nightly rate (INR)" name="legacyPrice" min={1} defaultValue={editing?.price} currency />{editing?.breakfastPrice === undefined && <label>Meal plan<select name="mealPlan" defaultValue={editing?.mealPlan}>{hotelMealPlans.map((plan) => <option key={plan}>{plan}</option>)}</select></label>}</> : <fieldset className="hotel-amenities hotel-room-types review-text-field"><legend>Room types, quantity & nightly rates</legend>{hotelRoomTypes.map((roomType) => <div className="registration-room-rate" key={roomType}><NumberStepper label={`${roomType} rooms`} name={`roomCount_${roomType.toLowerCase()}`} min={0} max={10000} defaultValue={editing ? editing.roomRates?.find((room) => room.roomType === roomType)?.count ?? 0 : 1} /><NumberStepper label={`${roomType} rate (INR)`} name={`roomPrice_${roomType.toLowerCase()}`} min={1} defaultValue={editing?.roomRates?.find((room) => room.roomType === roomType)?.price ?? 2000} step={100} currency /></div>)}<small className="review-text-field">Set a room type to 0 if you do not offer it. Only available room types and their rates are listed. Hotel cards show the lowest room rate.</small></fieldset>}
+        {legacyRooms ? <><label className="review-text-field">Room types (one per line)<textarea name="legacyRoomTypes" required defaultValue={editing?.roomTypes.join('\n')} /></label><NumberStepper label="Total rooms" name="totalRooms" min={1} max={10000} defaultValue={editing?.totalRooms} /><NumberStepper label="Nightly rate (INR)" name="legacyPrice" min={1} defaultValue={editing?.price} currency />{editing?.breakfastPrice === undefined && <label>Meal plan<select name="mealPlan" defaultValue={editing?.mealPlan}>{hotelMealPlans.map((plan) => <option key={plan}>{plan}</option>)}</select></label>}</> : <fieldset className="hotel-amenities hotel-room-types review-text-field"><legend>Room types, quantity & nightly rates</legend><p className="review-text-field">All room types start at 0. Increase the quantity for the rooms you offer, and leave the others at 0. Add at least one room.</p>{hotelRoomTypes.map((roomType) => <div className="registration-room-rate" key={roomType}><NumberStepper label={`${roomType} rooms`} name={`roomCount_${roomType.toLowerCase()}`} min={0} max={10000} defaultValue={editing?.roomRates?.find((room) => room.roomType === roomType)?.count ?? 0} /><NumberStepper label={`${roomType} rate (INR)`} name={`roomPrice_${roomType.toLowerCase()}`} min={1} defaultValue={editing?.roomRates?.find((room) => room.roomType === roomType)?.price ?? 2000} step={100} currency /></div>)}<small className="review-text-field">Only available room types and their rates are listed. Hotel cards show the lowest room rate.</small></fieldset>}
         {(!editing || editing.breakfastPrice !== undefined) && <><NumberStepper label="Breakfast add-on (INR)" name="breakfastPrice" defaultValue={editing?.breakfastPrice ?? 500} step={50} currency />
         <NumberStepper label="Dinner add-on (INR)" name="dinnerPrice" defaultValue={editing?.dinnerPrice ?? 500} step={50} currency /></>}
         <p className="privacy-note review-text-field">Rates are per room per night: Family rooms cover 4 people; other room types cover 2 people. Enter the base breakfast and dinner add-ons for 2 people; Family rooms automatically use 1.5 times each meal charge for 4 people. AVELOF may edit these prices before approval.</p>
@@ -158,7 +150,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
         {photoError && <p className="enquiry-error review-text-field" role="alert">{photoError}</p>}
         <div className="hotel-photo-grid review-text-field">{photos.map((photo, index) => <PhotoPreview key={index} photo={photo} index={index} />)}</div>
         <label className="enquiry-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
-        <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I am authorised to register this property and publish these photos. I consent to publication of approved hotel details and photos, including AVELOF's reviewed price and exact map pin if provided. My contact name and phone stay private. I will not upload guest faces, identity documents or payment information.</span></label>
+        <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I am authorised to register this property and publish these photos. I consent to publication of approved hotel details and photos, including the customer price{coordinates ? ' and the existing map pin' : ''}. My contact name and phone stay private. I will not upload guest faces, identity documents or payment information.</span></label>
         {error && <p className="enquiry-error review-text-field" role="alert">{error}</p>}
         {busy && <p className="review-text-field" role="status">Uploading photos and saving your hotel registration. Please keep this page open.</p>}
         <button className="button button-dark" disabled={processing || (!editing && !photos.length)} type="submit">{busy ? 'Saving registration...' : editing ? 'Save changes for approval' : 'Submit hotel for approval'} <ArrowRight size={16} /></button>
@@ -220,7 +212,6 @@ function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminH
   const [note, setNote] = useState(hotel.ownerNote)
   const [status, setStatus] = useState<HotelStatus>(hotel.status)
   const [error, setError] = useState('')
-  const [coordinates, setCoordinates] = useState<MapCoordinates | undefined>(() => mapCoordinates(hotel))
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const fields = new FormData(event.currentTarget)
@@ -229,7 +220,7 @@ function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminH
     if (!parsed.success) { setError('Enter a rate from INR 1 to INR 1,000,000 with at most two decimal places.'); return }
     setError('')
     if (roomRates?.some((room) => !hotelPriceSchema.safeParse(room.price).success)) { setError('Check the reviewed rate for each room type.'); return }
-    await onSave(hotel, status, parsed.data, note, hotel.breakfastPrice !== undefined ? Number(fields.get('breakfastPrice')) : undefined, hotel.dinnerPrice !== undefined ? Number(fields.get('dinnerPrice')) : undefined, roomRates, coordinates ?? null)
+    await onSave(hotel, status, parsed.data, note, hotel.breakfastPrice !== undefined ? Number(fields.get('breakfastPrice')) : undefined, hotel.dinnerPrice !== undefined ? Number(fields.get('dinnerPrice')) : undefined, roomRates)
   }
   return <article className="admin-review-record">
     <div className="admin-review-heading"><h2>{hotel.name}</h2><span className="enquiry-status">{hotelStatusLabels[hotel.status]}</span></div>
@@ -244,7 +235,6 @@ function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminH
     <p>Family room rates cover 4 people; other room rates cover 2 people. Reviewed breakfast and dinner are base charges for 2 people; Family rooms use 1.5 times each charge.</p>
     <form className="review-submission-form" onSubmit={submit}>
       <fieldset disabled={disabled} className="hotel-form-fields">
-        <LocationPicker value={coordinates} onChange={setCoordinates} destination={hotel.location} disabled={disabled} />
         {hotel.roomRates ? hotel.roomRates.map((room) => <NumberStepper key={room.roomType} label={`Reviewed ${room.roomType} rate (INR)`} name={`roomPrice_${room.roomType}`} min={1} defaultValue={room.price} step={100} currency />) : <NumberStepper label="Reviewed price (INR)" name="price" min={1} defaultValue={hotel.price} step={100} currency />}
         {hotel.breakfastPrice !== undefined && <><NumberStepper label="Reviewed breakfast (INR)" name="breakfastPrice" defaultValue={hotel.breakfastPrice} step={50} currency /><NumberStepper label="Reviewed dinner (INR)" name="dinnerPrice" defaultValue={hotel.dinnerPrice} step={50} currency /></>}
         <label>Listing status<select value={status} onChange={(event) => setStatus(hotelStatusSchema.parse(event.target.value))}><option value="pending">Awaiting approval</option><option value="approved">Approve and publish</option><option value="rejected">Reject / remove from public listings</option></select></label>

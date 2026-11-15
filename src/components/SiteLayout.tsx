@@ -15,7 +15,7 @@ export interface SiteContext {
 }
 
 const navItems = [
-  ['Tour Packages', '/tour-packages'], ['Car Rentals', '/car-rentals'], ['Hotels', '/hotels'],
+  ['Tour Packages', '/tour-packages'], ['Local Trips', '/local-trips'], ['Car Rentals', '/car-rentals'], ['Hotels', '/hotels'],
   ['Destinations', '/destinations'], ['Check Bookings', '/my-enquiries'],
   ['About & Contact', '/about'],
 ]
@@ -139,6 +139,7 @@ export default function SiteLayout() {
       '/hotels': { title: 'Kashmir Hotels & Stays | AVELOF', description: 'Discover houseboats, boutique hotels, family stays and mountain retreats across Kashmir.' },
       '/destinations': { title: 'Kashmir Places & Destination Guide | AVELOF', description: 'Explore Kashmir places, main attractions, seasonal guidance and optional activities, then customise your journey in the trip planner.' },
       '/activities': { title: 'Kashmir Activities | AVELOF', description: 'Browse Kashmir activity inspiration by destination and category, then request your favourites when planning a trip. Suggestions are not a live availability feed.' },
+      '/local-trips': { title: 'Local Trips in Kashmir | AVELOF', description: 'Enquire about Kashmir treks, picnic destinations and local transport for families and friends.' },
       '/food-and-shopping': { title: 'Kashmir Restaurants & Shops | AVELOF', description: 'Discover AVELOF-approved restaurants and local shops across Kashmir by destination. In-person discovery only; no online ordering or checkout.' },
       '/register-business': { title: 'Register Your Restaurant or Shop | AVELOF', description: 'Submit your Kashmir restaurant or shop for private review and approval before it appears in the Food & Shopping directory.' },
       '/business-status': { title: 'Private Business Status | AVELOF', description: 'Check and edit your restaurant or shop registration with your private status access code.' },
@@ -192,7 +193,7 @@ export default function SiteLayout() {
       <footer className="site-footer">
         <div className="footer-main">
           <div className="footer-brand"><Link className="brand brand-light" to="/"><span className="brand-mark">A</span><span>AVELOF<small>YOUR KASHMIR EXPERIENCE</small></span></Link><p>Your stay. Your journey.<br />Your Kashmir experience.</p></div>
-          <div><h3>Explore</h3><Link to="/tour-packages">Tour packages</Link><Link to="/car-rentals">Car rentals</Link><Link to="/drivers">Our drivers</Link><Link to="/hotels">Hotels & stays</Link><Link to="/destinations">Destinations</Link><Link to="/partners">Partner with AVELOF</Link></div>
+          <div><h3>Explore</h3><Link to="/tour-packages">Tour packages</Link><Link to="/local-trips">Local Trips</Link><Link to="/car-rentals">Car rentals</Link><Link to="/drivers">Our drivers</Link><Link to="/hotels">Hotels & stays</Link><Link to="/destinations">Destinations</Link><Link to="/partners">Partner with AVELOF</Link></div>
           <div><h3>AVELOF</h3><Link to="/about">About & Contact</Link><Link to="/reviews">Reviews</Link><Link to="/my-enquiries">Check bookings</Link><a href={business.instagram} target="_blank" rel="noreferrer">Instagram</a><a href="/" onClick={downloadApp}>Download app</a></div>
           <div><h3>Email our team</h3><a href={`mailto:${business.email}`}>{business.email}</a><span>Kashmir, India</span></div>
         </div>

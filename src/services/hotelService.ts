@@ -115,6 +115,9 @@ export function useRegisteredHotels(enabled: boolean, id?: string) {
   return { ...visible, reload: () => { setState({ key, hotels: [], loading: true, error: '' }); setRevision((current) => current + 1) } }
 }
 export const hotelSelectionValue = (hotel: Hotel) => hotel.registeredHotelId ? `${hotel.name} (${hotel.registeredHotelId})` : hotel.name
+export function hotelsInLocation(hotels: Hotel[], locationNames: string[]) {
+  return hotels.filter((hotel) => locationNames.some((name) => hotel.location.toLowerCase().includes(name.toLowerCase())))
+}
 export const includedHotelMeals = (hotel: Hotel) => ({
   ...(hotel.breakfastPrice !== undefined ? { breakfast: false, dinner: false } : {
   breakfast: hotel.mealPlan !== 'Room only',

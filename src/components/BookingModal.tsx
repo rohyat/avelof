@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
-import { ArrowRight, CalendarDays, Check, CircleCheck, Copy, MessageCircle, X } from 'lucide-react'
+import { ArrowRight, Check, CircleCheck, Copy, MessageCircle, X } from 'lucide-react'
+import DateInput from './DateInput'
 import { rentalCars, tourPackages } from '../data/catalog'
 import { createWhatsAppUrl, enquiryPath, formatEnquiryDetails, prepareRequest, saveEnquiry } from '../services/bookingService'
 import { indianPhoneNumber } from '../services/phoneNumbers'
@@ -115,8 +116,8 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     </div>
     {!plannerDates && (kind === 'car' || kind === 'package') && <>
       <div className="form-grid trip-dates enquiry-date-fields">
-        <label><span><CalendarDays size={15} /> Start date</span><input name={kind === 'package' ? 'arrivalDate' : 'startDate'} type="date" value={checkInDate} onChange={(event) => setCheckInDate(event.target.value)} required /></label>
-        <label><span><CalendarDays size={15} /> End date</span><input name={kind === 'package' ? 'departureDate' : 'endDate'} type="date" value={checkOutDate} min={kind === 'package' ? earliestCheckout : checkInDate || undefined} onChange={(event) => setCheckOutDate(event.target.value)} required /></label>
+        <label>Start date<DateInput name={kind === 'package' ? 'arrivalDate' : 'startDate'} value={checkInDate} onChange={(event) => setCheckInDate(event.target.value)} required /></label>
+        <label>End date<DateInput name={kind === 'package' ? 'departureDate' : 'endDate'} value={checkOutDate} min={kind === 'package' ? earliestCheckout : checkInDate || undefined} onChange={(event) => setCheckOutDate(event.target.value)} required /></label>
       </div>
       <p className="privacy-note" role="status">{kind === 'package' ? stayDuration ? <strong>{stayDuration}</strong> : checkInDate && checkOutDate ? 'End date must be after the start date.' : null : rentalDays ? <strong>{rentalDays} {rentalDays === 1 ? 'day' : 'days'}</strong> : checkInDate && checkOutDate ? 'End date must be on or after the start date.' : null}</p>
     </>}
@@ -138,8 +139,8 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     </fieldset>}
     {kind === 'hotel' ? <>
       <div className="form-grid trip-dates enquiry-date-fields">
-        <label><span><CalendarDays size={15} /> Start date</span><input name="checkInDate" type="date" value={checkInDate} onChange={(event) => setCheckInDate(event.target.value)} required /></label>
-        <label><span><CalendarDays size={15} /> End date</span><input name="checkOutDate" type="date" value={checkOutDate} min={earliestCheckout} onChange={(event) => setCheckOutDate(event.target.value)} required /></label>
+        <label>Start date<DateInput name="checkInDate" value={checkInDate} onChange={(event) => setCheckInDate(event.target.value)} required /></label>
+        <label>End date<DateInput name="checkOutDate" value={checkOutDate} min={earliestCheckout} onChange={(event) => setCheckOutDate(event.target.value)} required /></label>
       </div>
       <p className="privacy-note" role="status">{stayDuration ? <strong>{stayDuration}</strong> : checkInDate && checkOutDate ? 'Check-out must be after check-in.' : null}</p>
       {registered.loading && <p role="status">Loading registered hotels...</p>}

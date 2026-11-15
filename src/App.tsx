@@ -11,6 +11,7 @@ import DriversPage from './pages/DriversPage'
 import DriverReviewsPage from './pages/DriverReviewsPage'
 import { ActivitiesPage, FoodAndShoppingPage, TravelGuidePage } from './pages/DiscoveryPages'
 import BusinessRegistrationPage, { AdminBusinessesPage, BusinessStatusPage } from './pages/BusinessRegistrationPage'
+import LocalTripsPage from './pages/LocalTripsPage'
 
 export default function App() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="driver-status" element={<DriverStatusPage />} />
         <Route path="destinations" element={<DestinationsPage />} />
         <Route path="activities" element={<ActivitiesPage />} />
+        <Route path="local-trips" element={<LocalTripsPage />} />
         <Route path="food-and-shopping" element={<FoodAndShoppingPage />} />
         <Route path="travel-guide" element={<TravelGuidePage />} />
         <Route path="my-enquiries" element={<EnquiriesPage />} />

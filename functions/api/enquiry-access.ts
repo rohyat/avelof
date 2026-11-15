@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { accessConfigured, adminCookie, allowAccessAttempt, correctAdminUsername, createAdminSession, equalHashes, hashText, isAdmin, phoneCandidates, privateReply, sameOrigin, validAdminHash, verifyAdminPassword } from '../_lib/enquiryAccess.ts'
 import type { AccessEnv } from '../_lib/enquiryAccess.ts'
 import { indianPhoneNumber } from '../../src/services/phoneNumbers.ts'
+import { localTripPreferences } from '../../src/data/localTrips.ts'
 import { requestedBooking } from '../../src/services/bookingDetails.ts'
 import { hotelDetailsSchema } from '../../src/services/hotelSchema.ts'
 import { driverDetailsSchema } from '../../src/services/driverSchema.ts'
@@ -90,7 +91,7 @@ async function publicSummary(row: EnquiryRow, database: D1Database) {
       }
     }
   }
-  if (typeof source.packagePreference === 'string' && (tourPackages.some((item) => item.name === source.packagePreference) || ['Custom package', 'Stay or car only'].includes(source.packagePreference))) selected.packagePreference = source.packagePreference
+  if (typeof source.packagePreference === 'string' && (tourPackages.some((item) => item.name === source.packagePreference) || ['Custom package', 'Stay or car only', ...localTripPreferences].includes(source.packagePreference))) selected.packagePreference = source.packagePreference
   if (row.kind === 'package' && (source.packagePreference === 'Custom package' || typeof source.placesToVisit === 'string' && source.placesToVisit.trim())) selected.packagePreference = 'Custom package'
   for (const key of ['checkInDate', 'checkOutDate', 'startDate', 'endDate', 'arrivalDate', 'departureDate']) {
     const value = z.iso.date().safeParse(source[key])

@@ -12,8 +12,9 @@ export function requestedBooking(kind: BookingKind, fields: Record<string, strin
     startDate: fields.startDate || null, endDate: fields.endDate || null,
   }
   const customized = kind === 'package' && (fields.packagePreference === 'Custom package' || Boolean(fields.placesToVisit))
+  const localTrip = kind === 'contact' && (fields.packagePreference === 'Local trek' || fields.packagePreference === 'Local picnic / day trip')
   return {
-    type: kind === 'contact' ? 'General enquiry' : customized ? 'Customized package' : 'Package booking',
+    type: localTrip ? 'Local trip enquiry' : kind === 'contact' ? 'General enquiry' : customized ? 'Customized package' : 'Package booking',
     name: fields.packagePreference === 'Custom package' ? 'Customized package' : fields.packagePreference || 'Package selection pending',
     startLabel: 'Start date', endLabel: 'End date',
     startDate: fields.arrivalDate || null, endDate: fields.departureDate || null,

@@ -11,10 +11,23 @@ npm run dev
 
 Create a production build with `npm run build`. Run the configured linter with `npm run lint`.
 
+Planner, booking and local-trip dates use the shared `DateInput` control with a
+persistent Lucide calendar icon. The native date picker, validation and ISO
+form values are preserved; no third-party calendar service or library is used.
+Inputs shrink within their layout on Safari and use 16px text to avoid iPhone
+focus zoom. Run `node --test tests/date-inputs.test.mjs` against the local Pages
+preview (or `AVELOF_ACTIVITY_TEST_URL`) for iPhone-sized WebKit, Android-sized
+Chromium and desktop layout checks. These emulate browsers, not the physical
+iOS system picker. WebKit must be installed with `npx playwright install webkit`.
+
 Unused styles from the retired About layout, removed contact form and Travel
 Guide footnote have been removed. Keep image attribution/source records and
 licences: the current destination and vehicle assets are referenced by the site.
-Styles generated dynamically by booking status and Leaflet are intentionally
+The retired map-pin picker, its styles and Leaflet dependencies are removed.
+Previously saved coordinates and public Google Maps links remain supported.
+Unused SVG app/favicon icons are removed; the active PNG app, favicon and
+Apple touch icons remain. All current destination and vehicle photos are used.
+Styles generated dynamically by booking status are intentionally
 retained even when their full class names do not appear in JSX.
 
 ## Homepage discovery tiles
@@ -27,7 +40,44 @@ on this page; Plan a trip leads to the existing planner. WhatsApp remains an
 optional help channel, not the enquiry submission flow.
 
 Tile order: Plan a trip, Packages, Hotels, Cabs, Drivers, Bookings, Places,
-Activities, Reviews, Food & Shopping, Travel Guide, Partner.
+Activities, Reviews, Food & Shopping, Travel Guide, Partner, Local Trips.
+
+Local Trips (`/local-trips`) offers sourced trek ideas and picnic/day-trip
+requests using destination attractions and vehicle choices from the existing
+catalogue. Trek and picnic discovery use swipeable photo cards with position
+dots, arrow buttons and keyboard navigation. Trek descriptions and highlights
+are visible directly, without expandable details or external reading links.
+Trek photos show the named route where available, otherwise its starting region.
+Each card links to the enquiry flow with that trek or picnic place selected.
+Discovery starts directly below the Kashmir hero with two combined tiles:
+Picnics & day trips followed by Treks. Picnic/day trip is the default enquiry
+type. Headings, swipe instructions and three category-specific planning points
+sit above each bordered photo-carousel tile. Large heading icons are omitted;
+bullet points retain decorative icons. There are no duplicate introductory tiles.
+The three steps are trip type
+and contact details (name, phone, pickup, drop, group size and date), one trek
+or picnic destination with requested sights, then a preferred vehicle.
+Picnic travellers can request a one-night stay on the first step. This adds a
+Hotels step after Places, using only public AVELOF listings at the chosen
+destination. Check-in uses the preferred date and checkout is the next day.
+Listed rates are not date-specific availability or a group quote; rooms,
+meals, capacity and the final price need confirmation. A traveller may choose
+a hotel preference or ask AVELOF to help find a stay. Loading failures show an
+explicit retry action; destinations with no listings are identified as such.
+Changing destinations clears the hotel preference. Disabling the overnight
+choice or choosing a trek excludes hotel details from the enquiry.
+Destination and vehicle cards reuse the main planner's styling; Back preserves
+entered details and choices. Changing the picnic destination clears its
+previous attraction choices. The form has no additional free-text field.
+Campfires are requests only, subject to permission and safety.
+The enquiry section displays a launch warning: Local Trips is launching soon
+and confirmed bookings are not being accepted yet. Enquiry submissions remain
+open for registering interest.
+Requests use the existing server-side enquiry storage, return a receipt only
+after a successful save, and never confirm availability, price or a booking.
+Routes, permissions, guides, transport and local taxi rules need checking.
+Trip and vehicle choices are maintained in `src/data/`; no local-trip admin
+catalogue is implemented yet.
 
 The Travel Guide offers optional WhatsApp help using the business phone in
 `src/config.ts`. The site-wide floating help link is an accessible, icon-only
@@ -122,8 +172,7 @@ Businesses can add up to 20 product/dish names (100 characters each), displayed
 as item chips on approved listings, with dish icons for restaurants and shopping
 icons for shops. The former About your business field is
 removed from registration; existing descriptions remain readable and editable
-in the admin panel. Address guidance asks for a nearby attraction or landmark;
-the optional map pin identifies the exact entrance.
+in the admin panel. Address guidance asks for a nearby attraction or landmark.
 Business registrations require 1-5 shop, restaurant or product photos (JPEG,
 PNG or WebP, up to 5 MB original each); invalid counts are rejected with feedback.
 Every photo is compressed and validated, saved transactionally in D1, private
@@ -420,8 +469,9 @@ current free limits; Pages Functions also consume Workers usage allowances.
 1-5 required photos, a curated location dropdown, AVELOF category (Deluxe: 2-star,
 Premium: 3-star, Luxury: 4-5-star), heating, amenities, check-in/out times, room
 counts for Standard, Deluxe, Premium, Family and Suite types, and selectable
-public highlight points. Each room type starts at one; set unoffered types to
-zero. The total room count is calculated from the selected quantities. Hotel
+public highlight points. Each room type starts at zero; increase the quantities
+for offered rooms and leave unavailable types at zero. At least one room is
+required. The total room count is calculated from the selected quantities. Hotel
 descriptions are generated from the chosen category and location.
 These categories are not official star certifications.
 
@@ -570,12 +620,11 @@ partner and status filters apply before pagination and are retained after
 publishing, hiding, returning to pending or deleting a review.
 
 New hotel registrations collect a room count and a room-only INR rate for each
-offered type (Standard, Deluxe, Premium, Family and Suite). The registration and
-private edit pricing section explains that entered room prices are shown directly
-to customers once approved. AVELOF deducts 10% commission from that price rather
-than adding it on top, and the hotel receives 90%, with a boxed table of INR 2,000,
-INR 3,000 and INR 5,000 examples showing the customer price, hotel share and commission. This is
-informational guidance; it does not change stored rates or customer estimates.
+offered type (Standard, Deluxe, Premium, Family and Suite). Submitted and
+admin-reviewed room rates remain unchanged in private records. The public hotel
+API adds 9% to each room rate and rounds up to the next whole rupee, including
+legacy rates. This applies to existing and new hotels, listings, enquiries and
+planner estimates. Breakfast and dinner add-ons are not increased.
 A zero count excludes
 that type. Family room-only rates cover four people; other room rates cover two.
 Breakfast and dinner are entered as shared base add-ons for two people. For a
@@ -783,14 +832,12 @@ Email notifications are not included. The owner dashboard provides authenticated
 
 Catalog photography remains illustrative. Owner-approved guest reviews and published website submissions are displayed from D1 without an independently verified claim. Any future sample content must remain preview-only and outside live ratings. Images are served locally through Pages with source/license records retained; replace illustrative photography with approved images before presenting it as actual destinations, hotels or allocated vehicles.
 
-## Exact business map pins
+## Existing map pins
 
-- Hotels, restaurants and shops can optionally confirm their public entrance on a shared map during registration. Hotel partners can update or remove their pin during private editing, and administrators can review and edit pins before approval. Existing listings without pins still work.
-- Open the map, tap the entrance (or pan and choose **Use map centre**), then press **Confirm pin**. **Use my current location** requests high-accuracy GPS only on demand. Device-reported accuracy is shown; owners must check the entrance because GPS accuracy cannot be guaranteed. Coordinate fields provide a keyboard/offline fallback.
-- The picker works in mobile browsers and the installed web app. Geolocation requires HTTPS (localhost is allowed), device support and permission. Permission denial or unavailable tiles show explicit guidance and do not prevent manual coordinates.
-- OpenStreetMap tiles load only after opening the map. The tile provider receives the IP address and viewed area, not registration contacts. Attribution remains visible. Image CSP permits OpenStreetMap tiles and Leaflet's transparent data-image placeholder; script CSP still prohibits unsafe eval and inline scripts. Browser Zod validation uses its non-JIT runtime to avoid blocked code-generation probes.
-- Pins are saved server-side as validated, paired coordinates and become public only on approved listings. Hotel cards/details and Food & Shopping listings offer **View on Google Maps**, preserving the exact saved coordinates. Private contact details are not included.
-- Apply `0022_business_map_coordinates.sql` using the existing D1 migration workflow before deploying this feature. Local migration does not update production. `npm run test:maps-ui` exercises GPS, touch placement, explicit confirmation, clearing, denied permissions, tile failure, mobile layouts and production CSP; registration suites cover payloads and public links.
+Map pin selectors are not offered on hotel or business registration, editing, or
+admin forms. Existing coordinates remain unchanged during edits, and approved
+listings with saved coordinates can still offer **View on Google Maps**. No Google
+Maps Platform API or paid map service is used.
 
 # React + TypeScript + Vite
 

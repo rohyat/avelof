@@ -1,11 +1,12 @@
 import { Children, useEffect, useRef, useState } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
-import { ArrowLeft, ArrowRight, CalendarDays, MapPin, MoonStar } from 'lucide-react'
+import { ArrowLeft, ArrowRight, MapPin, MoonStar } from 'lucide-react'
+import DateInput from './DateInput'
 import { Link } from 'react-router-dom'
 import { rentalCars } from '../data/catalog'
 import { combinedExcursionId, destinationOptionId, destinationOptions } from '../data/destinationOptions'
 import { clearSavedTripPlan, tripPlanStorageKey, tripReturnStorageKey } from '../services/tripPlanStorage'
-import { hotelNightlyPrice, includedHotelMeals, selectedHotelRoom, useRegisteredHotels } from '../services/hotelService'
+import { hotelNightlyPrice, hotelsInLocation, includedHotelMeals, selectedHotelRoom, useRegisteredHotels } from '../services/hotelService'
 import type { Hotel, PreparedRequest } from '../types'
 import HotelRates from './HotelRates'
 import OfferPrice from './OfferPrice'
@@ -161,8 +162,7 @@ function stayOptions(destinationId: string, nextDestinationId?: string) {
 }
 
 function hotelsAt(locationId: string, availableHotels: Hotel[]) {
-  const locationName = stopName(locationId).toLowerCase()
-  return availableHotels.filter((hotel) => hotel.location.toLowerCase().includes(locationName))
+  return hotelsInLocation(availableHotels, [stopName(locationId)])
 }
 
 function SwipeRail({ label, className, children }: { label: string; className: string; children: ReactNode }) {
@@ -493,8 +493,8 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
         {!receipt && step > 0 && <button className="button button-outline planner-back" type="button" disabled={submitting} onClick={() => changeStep(step - 1)}><ArrowLeft size={16} /> {step === 5 ? 'Back to hotels' : 'Back'}</button>}
         {step !== 1 && (step === 0 ? placeNotice : selectionError) && <p className="planner-place-notice" role="alert">{step === 0 ? placeNotice : selectionError}</p>}
         {step === 0 && <div className="trip-dates">
-          <label><span><CalendarDays size={15} /> Start date</span><input type="date" min={minDate} value={startDate} onChange={(event) => changeStartDate(event.target.value)} /></label>
-          <label className={!startDate ? 'trip-date-disabled' : undefined}><span><CalendarDays size={15} /> End date</span><input type="date" min={startDate ? addDays(startDate, 1) : addDays(minDate, 1)} max={startDate ? addDays(startDate, 30) : undefined} value={endDate} disabled={!startDate} onChange={(event) => changeEndDate(event.target.value)} /></label>
+          <label>Start date<DateInput min={minDate} value={startDate} onChange={(event) => changeStartDate(event.target.value)} /></label>
+          <label className={!startDate ? 'trip-date-disabled' : undefined}>End date<DateInput min={startDate ? addDays(startDate, 1) : addDays(minDate, 1)} max={startDate ? addDays(startDate, 30) : undefined} value={endDate} disabled={!startDate} onChange={(event) => changeEndDate(event.target.value)} /></label>
           <div className="trip-length" aria-live="polite"><strong>{tripDays || '—'}</strong><span>{tripDays ? `${tripDays === 1 ? 'day' : 'days'} · ${nights} ${nights === 1 ? 'night' : 'nights'}` : 'Trip length'}</span></div>
         </div>}
         {step === 0 && <div className="form-grid planner-guests"><NumberStepper label="Adults" name="plannerAdults" min={1} max={100} value={adults} onChange={(value) => changeGuests(value, children)} /><NumberStepper label="Children (5 years+)" name="plannerChildren" min={0} max={99} value={children} onChange={(value) => changeGuests(adults, value)} /><p className="privacy-note">Children below 5 years are complimentary. {validGuests ? `${people} people in total.` : 'Enter valid counts for up to 100 people.'}</p></div>}

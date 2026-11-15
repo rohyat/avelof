@@ -217,7 +217,7 @@ test('review carousel preserves layout and supports accessible automatic and man
         const tiles = page.locator('.home-shortcut-link')
         const shortcuts = page.getByRole('navigation', { name: 'Explore AVELOF' })
         await tiles.last().waitFor()
-        assert.deepEqual(await tiles.allTextContents(), ['Plan a trip', 'Packages', 'Hotels', 'Cabs', 'Drivers', 'Bookings', 'Places', 'Activities', 'Reviews', 'Food & Shopping', 'Travel Guide', 'Partner'])
+        assert.deepEqual(await tiles.allTextContents(), ['Plan a trip', 'Packages', 'Hotels', 'Cabs', 'Drivers', 'Bookings', 'Places', 'Activities', 'Reviews', 'Food & Shopping', 'Travel Guide', 'Partner', 'Local Trips'])
         assert.equal(await page.getByRole('button', { name: 'Ask AVELOF' }).count(), 0)
         assert.ok(await page.getByRole('heading', { name: 'Experience Kashmir Beyond Expectations.' }).isVisible())
         assert.ok(await page.getByText("Where Kashmir's natural beauty meets warm hospitality, memorable stays and genuine local care.", { exact: true }).isVisible())
@@ -310,10 +310,10 @@ test('review carousel preserves layout and supports accessible automatic and man
             const rows = new Set(tiles.map((tile) => Math.round(tile.getBoundingClientRect().y)))
             return { count: tiles.length, overflow: document.documentElement.scrollWidth > innerWidth, rowCount: rows.size, clippedText: tiles.some((tile) => tile.scrollWidth > tile.clientWidth) }
           })
-          assert.equal(layout.count, 12)
+          assert.equal(layout.count, 13)
           assert.equal(layout.overflow, false, `Page overflow at ${width}px`)
           assert.equal(layout.clippedText, false, `Tile labels should fit at ${width}px`)
-          assert.equal(layout.rowCount, 4, `Tiles should form four balanced rows at ${width}px`)
+          assert.equal(layout.rowCount, 5, `Tiles should form five balanced rows at ${width}px`)
         }
         for (const [width, height] of [[320, 640], [360, 740], [390, 844], [446, 699], [430, 932]]) {
           await page.setViewportSize({ width, height })

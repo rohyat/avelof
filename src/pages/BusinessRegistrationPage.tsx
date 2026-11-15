@@ -9,10 +9,8 @@ import { BusinessError, businessErrorText, compressBusinessPhoto, deleteBusiness
 import { hotelStatusLabels } from '../data/hotelRegistration'
 import RegistrationReceipt from '../components/RegistrationReceipt'
 import RegistrationForm from '../components/RegistrationForm'
-import LocationPicker from '../components/LocationPicker'
 import MapLocationLink from '../components/MapLocationLink'
 import { locationFields, mapCoordinates } from '../services/mapLocation'
-import type { MapCoordinates } from '../services/mapLocation'
 
 function PhotoPreview({ photo }: { photo: Blob }) {
   const imageRef = useRef<HTMLImageElement>(null)
@@ -33,7 +31,7 @@ export default function BusinessRegistrationPage({ editing, onCancel }: { editin
   const [photoError, setPhotoError] = useState('')
   const [receipt, setReceipt] = useState<BusinessReceipt | null>(null)
   const [destination, setDestination] = useState<string>(editing?.business.location ?? 'Srinagar')
-  const [coordinates, setCoordinates] = useState<MapCoordinates | undefined>(() => mapCoordinates(editing?.business ?? {}))
+  const coordinates = mapCoordinates(editing?.business ?? {})
   const pending = useRef({ id: crypto.randomUUID(), fingerprint: '' })
   const photoVersion = useRef(0)
   const inFlight = useRef(false)
@@ -110,8 +108,6 @@ export default function BusinessRegistrationPage({ editing, onCancel }: { editin
           <label>Business type<select name="kind" required defaultValue={editing?.business.kind ?? 'restaurant'}>{businessKinds.map((kind) => <option key={kind} value={kind}>{businessKindLabels[kind]}</option>)}</select></label>
           <label>Destination<select name="location" required value={destination} onChange={(event) => setDestination(event.target.value)}>{businessLocations.map((location) => <option key={location}>{location}</option>)}</select></label>
           <label>Public address or area<input name="address" maxLength={200} required autoComplete="street-address" defaultValue={editing?.business.address} placeholder="Address or nearby main attraction" /><small>Include a nearby main attraction or landmark so guests can recognise the area.</small></label>
-          <p className="review-text-field">Pinpoint your entrance on the map so guests can find your exact location.</p>
-          <LocationPicker value={coordinates} onChange={setCoordinates} destination={destination} disabled={busy} />
           <fieldset className="business-items-fields review-text-field"><legend>Products or dishes available (optional)</legend><p>Add up to 20 item names for guests to browse. This is not an online ordering menu.</p>{items.map((item, index) => <div className="business-item-row" key={item.id}><label>Item {index + 1}<input name={`item-${item.id}`} maxLength={100} value={item.name} placeholder="For example, saffron or walnut wood crafts" onChange={(event) => setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, name: event.target.value } : entry))} /></label>{items.length > 1 && <button className="icon-button" type="button" aria-label={`Remove item ${index + 1}`} onClick={() => setItems((current) => current.filter((entry) => entry.id !== item.id))}><Trash2 size={18} /></button>}</div>)}<button className="button button-outline" type="button" disabled={items.length >= 20} onClick={() => setItems((current) => [...current, { id: crypto.randomUUID(), name: '' }])}><Plus size={16} />Add another item</button></fieldset>
           <label>Public website (optional)<input name="website" type="url" maxLength={200} placeholder="https://example.com" defaultValue={editing?.business.website} /></label>
         </section>
@@ -124,7 +120,7 @@ export default function BusinessRegistrationPage({ editing, onCancel }: { editin
           {photoError && <p className="enquiry-error review-text-field" role="alert">{photoError}</p>}
           <div className="hotel-photo-grid review-text-field">{photos.map((photo, index) => <PhotoPreview key={index} photo={photo} />)}</div>
           <label className="enquiry-honeypot" aria-hidden="true">Website<input name="websiteTrap" tabIndex={-1} autoComplete="off" /></label>
-          <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I am authorised to register this business and use these photos. I consent to publishing the business name, type, destination, address, exact map pin if provided, item names, website and photos if approved. My contact name, phone and email stay private. I understand this listing does not take orders or payments and does not guarantee a discount.</span></label>
+          <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I am authorised to register this business and use these photos. I consent to publishing the business name, type, destination, address{coordinates ? ', existing map pin' : ''}, item names, website and photos if approved. My contact name, phone and email stay private. I understand this listing does not take orders or payments and does not guarantee a discount.</span></label>
           {error && <p className="enquiry-error review-text-field" role="alert">{error}</p>}
           <p className="review-text-field" role="status">{processing ? 'Preparing photos...' : photos.length ? `${photos.length} photos ready to upload.` : editing ? 'Existing photos will be kept.' : 'Select at least one photo before submitting.'}</p>
           {busy && <p className="review-text-field" role="status">Submitting your business for review…</p>}
@@ -167,7 +163,7 @@ function BusinessRecord({ business, disabled, save, remove }: {
 }) {
   const [status, setStatus] = useState<BusinessStatus>(business.status)
   const [destination, setDestination] = useState<string>(business.location)
-  const [coordinates, setCoordinates] = useState<MapCoordinates | undefined>(() => mapCoordinates(business))
+  const coordinates = mapCoordinates(business)
   const [validationError, setValidationError] = useState('')
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -198,7 +194,6 @@ function BusinessRecord({ business, disabled, save, remove }: {
         <label>Business type<select name="kind" defaultValue={business.kind}>{businessKinds.map((kind) => <option key={kind} value={kind}>{businessKindLabels[kind]}</option>)}</select></label>
         <label>Destination<select name="location" value={destination} onChange={(event) => setDestination(event.target.value)}>{businessLocations.map((location) => <option key={location}>{location}</option>)}</select></label>
         <label>Public address<input name="address" maxLength={200} required defaultValue={business.address} /></label>
-        <LocationPicker value={coordinates} onChange={setCoordinates} destination={destination} disabled={disabled} />
         <label className="review-text-field">Public description (legacy, optional)<textarea name="description" rows={4} maxLength={1600} defaultValue={business.description} /></label>
         <label className="review-text-field">Available items (one per line, up to 20)<textarea name="items" rows={5} maxLength={2019} defaultValue={business.items.join('\n')} /></label>
         <label>Public website<input name="website" type="url" maxLength={200} defaultValue={business.website} /></label>
