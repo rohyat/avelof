@@ -42,7 +42,7 @@ test('branded PDF contains the current promises, every contact link, itinerary, 
   for (const promise of brandPromises) assert.ok(contents.includes(promise), `Cover includes: ${promise}`)
   for (const contact of [business.phone, business.email, business.instagramHandle, 'avelof.in']) assert.ok(contents.includes(contact))
   for (const url of [business.website, `mailto:${business.email}`, business.instagram]) assert.ok(contents.includes(url))
-  for (const text of ['Custom Kashmir Itinerary', 'Arrive in Srinagar', 'Selected stays', 'Activities requested', 'Union cabs requested', 'any eligible', 'applicable local operator terms', 'Inclusions', 'Exclusions', 'Thank you.']) {
+  for (const text of ['Custom Kashmir Itinerary', 'Arrive in Srinagar', 'Selected stays', 'Activities requested', 'Union cabs requested', 'help arrange a refund', 'amount paid', 'applicable local operator terms', 'planning guide', 'refine your choices', 'Inclusions', 'Exclusions', 'Thank you.']) {
     assert.ok(contents.includes(text), `PDF contains ${text}`)
   }
   assert.ok((contents.match(/info@avelof\.in/g) ?? []).length >= pdf.getNumberOfPages(), 'Contact details appear in each page footer')
@@ -69,7 +69,7 @@ test('Deluxe and Premium PDFs use their current package itinerary and union-cab 
     assert.equal(data.days.length, item.itinerary.length)
     assert.deepEqual(data.inclusions, item.inclusions)
     assert.deepEqual(data.exclusions, item.exclusions)
-    assert.ok(data.notes?.some((note) => note.includes('any eligible refund is subject to applicable local operator terms')))
+    assert.ok(data.notes?.some((note) => note.includes('help arrange a refund of the amount paid')))
   }
 })
 
@@ -121,8 +121,16 @@ test('planner and ready-made packages download branded PDFs at the intended step
     const inputDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     await planner.getByLabel('Start date').fill(inputDate(start))
     await planner.getByLabel('End date').fill(inputDate(end))
-    for (const next of ['Next: places', 'Next: vehicle', 'Next: activities', 'Next: hotels']) {
-      if (next === 'Next: activities') await planner.locator('.planner-union-cabs').getByLabel(/Pahalgam/).check()
+    await planner.getByRole('button', { name: 'Next: places', exact: true }).click()
+    const navigationHelp = planner.locator('.planner-navigation > p')
+    assert.ok((await navigationHelp.innerText()).includes('Choose at your own pace'))
+    assert.ok((await navigationHelp.innerText()).includes('download a PDF'))
+    assert.equal(await planner.getByRole('button', { name: 'Back', exact: true }).isVisible(), true)
+    for (const next of ['Next: vehicle', 'Next: activities', 'Next: hotels']) {
+      if (next === 'Next: activities') {
+        await planner.locator('.planner-union-cabs').getByLabel(/Pahalgam/).check()
+        assert.ok((await planner.locator('.planner-union-refund-note').innerText()).includes('help arrange a refund'))
+      }
       await planner.getByRole('button', { name: next, exact: true }).click()
     }
     await planner.getByRole('button', { name: 'Continue with this plan', exact: true }).click()
@@ -136,8 +144,22 @@ test('planner and ready-made packages download branded PDFs at the intended step
         const button = element.querySelector('button').getBoundingClientRect()
         return { promptRight: prompt.right, buttonRight: button.right, promptWidth: prompt.width, direction: getComputedStyle(element).flexDirection }
       })
+      const navigationBounds = await planner.locator('.planner-navigation').evaluate((element) => {
+        const row = element.getBoundingClientRect()
+        const back = element.querySelector('.planner-back').getBoundingClientRect()
+        const message = element.querySelector('p').getBoundingClientRect()
+        return { rowRight: row.right, backRight: back.right, messageLeft: message.left, messageRight: message.right, direction: getComputedStyle(element).flexDirection }
+      })
       assert.ok(bounds.buttonRight <= bounds.promptRight)
       if (width <= 640) assert.equal(bounds.direction, 'column')
+      assert.ok(await planner.locator('.planner-pdf-assurance').isVisible())
+      assert.ok(navigationBounds.messageRight <= navigationBounds.rowRight)
+      if (width > 640) {
+        assert.ok(navigationBounds.messageLeft >= navigationBounds.backRight)
+        assert.equal(navigationBounds.direction, 'row')
+      } else {
+        assert.equal(navigationBounds.direction, 'column')
+      }
     }
     const tripDownloadEvent = page.waitForEvent('download')
     await tripDownload.click()
@@ -149,6 +171,8 @@ test('planner and ready-made packages download branded PDFs at the intended step
     assert.ok(tripPdf.toString('latin1').includes('Places selected:'))
     assert.ok(tripPdf.toString('latin1').includes('Add union cabs in Pahalgam'))
     assert.ok(tripPdf.toString('latin1').includes('applicable local operator terms'))
+    assert.ok(tripPdf.toString('latin1').includes('help arrange a refund of the amount paid'))
+    assert.ok(tripPdf.toString('latin1').includes('planning guide'))
     assert.ok(tripPdf.toString('latin1').includes('Inclusions'))
     assert.ok(tripPdf.toString('latin1').includes('Thank you.'))
     assert.ok((tripPdf.toString('latin1').match(/\/Subtype\s*\/Image/g) ?? []).length >= kashmirPhotosForPdf.length)

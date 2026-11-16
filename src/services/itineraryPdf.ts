@@ -38,9 +38,41 @@ const ink = [32, 58, 58] as const
 const muted = [91, 112, 108] as const
 const paper = [249, 248, 243] as const
 const pale = [237, 243, 238] as const
+const promiseIconColor = [178, 113, 85] as const
+const planningNote = 'This PDF is a planning guide, not your final itinerary or a confirmed booking. AVELOF will help refine your choices and arrange the final trip.'
+const unionCabRefundNote = 'If you select and pay for a union cab but do not use it, AVELOF will help arrange a refund of the amount paid, subject to applicable local operator terms.'
 
 function setPdfTextColor(pdf: JsPDFDocument, color: readonly number[]) {
   pdf.setTextColor(color[0], color[1], color[2])
+}
+
+function drawPromiseIcon(pdf: JsPDFDocument, index: number, x: number, y: number) {
+  const left = x + 1
+  const top = y + 1
+  pdf.setDrawColor(...promiseIconColor)
+  pdf.setLineWidth(0.7)
+  if (index === 0) {
+    pdf.circle(x + 4, y + 4, 3.2, 'S')
+    pdf.line(left + 1.2, top + 3.1, left + 2.5, top + 4.4)
+    pdf.line(left + 2.5, top + 4.4, left + 5.1, top + 1.7)
+  } else if (index === 1) {
+    pdf.roundedRect(x + 1.7, y + 0.6, 4.6, 6.8, 0.8, 0.8, 'S')
+    pdf.line(x + 3, y + 1.6, x + 5, y + 1.6)
+    pdf.circle(x + 4, y + 6.2, 0.25, 'S')
+  } else if (index === 2) {
+    pdf.line(x + 4, y + 0.5, x + 7, y + 1.6)
+    pdf.line(x + 7, y + 1.6, x + 6.5, y + 4.4)
+    pdf.line(x + 6.5, y + 4.4, x + 4, y + 7)
+    pdf.line(x + 4, y + 7, x + 1.5, y + 4.4)
+    pdf.line(x + 1.5, y + 4.4, x + 1, y + 1.6)
+    pdf.line(x + 1, y + 1.6, x + 4, y + 0.5)
+    pdf.line(x + 2.5, y + 3.7, x + 3.6, y + 4.8)
+    pdf.line(x + 3.6, y + 4.8, x + 5.6, y + 2.7)
+  } else {
+    pdf.roundedRect(x + 0.6, y + 1, 6.8, 5.8, 0.8, 0.8, 'S')
+    pdf.line(x + 1, y + 2.8, x + 7, y + 2.8)
+    pdf.line(x + 1.7, y + 5.2, x + 3.5, y + 5.2)
+  }
 }
 
 function printable(value: string) {
@@ -84,7 +116,7 @@ export function tourPackagePdfData(item: TourPackage): ItineraryPdfData {
     exclusions: item.exclusions,
     notes: [
       'Optional activities, tickets and access are subject to availability, local rules, weather and operator confirmation.',
-      ...(includesUnionCabs || excludesUnionCabs ? ['Union-cab charges and usage depend on the package, local operator terms and confirmation. If you pay for/request a union cab but do not use it, any eligible refund is subject to applicable local operator terms.'] : []),
+      ...(includesUnionCabs || excludesUnionCabs ? [`Union-cab charges and usage depend on the package, local operator terms and confirmation. ${unionCabRefundNote}`] : []),
     ],
   }
 }
@@ -239,25 +271,25 @@ export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
 
     const cardTop = 151
     const cardWidth = (pageWidth - margin * 2 - 8) / 2
-    const cardHeight = 34
+    const cardHeight = 30
     brandPromises.forEach((promise, index) => {
       const x = margin + (index % 2) * (cardWidth + 8)
       const top = cardTop + Math.floor(index / 2) * (cardHeight + 8)
       pdf.setFillColor(255, 255, 255)
       pdf.setDrawColor(85, 130, 115)
       pdf.roundedRect(x, top, cardWidth, cardHeight, 3, 3, 'FD')
-      pdf.setFillColor(...copper)
-      pdf.circle(x + 7, top + 8, 1.5, 'F')
-      writeWrapped(promise, x + 12, top + 10, cardWidth - 18, 9, deepForest)
+      drawPromiseIcon(pdf, index, x + 5, top + 8)
+      writeWrapped(promise, x + 16, top + 9, cardWidth - 22, 8.5, deepForest)
     })
 
     const summary = [data.dates, data.guests].filter(Boolean).join('  |  ')
     if (summary) {
-      pdf.setTextColor(225, 238, 230)
-      pdf.setFont('helvetica', 'normal')
-      pdf.setFontSize(9)
-      pdf.text(printable(summary), margin, 240)
+      writeWrapped(summary, margin, 220, pageWidth - margin * 2, 8.5, [225, 238, 230])
     }
+    pdf.setFillColor(255, 255, 255)
+    pdf.setDrawColor(85, 130, 115)
+    pdf.roundedRect(margin, 231, pageWidth - margin * 2, 30, 3, 3, 'FD')
+    writeWrapped(planningNote, margin + 6, 240, pageWidth - margin * 2 - 12, 8, deepForest)
     pdf.setDrawColor(85, 130, 115)
     pdf.line(margin, 263, pageWidth - margin, 263)
     drawFooter(true)
@@ -307,7 +339,7 @@ export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
   if (data.unionCabs?.length) {
     sectionHeading('Union cabs requested')
     bulletList(data.unionCabs)
-    paragraph('Union-cab charges are separate unless expressly included in your package. If a paid union cab is not used, any eligible refund is subject to the applicable local operator terms.')
+    paragraph(`Union-cab charges are separate unless expressly included in your package. ${unionCabRefundNote}`)
   }
   if (data.notes?.length) {
     sectionHeading('Helpful notes')
@@ -316,6 +348,9 @@ export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
 
   for (let firstPhoto = 0; firstPhoto < kashmirPhotosForPdf.length; firstPhoto += 6) {
     startContentPage()
+    const photosOnPage = Math.min(6, kashmirPhotosForPdf.length - firstPhoto)
+    const imageHeight = photosOnPage <= 4 ? 82 : 56
+    const rowHeight = photosOnPage <= 4 ? 98 : 70
     pdf.setFont('helvetica', 'bold')
     pdf.setFontSize(15)
     setPdfTextColor(pdf, forest)
@@ -326,11 +361,10 @@ export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
     y += 11
     writeWrapped('Illustrative travel and stay imagery; scenes and accommodation may vary by season and availability.', margin, y, pageWidth - margin * 2, 8, muted)
     const imageWidth = (pageWidth - margin * 2 - 8) / 2
-    const imageHeight = 56
-    for (let index = firstPhoto; index < Math.min(firstPhoto + 6, kashmirPhotosForPdf.length); index += 1) {
+    for (let index = firstPhoto; index < firstPhoto + photosOnPage; index += 1) {
       const position = index - firstPhoto
       const x = margin + (position % 2) * (imageWidth + 8)
-      const imageTop = y + 8 + Math.floor(position / 2) * 70
+      const imageTop = y + 8 + Math.floor(position / 2) * rowHeight
       pdf.setFillColor(...paper)
       pdf.roundedRect(x, imageTop, imageWidth, imageHeight, 2, 2, 'F')
       const imageProperties = pdf.getImageProperties(photoImages[index])
@@ -359,7 +393,7 @@ export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
   bulletList(data.inclusions)
   sectionHeading('Exclusions')
   bulletList(data.exclusions)
-  paragraph('Availability, final pricing, route access and included services are confirmed with AVELOF before booking. This itinerary is a planning document, not a confirmed booking.')
+  paragraph(`Availability, final pricing, route access and included services are confirmed with AVELOF before booking. ${planningNote}`)
 
   pdf.addPage()
   drawWatermark()

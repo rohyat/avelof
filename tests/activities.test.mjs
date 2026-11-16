@@ -557,6 +557,7 @@ test('both planners can skip activities and union cabs, and older hotel steps re
       await planner.getByLabel('Phone number').fill('9876543210')
       await planner.getByRole('button', { name: 'Submit enquiry' }).click()
       await planner.getByRole('heading', { name: 'Thank you for submitting your details.' }).waitFor()
+      assert.ok((await page.locator('.confirmation-modal').innerText()).includes('AVELOF will help refine your selections and arrange a final itinerary'))
       assert.equal(submissions.at(-1).fields.selectedActivities, undefined)
       assert.equal(submissions.at(-1).fields.unionCabRequests, undefined)
       assert.match(submissions.at(-1).fields.placesToVisit, /Gulmarg/)
