@@ -127,6 +127,8 @@ export default function LocalTripsPage() {
   }
 
   return <>
+    {busy && <SubmissionProgress title="Saving your enquiry">Please keep this page open while we save your local trip enquiry.</SubmissionProgress>}
+    {receipt && <SubmissionSuccess title="Enquiry saved"><p>Enquiry ID: <strong>{receipt.reference}</strong></p><p>We will get in touch to discuss the details. This is not a confirmed booking.</p></SubmissionSuccess>}
     <section className="local-trips-hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(15, 42, 30, .88), rgba(15, 42, 30, .35)), url("${providedDestinationPhotos.yusmarg}")` }}>
       <div className="page-width">
         <div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>Local Trips</span></div>
@@ -235,3 +237,4 @@ export default function LocalTripsPage() {
     </div>
   </>
 }
+import SubmissionProgress, { SubmissionSuccess } from '../components/SubmissionFeedback'

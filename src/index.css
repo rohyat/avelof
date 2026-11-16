@@ -912,8 +912,12 @@ body.enquiry-open { overflow: hidden; }
 .confirmation-modal h2 { margin: 6px 0 13px; }
 .confirmation-modal > p:not(.eyebrow) { margin: 0 0 24px; color: var(--muted); font-size: 11px; line-height: 1.8; }
 .confirmation-modal .success-mark { margin-bottom: 21px; }
-.registration-success { border: 0; color: var(--ink); }
-.registration-success::backdrop { background: rgba(16,33,26,.66); backdrop-filter: blur(5px); }
+dialog.registration-success, dialog.registration-progress { position: fixed; inset: 0; margin: auto; width: min(500px, calc(100% - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; border: 0; color: var(--ink); }
+.registration-success::backdrop, .registration-progress::backdrop { background: rgba(16,33,26,.66); backdrop-filter: blur(5px); }
+.registration-progress { text-align: center; }
+.registration-spinner { color: var(--forest); animation: registration-spin 1s linear infinite; }
+@keyframes registration-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .registration-spinner { animation: none; } }
 .registration-success dd { margin: 6px 0 18px; font-family: monospace; overflow-wrap: anywhere; }
 
 .button { border-radius: 5px; font-size: 12px; letter-spacing: 0; }

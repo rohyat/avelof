@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, FileImage, Handshake, Heart, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
+import SubmissionProgress from '../components/SubmissionFeedback'
 import RegistrationReceipt from '../components/RegistrationReceipt'
 import RegistrationForm from '../components/RegistrationForm'
 import PartnerRegistrationLayout from '../components/PartnerRegistrationLayout'
@@ -131,7 +132,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
         {legacyRooms ? <><label className="review-text-field">Room types (one per line)<textarea name="legacyRoomTypes" required defaultValue={editing?.roomTypes.join('\n')} /></label><NumberStepper label="Total rooms" name="totalRooms" min={1} max={10000} defaultValue={editing?.totalRooms} /><NumberStepper label="Nightly rate (INR)" name="legacyPrice" min={1} defaultValue={editing?.price} currency />{editing?.breakfastPrice === undefined && <label>Meal plan<select name="mealPlan" defaultValue={editing?.mealPlan}>{hotelMealPlans.map((plan) => <option key={plan}>{plan}</option>)}</select></label>}</> : <fieldset className="hotel-amenities hotel-room-types review-text-field"><legend>Room types, quantity & nightly rates</legend><p className="review-text-field">All room types start at 0. Increase the quantity for the rooms you offer, and leave the others at 0. Add at least one room.</p>{hotelRoomTypes.map((roomType) => <div className="registration-room-rate" key={roomType}><NumberStepper label={`${roomType} rooms`} name={`roomCount_${roomType.toLowerCase()}`} min={0} max={10000} defaultValue={editing?.roomRates?.find((room) => room.roomType === roomType)?.count ?? 0} /><NumberStepper label={`${roomType} rate (INR)`} name={`roomPrice_${roomType.toLowerCase()}`} min={1} defaultValue={editing?.roomRates?.find((room) => room.roomType === roomType)?.price ?? 2000} step={100} currency /></div>)}<small className="review-text-field">Only available room types and their rates are listed. Hotel cards show the lowest room rate.</small></fieldset>}
         {(!editing || editing.breakfastPrice !== undefined) && <><NumberStepper label="Breakfast add-on (INR)" name="breakfastPrice" defaultValue={editing?.breakfastPrice ?? 500} step={50} currency />
         <NumberStepper label="Dinner add-on (INR)" name="dinnerPrice" defaultValue={editing?.dinnerPrice ?? 500} step={50} currency /></>}
-        <p className="privacy-note review-text-field">Rates are per room per night: Family rooms cover 4 people; other room types cover 2 people. Enter the base breakfast and dinner add-ons for 2 people; Family rooms automatically use 1.5 times each meal charge for 4 people. AVELOF may edit these prices before approval.</p>
+        <p className="privacy-note review-text-field">Rates are per room per night: Family rooms cover 4 people; other room types cover 2 people. Enter the base breakfast and dinner add-ons for 2 people; Family rooms automatically use twice each meal charge for 4 people. AVELOF may edit these prices before approval.</p>
         <label>Taxes<select name="taxDetails" required defaultValue={editing?.taxDetails}>{hotelTaxOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
         </section>
         <section className="hotel-form-fields registration-section" aria-labelledby="hotel-facilities-title">
@@ -159,6 +160,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
         </section>
       </fieldset>
     </RegistrationForm>}
+    {busy && <SubmissionProgress title="Saving your hotel registration">Uploading photos and saving your hotel details. Please keep this page open until you see your receipt.</SubmissionProgress>}
   </PartnerRegistrationLayout>
 }
 
@@ -198,7 +200,7 @@ export function HotelStatusPage() {
       <p>{hotel.status === 'approved' ? 'Published' : 'Current'} rate: INR {hotel.price.toLocaleString('en-IN')} {hotelRoomRateBasis(selectedHotelRoom(hotel)?.roomType)}.</p>
       <p>{hotel.mealPlan} · {hotel.taxDetails}</p>
       {hotel.roomRates && <ul>{hotel.roomRates.map((room) => <li key={room.roomType}>{room.roomType}: INR {room.price.toLocaleString('en-IN')} {hotelRoomRateBasis(room.roomType)}</li>)}</ul>}
-      {hotel.breakfastPrice !== undefined && <p>Base optional breakfast: INR {hotel.breakfastPrice}; dinner: INR {hotel.dinnerPrice}, for 2 people. Family rooms cover 4 people and use 1.5 times each meal charge.</p>}
+      {hotel.breakfastPrice !== undefined && <p>Base optional breakfast: INR {hotel.breakfastPrice}; dinner: INR {hotel.dinnerPrice}, for 2 people. Family rooms cover 4 people and use twice each meal charge.</p>}
       <p>Heating: {hotel.heating}. Amenities: {hotel.amenities.join(', ') || 'None selected'}.</p>
       <ul>{hotel.highlights.map((point) => <li key={point}>{point}</li>)}</ul>
       {hotel.status === 'approved' ? <Link className="text-link" to={`/hotels/${hotel.id}`}>View approved listing <ArrowRight size={16} /></Link> : <p>This property is not publicly listed.</p>}
@@ -232,7 +234,7 @@ function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminH
     <p>{hotel.totalRooms} rooms. Room types: {hotel.roomTypes.join(', ')}. Check-in: {hotel.checkIn}; check-out: {hotel.checkOut}.</p>
     <h3>Public highlight points</h3><ul>{hotel.highlights.map((point) => <li key={point}>{point}</li>)}</ul>
     <p>Submitted rate: INR {hotel.submittedPrice.toLocaleString('en-IN')} {hotelRoomRateBasis(selectedHotelRoom(hotel)?.roomType)}. {hotel.mealPlan} · {hotel.taxDetails}.</p>
-    <p>Family room rates cover 4 people; other room rates cover 2 people. Reviewed breakfast and dinner are base charges for 2 people; Family rooms use 1.5 times each charge.</p>
+    <p>Family room rates cover 4 people; other room rates cover 2 people. Reviewed breakfast and dinner are base charges for 2 people; Family rooms use twice each charge.</p>
     <form className="review-submission-form" onSubmit={submit}>
       <fieldset disabled={disabled} className="hotel-form-fields">
         {hotel.roomRates ? hotel.roomRates.map((room) => <NumberStepper key={room.roomType} label={`Reviewed ${room.roomType} rate (INR)`} name={`roomPrice_${room.roomType}`} min={1} defaultValue={room.price} step={100} currency />) : <NumberStepper label="Reviewed price (INR)" name="price" min={1} defaultValue={hotel.price} step={100} currency />}

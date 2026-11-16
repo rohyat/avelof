@@ -8,6 +8,7 @@ import type { AdminBusiness, BusinessDetails, BusinessReceipt, BusinessStatus, O
 import { BusinessError, businessErrorText, compressBusinessPhoto, deleteBusiness, editBusiness, loadAdminBusinesses, lookupBusiness, moderateBusiness, saveBusiness } from '../services/businessService'
 import { hotelStatusLabels } from '../data/hotelRegistration'
 import RegistrationReceipt from '../components/RegistrationReceipt'
+import SubmissionProgress from '../components/SubmissionFeedback'
 import RegistrationForm from '../components/RegistrationForm'
 import MapLocationLink from '../components/MapLocationLink'
 import { locationFields, mapCoordinates } from '../services/mapLocation'
@@ -130,6 +131,7 @@ export default function BusinessRegistrationPage({ editing, onCancel }: { editin
         </section>
       </fieldset>
     </RegistrationForm>}
+    {busy && <SubmissionProgress title="Saving your business registration">Uploading photos and saving your restaurant or shop details. Please keep this page open until you see your receipt.</SubmissionProgress>}
   </section>
 }
 

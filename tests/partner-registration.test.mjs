@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
+import { assertCentered, assertSaving } from './submission-feedback.mjs'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
 const id = '00000000-0000-4000-8000-000000000002'
@@ -195,12 +196,14 @@ test('partner onboarding and approved listings work separately from customer nav
     await context.test('driver save failures do not confirm receipt and unchanged retries preserve the ID', async () => {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
       let saved, fail = true
+      const saveGate = Promise.withResolvers()
       await page.route('**/api/drivers*', async (route) => {
         if (route.request().method() !== 'POST') return route.fulfill({ json: listing([]) })
         const form = await new Response(route.request().postDataBuffer(), { headers: { 'Content-Type': route.request().headers()['content-type'] } }).formData()
         saved = JSON.parse(form.get('details'))
         assert.equal(form.getAll('photos').length, 1)
         if (fail) return route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>Vite</title>' })
+        await saveGate.promise
         return route.fulfill({ status: 201, json: { saved: true, id: saved.id, driverId, accessCode, status: 'pending' } })
       })
       try {
@@ -242,8 +245,11 @@ test('partner onboarding and approved listings work separately from customer nav
         const firstId = saved.id
         fail = false
         await page.getByRole('button', { name: 'Submit driver for approval' }).click()
+        await assertSaving(page, 'Saving your driver registration')
+        saveGate.resolve()
         const success = page.getByRole('dialog', { name: 'Driver registration saved' })
         await success.waitFor()
+        await assertCentered(page, success)
         assert.ok((await success.innerText()).includes(driverId))
         assert.ok((await success.innerText()).includes(accessCode))
         assert.ok((await success.innerText()).includes('not a confirmed listing or booking'))
@@ -407,6 +413,7 @@ test('partner onboarding and approved listings work separately from customer nav
         await page.getByLabel('5 stars').check({ force: true })
         await page.getByRole('checkbox', { name: /consent to immediate publication/ }).check()
         await page.getByRole('button', { name: 'Submit driver rating' }).click()
+        await page.getByRole('dialog', { name: 'Your review has been saved' }).getByRole('button', { name: 'View submission details' }).click()
         await page.getByRole('heading', { name: 'Thank you. Your driver rating has been saved.' }).waitFor()
         const driverReview = submittedReviews[0]
         assert.equal(driverReview.driverId, driverId)
@@ -444,6 +451,7 @@ test('partner onboarding and approved listings work separately from customer nav
         await page.getByLabel('4 stars').check({ force: true })
         await page.getByRole('checkbox', { name: /consent to immediate publication/ }).check()
         await page.getByRole('button', { name: 'Submit hotel rating' }).click()
+        await page.getByRole('dialog', { name: 'Your review has been saved' }).getByRole('button', { name: 'View submission details' }).click()
         await page.getByRole('heading', { name: 'Thank you. Your hotel rating has been saved.' }).waitFor()
         const hotelReview = submittedReviews[1]
         assert.equal(hotelReview.hotelId, hotel.hotelId)

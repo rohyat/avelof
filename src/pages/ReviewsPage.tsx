@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import ReviewCarousel from '../components/ReviewCarousel'
 import ReviewCard from '../components/ReviewCard'
 import ReviewStars from '../components/ReviewStars'
+import SubmissionProgress, { SubmissionSuccess } from '../components/SubmissionFeedback'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import { deleteReview as deleteReviewRequest, loadAdminReviews, loadPublicReviews, moderateReview, ReviewError, saveReview } from '../services/reviewService'
 import { reviewSubmissionSchema } from '../services/reviewSchema'
@@ -93,6 +94,8 @@ export default function ReviewsPage() {
   }
 
   return <>
+    {submitting && <SubmissionProgress title="Saving your review" />}
+    {saved && <SubmissionSuccess title="Your review has been saved">{saved === 'published' ? 'Your review is published and now appears in Guest reviews.' : 'Your submission has been saved but is not currently published.'}</SubmissionSuccess>}
     <section className="page-hero"><div className="page-width"><div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>Reviews</span></div><p className="eyebrow">Stories from the valley</p><h1>Travel leaves<br /><em>a little something.</em></h1><p>Every honest experience matters. Positive, mixed, and critical feedback is welcome.</p></div></section>
     <section className="reviews-page page-width">
       <div className="review-invite review-invite-top"><div><p className="eyebrow">Share your experience</p><h2>We’d love to hear your story.</h2></div><a className="button button-dark" href="#share-review">Write a review <ArrowRight size={16} /></a></div>

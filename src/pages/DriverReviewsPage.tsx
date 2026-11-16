@@ -5,6 +5,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import ReviewCard from '../components/ReviewCard'
 import ReviewCarousel from '../components/ReviewCarousel'
 import ReviewStars from '../components/ReviewStars'
+import SubmissionProgress, { SubmissionSuccess } from '../components/SubmissionFeedback'
 import { loadPublicDriverByDisplayId } from '../services/driverService'
 import { loadPublicHotelByDisplayId } from '../services/hotelService'
 import { reviewSubmissionSchema } from '../services/reviewSchema'
@@ -95,6 +96,8 @@ export default function DriverReviewsPage() {
   }
 
   return <>
+    {submitting && <SubmissionProgress title="Saving your review" />}
+    {saved && <SubmissionSuccess title="Your review has been saved">{saved === 'published' ? 'Your rating has been saved and published.' : 'Your submission has been saved but is not currently published.'}</SubmissionSuccess>}
     <section className="page-hero"><div className="page-width">
       <div className="breadcrumb"><Link to="/">Home</Link><span>/</span><Link to={reviewKind === 'hotel' ? '/hotels' : '/drivers'}>{reviewKind === 'hotel' ? 'Hotels' : 'Our drivers'}</Link><span>/</span><span>{reviewKind === 'hotel' ? 'Hotel' : 'Driver'} reviews</span></div>
       <p className="eyebrow">AVELOF {reviewKind} feedback</p><h1>{subject?.name ?? `${reviewKind === 'hotel' ? 'Hotel' : 'Driver'} reviews`}</h1>

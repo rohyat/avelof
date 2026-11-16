@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { mkdir } from 'node:fs/promises'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
+import { assertCentered, assertSaving } from './submission-feedback.mjs'
 import { ownerGuestReviewMonths, ownerProvidedGuestReviews } from '../src/data/catalog.ts'
 
 const origin = process.env.AVELOF_REVIEW_TEST_URL || 'http://localhost:8792'
@@ -180,9 +181,11 @@ test('review carousel preserves layout and supports accessible automatic and man
     await context.test('submitted review publishes and scrolls into the public feed', async () => {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
       let submitted
+      const saveGate = Promise.withResolvers()
       await page.route('**/api/reviews*', async (route) => {
         if (route.request().method() === 'POST') {
           submitted = route.request().postDataJSON()
+          await saveGate.promise
           return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ saved: true, id: submitted.id, status: 'published' }) })
         }
         const published = submitted ? [{ id: submitted.id, reviewerName: submitted.reviewerName, bookingId: submitted.bookingId, experience: submitted.experience, rating: submitted.rating, title: submitted.title, reviewText: submitted.reviewText, publishedAt: '2026-11-11T12:00:00.000Z', reviewMonth: null }, ...reviews] : reviews
@@ -200,6 +203,12 @@ test('review carousel preserves layout and supports accessible automatic and man
         await page.locator('textarea[name="reviewText"]').fill('The local team made our journey easy and welcoming.')
         await page.locator('input[name="publicationConsent"]').check()
         await page.getByRole('button', { name: 'Submit review' }).click()
+        await assertSaving(page, 'Saving your review')
+        saveGate.resolve()
+        const success = page.getByRole('dialog', { name: 'Your review has been saved' })
+        await success.waitFor()
+        await assertCentered(page, success)
+        await success.getByRole('button', { name: 'View submission details' }).click()
         await page.getByRole('heading', { name: 'Thank you. Your review has been saved.' }).waitFor()
         const card = page.locator(`#guest-review-${submitted.id}`)
         await card.waitFor()

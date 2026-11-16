@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
+import { dismissSubmission } from './submission-feedback.mjs'
 import { validHotelJpeg } from '../functions/_lib/hotelRegistration.ts'
 import { hotelPhotoLimit } from '../src/data/hotelRegistration.ts'
 
@@ -331,7 +332,7 @@ test('hotel registration, private lookup and moderation integrate with public st
         assert.ok(itinerary.includes(`Vehicle + selected stays estimate: INR ${(vehicleEstimate + 5100).toLocaleString('en-IN')}`))
       } finally { await page.close() }
     })
-    await context.test('Family rates cover four people and meal add-ons use 1.5 times the base charges everywhere', async () => {
+    await context.test('Family rates cover four people and meal add-ons use twice the base charges everywhere', async () => {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
       const published = {
         ...publicHotel(), price: 2000, mealPlan: 'Room only', breakfastPrice: 400, dinnerPrice: 600, totalRooms: 12,
@@ -359,12 +360,12 @@ test('hotel registration, private lookup and moderation integrate with public st
         const form = page.locator('.enquiry-form')
         const rates = form.locator('.hotel-rates')
         assert.equal(await rates.getByLabel('Room type', { exact: true }).inputValue(), 'Family')
-        assert.ok((await rates.getByLabel('Breakfast', { exact: false }).locator('..').innerText()).includes('+INR 600'))
-        assert.ok((await rates.getByLabel('Dinner', { exact: false }).locator('..').innerText()).includes('+INR 900'))
+        assert.ok((await rates.getByLabel('Breakfast', { exact: false }).locator('..').innerText()).includes('+INR 800'))
+        assert.ok((await rates.getByLabel('Dinner', { exact: false }).locator('..').innerText()).includes('+INR 1,200'))
         await rates.getByLabel('Breakfast', { exact: false }).check()
-        assert.ok((await rates.locator('strong[role="status"]').innerText()).includes('2,600'))
+        assert.ok((await rates.locator('strong[role="status"]').innerText()).includes('2,800'))
         await rates.getByLabel('Dinner', { exact: false }).check()
-        assert.ok((await rates.locator('strong[role="status"]').innerText()).includes('3,500'))
+        assert.ok((await rates.locator('strong[role="status"]').innerText()).includes('4,000'))
         await rates.getByLabel('Room type', { exact: true }).selectOption('Standard')
         assert.ok((await rates.innerText()).includes('for 2 people'))
         assert.ok((await rates.locator('strong[role="status"]').innerText()).includes('4,000'))
@@ -378,7 +379,7 @@ test('hotel registration, private lookup and moderation integrate with public st
         await form.getByRole('button', { name: 'Submit enquiry' }).click()
         await page.getByRole('heading', { name: 'Thank you for submitting your details.' }).waitFor()
         assert.equal(enquiry.fields.roomType, 'Family')
-        assert.ok(enquiry.fields.nightlyRate.includes('3,500 per room per night for 4 people'))
+        assert.ok(enquiry.fields.nightlyRate.includes('4,000 per room per night for 4 people'))
         await page.goto(`${origin}/tour-packages`)
         const planner = page.locator('.trip-planner')
         await planner.getByLabel('Start date').fill('2027-01-10')
@@ -393,14 +394,14 @@ test('hotel registration, private lookup and moderation integrate with public st
         await plannedHotel.getByLabel('Breakfast', { exact: false }).check()
         await plannedHotel.getByLabel('Dinner', { exact: false }).check()
         assert.ok((await plannedHotel.locator('.hotel-rates').innerText()).includes('for 4 people'))
-        assert.ok((await planner.locator('.planner-trip-estimate').innerText()).includes('Selected stays: INR 3,500'))
+        assert.ok((await planner.locator('.planner-trip-estimate').innerText()).includes('Selected stays: INR 4,000'))
         await planner.getByRole('button', { name: 'Continue with this plan' }).click()
         await form.getByLabel('Name', { exact: true }).fill('Family Planner Guest')
         await form.getByLabel('Phone number').fill('9876543210')
         await form.getByRole('button', { name: 'Submit enquiry' }).click()
         await page.getByRole('heading', { name: 'Thank you for submitting your details.' }).waitFor()
         assert.ok(enquiry.fields.customDetails.includes('room type: Family'))
-        assert.ok(enquiry.fields.customDetails.includes('3,500 per room per night for 4 people'))
+        assert.ok(enquiry.fields.customDetails.includes('4,000 per room per night for 4 people'))
       } finally { await page.close() }
     })
     await context.test('guest counts drive vehicle suggestions and room quantities with inline planner submission', async () => {
@@ -469,12 +470,12 @@ test('hotel registration, private lookup and moderation integrate with public st
         assert.ok((await rates.locator('.hotel-rooms-total').innerText()).includes('20,000'))
         await rates.getByLabel('Room type', { exact: true }).selectOption('Family')
         assert.equal(await rates.getByLabel('Number of rooms', { exact: true }).inputValue(), '2')
-        assert.ok((await rates.locator('.hotel-rooms-total').innerText()).includes('7,000'))
+        assert.ok((await rates.locator('.hotel-rooms-total').innerText()).includes('8,000'))
         await form.getByLabel('Name', { exact: true }).fill('Eight Guests')
         await form.getByLabel('Phone number').fill('9876543210')
         await form.locator('[name="checkInDate"]').fill('2027-01-10')
         await form.locator('[name="checkOutDate"]').fill('2027-01-12')
-        assert.ok((await form.locator('.hotel-stay-estimate').innerText()).includes('14,000'))
+        assert.ok((await form.locator('.hotel-stay-estimate').innerText()).includes('16,000'))
         await rates.getByLabel('Number of rooms', { exact: true }).fill('1')
         await form.getByRole('button', { name: 'Submit enquiry' }).click()
         assert.equal(submissions.length, 0)
@@ -482,8 +483,8 @@ test('hotel registration, private lookup and moderation integrate with public st
         await form.getByRole('button', { name: 'Submit enquiry' }).click()
         await page.getByRole('heading', { name: 'Thank you for submitting your details.' }).waitFor()
         assert.equal(submissions[0].fields.roomCount, '2')
-        assert.ok(submissions[0].fields.hotelNightlyTotal.includes('7,000'))
-        assert.ok(submissions[0].fields.hotelStayEstimate.includes('14,000'))
+        assert.ok(submissions[0].fields.hotelNightlyTotal.includes('8,000'))
+        assert.ok(submissions[0].fields.hotelStayEstimate.includes('16,000'))
 
         await page.goto(`${origin}/tour-packages`)
         const planner = page.locator('.trip-planner')
@@ -517,13 +518,13 @@ test('hotel registration, private lookup and moderation integrate with public st
         assert.equal(await hotelCard.getByLabel('Number of rooms', { exact: true }).inputValue(), '2')
         await hotelCard.getByLabel('Breakfast', { exact: false }).check()
         await hotelCard.getByLabel('Dinner', { exact: false }).check()
-        assert.ok((await planner.locator('.planner-trip-estimate').innerText()).includes('Selected stays: INR 7,000'))
+        assert.ok((await planner.locator('.planner-trip-estimate').innerText()).includes('Selected stays: INR 8,000'))
         await hotelCard.getByLabel('Number of rooms', { exact: true }).fill('1')
         assert.equal(await planner.getByRole('button', { name: 'Continue with this plan' }).isDisabled(), true)
         assert.ok((await planner.getByRole('alert').innerText()).includes('enough capacity'))
         await hotelCard.getByLabel('Number of rooms', { exact: true }).fill('2')
         await hotelCard.getByRole('button', { name: 'Increase Number of rooms', exact: true }).click()
-        assert.ok((await planner.locator('.planner-trip-estimate').innerText()).includes('Selected stays: INR 10,500'))
+        assert.ok((await planner.locator('.planner-trip-estimate').innerText()).includes('Selected stays: INR 12,000'))
         await hotelCard.getByRole('link', { name: 'View hotel' }).click()
         await page.getByRole('button', { name: 'Back to your trip' }).click()
         assert.equal(await hotelCard.getByLabel('Number of rooms', { exact: true }).inputValue(), '3')
@@ -545,7 +546,8 @@ test('hotel registration, private lookup and moderation integrate with public st
         assert.equal(submissions[1].reference, submissions[2].reference)
         assert.equal(submissions[2].fields.adults, '6')
         assert.equal(submissions[2].fields.children, '2')
-        assert.ok(submissions[2].fields.placesToVisit.includes('rooms: 3; all rooms per night: INR 10,500'))
+        assert.ok(submissions[2].fields.placesToVisit.includes('rooms: 3; all rooms per night: INR 12,000'))
+        await dismissSubmission(page)
         assert.equal(await page.getByRole('dialog').count(), 0)
         await page.goto(`${origin}/`)
         await planner.getByLabel('Start date').fill('2027-01-10')
@@ -589,6 +591,9 @@ test('hotel registration, private lookup and moderation integrate with public st
       let saved
       let originalJpegSize
       let fail = true
+      let releaseSave
+      let markSavePending
+      const savePending = new Promise((resolve) => { markSavePending = resolve })
       await page.route('**/api/hotels*', async (route) => {
         if (route.request().method() !== 'POST') return route.fulfill({ json: list([]) })
         const form = await new Response(route.request().postDataBuffer(), { headers: { 'Content-Type': route.request().headers()['content-type'] } }).formData()
@@ -607,6 +612,7 @@ test('hotel registration, private lookup and moderation integrate with public st
           assert.equal(buffer.readUInt16BE(frame + 5), 1344)
           assert.equal(buffer.readUInt16BE(frame + 7), 1920)
         }
+        if (!fail) await new Promise((resolve) => { releaseSave = resolve; markSavePending() })
         return route.fulfill({ status: fail ? 503 : 201, json: fail ? { error: 'Photo storage is unavailable.' } : { saved: true, id: saved.id, hotelId, status: 'pending', accessCode } })
       })
       try {
@@ -674,8 +680,26 @@ test('hotel registration, private lookup and moderation integrate with public st
         const originalId = saved.id
         fail = false
         await page.getByRole('button', { name: 'Submit hotel for approval' }).click()
+        const progress = page.getByRole('dialog', { name: 'Saving your hotel registration' })
+        await progress.waitFor()
+        assert.equal(await progress.locator('.registration-spinner').isVisible(), true)
+        const assertCentered = async (dialog) => {
+          const box = await dialog.boundingBox()
+          const viewport = page.viewportSize()
+          assert.ok(Math.abs(box.x + box.width / 2 - viewport.width / 2) < 2)
+          assert.ok(Math.abs(box.y + box.height / 2 - viewport.height / 2) < 2)
+          assert.ok(box.y >= 0 && box.y + box.height <= viewport.height)
+        }
+        await assertCentered(progress)
+        await page.keyboard.press('Escape')
+        assert.equal(await progress.isVisible(), true)
+        assert.equal(await page.getByRole('dialog', { name: 'Hotel registration saved' }).count(), 0)
+        await savePending
+        releaseSave()
         const success = page.getByRole('dialog', { name: 'Hotel registration saved' })
         await success.waitFor()
+        await assertCentered(success)
+        assert.equal(await progress.count(), 0)
         assert.ok((await success.innerText()).includes(hotelId))
         assert.ok((await success.innerText()).includes(accessCode))
         assert.ok((await success.innerText()).includes('not a confirmed listing or booking'))

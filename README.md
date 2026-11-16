@@ -11,6 +11,14 @@ npm run dev
 
 Create a production build with `npm run build`. Run the configured linter with `npm run lint`.
 
+Public registrations (hotels, drivers, restaurants and shops), enquiries
+(including the custom planner and local trips), and reviews display a centred
+loading dialog while their save request is pending. Escape cannot dismiss the
+loading dialog. A centred acknowledgement appears only after the server confirms
+the save; failures keep the form available for retry. Enquiry receipts do not
+confirm a booking. Shared feedback lives in `src/components/SubmissionFeedback.tsx`;
+registration receipts retain their private reference and access-code details.
+
 Planner, booking and local-trip dates use the shared `DateInput` control with a
 persistent Lucide calendar icon. The native date picker, validation and ISO
 form values are preserved; no third-party calendar service or library is used.

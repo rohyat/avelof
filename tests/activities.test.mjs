@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
+import { assertCentered, assertSaving, dismissSubmission } from './submission-feedback.mjs'
 import { business } from '../src/config.ts'
 import { activities, activitiesForPlaces, activityDestinations, formatSelectedActivities } from '../src/data/activities.ts'
 import { travelGuideSections } from '../src/data/travelGuide.ts'
@@ -9,14 +10,51 @@ import { searchSuggestions } from '../src/services/searchSuggestions.ts'
 
 const origin = process.env.AVELOF_ACTIVITY_TEST_URL || 'http://localhost:8792'
 
+test('enquiry modal stays open while saving and centres its persisted confirmation', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  const saveGate = Promise.withResolvers()
+  await page.route('**/api/drivers*', (route) => route.fulfill({ json: { drivers: [], total: 0, page: 1, pageSize: 25 } }))
+  await page.route('**/api/enquiries', async (route) => {
+    const body = route.request().postDataJSON()
+    await saveGate.promise
+    return route.fulfill({ status: 201, json: { saved: true, requestReference: body.reference, reference: 'AVELOF_CAB_10001' } })
+  })
+  try {
+    await page.goto(`${origin}/car-rentals`)
+    await page.getByRole('button', { name: 'Book Now', exact: true }).first().click()
+    const enquiry = page.getByRole('dialog', { name: 'Send us your car rental enquiry.' })
+    await enquiry.getByLabel('Name', { exact: true }).fill('Test Guest')
+    await enquiry.getByLabel('Phone number').fill('9876543210')
+    await enquiry.getByLabel('Start date').fill('2099-06-01')
+    await enquiry.getByLabel('End date').fill('2099-06-02')
+    await enquiry.getByRole('button', { name: 'Submit enquiry' }).click()
+    await assertSaving(page, 'Saving your enquiry')
+    await page.keyboard.press('Tab')
+    assert.equal(await page.getByRole('dialog', { name: 'Saving your enquiry' }).evaluate((element) => element.contains(document.activeElement)), true)
+    assert.equal(await enquiry.isVisible(), true)
+    assert.equal(await page.getByRole('heading', { name: 'Thank you for submitting your details.' }).count(), 0)
+    saveGate.resolve()
+    const success = page.getByRole('dialog', { name: 'Thank you for submitting your details.' })
+    await success.waitFor()
+    await assertCentered(page, success)
+    assert.ok((await success.innerText()).includes('AVELOF_CAB_10001'))
+    assert.equal(await page.locator('.registration-progress').count(), 0)
+    await success.getByRole('button', { name: 'No Thanks' }).click()
+    await success.waitFor({ state: 'hidden' })
+  } finally { saveGate.resolve(); await browser.close() }
+})
+
 test('local treks and picnic requests preserve choices and confirm only after saving', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
   const submissions = []
+  const saveGate = Promise.withResolvers()
   await page.route('**/api/enquiries', async (route) => {
     const body = route.request().postDataJSON()
     submissions.push(body)
     if (submissions.length === 1) return route.fulfill({ status: 503, json: { error: 'Unavailable' } })
+    await saveGate.promise
     return route.fulfill({ status: 201, json: { saved: true, requestReference: body.reference, reference: 'AVELOF_INQ_10001' } })
   })
   try {
@@ -98,6 +136,9 @@ test('local treks and picnic requests preserve choices and confirm only after sa
     await page.getByRole('alert').filter({ hasText: 'could not be saved' }).waitFor()
     assert.equal(await page.getByText('Your enquiry has been saved.').count(), 0)
     await page.getByRole('button', { name: 'Send enquiry' }).click()
+    await assertSaving(page, 'Saving your enquiry')
+    saveGate.resolve()
+    await dismissSubmission(page)
     await page.getByRole('heading', { name: 'Your enquiry has been saved.' }).waitFor()
     assert.deepEqual(submissions[0], submissions[1])
     assert.equal(submissions[1].fields.packagePreference, 'Local picnic / day trip')
@@ -122,6 +163,7 @@ test('local treks and picnic requests preserve choices and confirm only after sa
     await page.getByRole('button', { name: 'Next: vehicle' }).click()
     await page.getByRole('radio', { name: /No car needed/ }).check()
     await page.getByRole('button', { name: 'Send enquiry' }).click()
+    await dismissSubmission(page)
     await page.getByRole('heading', { name: 'Your enquiry has been saved.' }).waitFor()
     assert.equal(submissions[2].fields.packagePreference, 'Local trek')
     assert.equal(submissions[2].fields.selectedDestinations, 'Tarsar Marsar (Aru, Pahalgam)')
@@ -253,6 +295,7 @@ test('local picnic overnight stays filter hotels, preserve one-night dates and c
     await page.getByRole('button', { name: 'Next: vehicle' }).click()
     await page.getByRole('radio', { name: /No car needed/ }).check()
     await page.getByRole('button', { name: 'Send enquiry' }).click()
+    await dismissSubmission(page)
     await page.getByRole('heading', { name: 'Your enquiry has been saved.' }).waitFor()
     assert.equal(submissions[0].fields.preferredStay, 'Pahalgam Partner Hotel (AVELOF_HTL_10001PHL)')
     assert.equal(submissions[0].fields.checkInDate, '2099-12-31')
@@ -268,6 +311,7 @@ test('local picnic overnight stays filter hotels, preserve one-night dates and c
     await page.getByRole('radio', { name: /Help me find a stay/ }).check()
     await page.getByRole('button', { name: 'Next: vehicle' }).click()
     await page.getByRole('button', { name: 'Send enquiry' }).click()
+    await dismissSubmission(page)
     await page.getByRole('heading', { name: 'Your enquiry has been saved.' }).waitFor()
     assert.equal(submissions[1].fields.preferredStay, 'Help find a stay in Manasbal Lake')
     await page.getByRole('button', { name: 'Start another enquiry' }).click()
@@ -275,6 +319,7 @@ test('local picnic overnight stays filter hotels, preserve one-night dates and c
     await page.getByRole('button', { name: 'Next: places' }).click()
     await page.getByRole('button', { name: 'Next: vehicle' }).click()
     await page.getByRole('button', { name: 'Send enquiry' }).click()
+    await dismissSubmission(page)
     await page.getByRole('heading', { name: 'Your enquiry has been saved.' }).waitFor()
     for (const key of ['preferredStay', 'checkInDate', 'checkOutDate', 'departureDate', 'tripNights']) assert.equal(submissions[2].fields[key], undefined)
     assert.equal(submissions[2].fields.customDetails.includes('One-night stay'), false)

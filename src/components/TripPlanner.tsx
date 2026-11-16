@@ -16,6 +16,7 @@ import TripPlannerSteps from './TripPlannerSteps'
 import { hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration'
 import NumberStepper from './NumberStepper'
 import { EnquiryForm } from './BookingModal'
+import { SubmissionSuccess } from './SubmissionFeedback'
 import { enquiryPath } from '../services/bookingService'
 import { activitiesForPlaces, formatSelectedActivities } from '../data/activities'
 import ActivityChoices from './ActivityChoices'
@@ -475,6 +476,7 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
   }
 
   return <section className="custom-trip-section" id={sectionId}>
+    {receipt && <SubmissionSuccess title="Enquiry saved"><p>Booking enquiry ID: <strong>{receipt.reference}</strong></p><p>Your enquiry has been saved. This is not a confirmed booking.</p></SubmissionSuccess>}
     <div className="page-width custom-trip-inner">
       <div className="custom-trip-intro">
         <p className="eyebrow">Customise your trip</p>

@@ -6,6 +6,7 @@ import { Trash2 } from 'lucide-react'
 import NumberStepper from '../components/NumberStepper'
 import PartnerPhotos from '../components/PartnerPhotos'
 import RegistrationReceipt from '../components/RegistrationReceipt'
+import SubmissionProgress from '../components/SubmissionFeedback'
 import RegistrationForm from '../components/RegistrationForm'
 import PartnerRegistrationLayout from '../components/PartnerRegistrationLayout'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
@@ -92,6 +93,7 @@ function DriverForm({ editing, onCancel }: { editing?: { driver: OwnerDriver; ac
         </section>
       </fieldset>
     </RegistrationForm>}
+    {busy && <SubmissionProgress title="Saving your driver registration">Uploading your portrait and saving your driver details. Please keep this page open until you see your receipt.</SubmissionProgress>}
   </>
 }
 

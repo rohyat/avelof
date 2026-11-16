@@ -19,7 +19,7 @@ export const hotelPriceRanges = Array.from({ length: 9 }, (_, index) => {
 export const hotelCategoryLabels = { Deluxe: 'Deluxe - 2-star', Premium: 'Premium - 3-star', Luxury: 'Luxury - 4-5-star' }
 export const hotelRoomTypes = ['Standard', 'Deluxe', 'Premium', 'Family', 'Suite'] as const
 export const hotelRoomOccupancy = (roomType?: string) => roomType === 'Family' ? 4 : 2
-export const hotelRoomMealMultiplier = (roomType?: string) => roomType === 'Family' ? 1.5 : 1
+export const hotelRoomMealMultiplier = (roomType?: string) => roomType === 'Family' ? 2 : 1
 export const hotelRoomRateBasis = (roomType?: string) => `per room per night for ${hotelRoomOccupancy(roomType)} people`
 export const minimumHotelRooms = (people: number, roomType?: string) => Math.max(1, Math.ceil(people / hotelRoomOccupancy(roomType)))
 export const hotelHighlightOptions = ['Mountain views', 'Near the market', 'Near local attractions', 'Garden or outdoor space', 'On-site restaurant', 'Room service', 'Family-friendly stay', 'Centralised heating'] as const

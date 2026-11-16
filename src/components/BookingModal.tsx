@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { ArrowRight, Check, CircleCheck, Copy, MessageCircle, X } from 'lucide-react'
 import DateInput from './DateInput'
+import SubmissionProgress from './SubmissionFeedback'
 import { rentalCars, tourPackages } from '../data/catalog'
 import { createWhatsAppUrl, enquiryPath, formatEnquiryDetails, prepareRequest, saveEnquiry } from '../services/bookingService'
 import { indianPhoneNumber } from '../services/phoneNumbers'
@@ -108,6 +109,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   }
 
   return <form onSubmit={submit} className="enquiry-form" aria-busy={submitting}>
+    {submitting && <SubmissionProgress title="Saving your enquiry">Please keep this page open while we save your enquiry. This does not confirm a booking.</SubmissionProgress>}
     {children}
     <label className="enquiry-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
     <div className="form-grid">

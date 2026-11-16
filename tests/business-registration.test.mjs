@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
+import { assertCentered, assertSaving } from './submission-feedback.mjs'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
 const id = 'c0a80123-4567-489a-8abc-000000000001'
@@ -41,6 +42,7 @@ test('business registration, moderation and discovery work without exposing priv
     await context.test('photo registration handles failure, unchanged retry and private access-code receipt', async () => {
       const page = await browser.newPage({ viewport: { width: 390, height: 900 } })
       const submissions = []
+      const saveGate = Promise.withResolvers()
       const pageErrors = []
       page.on('pageerror', (error) => pageErrors.push(error.message))
       await page.route('**/api/business-images/*', (route) => route.fulfill({ contentType: 'image/jpeg', body: jpeg }))
@@ -60,6 +62,7 @@ test('business registration, moderation and discovery work without exposing priv
         assert.equal(details.contactEmail, adminBusiness.contactEmail)
         assert.equal(details.publicationConsent, true)
         if (submissions.length === 1) return route.fulfill({ status: 503, json: { error: 'Temporary database issue. Retry with the same unchanged form.' } })
+        await saveGate.promise
         return route.fulfill({ status: 201, json: { saved: true, id: details.id, status: 'pending', accessCode: 'SAFF3210' } })
       })
       try {
@@ -97,8 +100,11 @@ test('business registration, moderation and discovery work without exposing priv
         await page.getByRole('alert').filter({ hasText: 'Temporary database issue' }).waitFor()
         assert.equal(submissions.length, 1)
         await submit.click()
+        await assertSaving(page, 'Saving your business registration')
+        saveGate.resolve()
         const dialog = page.getByRole('dialog')
         await dialog.getByRole('heading', { name: 'Business registration saved', exact: true }).waitFor()
+        await assertCentered(page, dialog)
         assert.equal(submissions.length, 2)
         assert.equal(submissions[0].id, submissions[1].id)
         assert.deepEqual(submissions[0], submissions[1])
