@@ -4,7 +4,7 @@ import { hotelMealPrices, hotelNightlyPrice, selectedHotelRoom } from '../servic
 import { hotelRoomOccupancy, hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration'
 import NumberStepper from './NumberStepper'
 import RegularPrice from './RegularPrice'
-import { hotelPackagePriceInclusions } from '../services/pricing'
+import { hotelPackageDiscountPercent, hotelPackagePriceInclusions } from '../services/pricing'
 
 export default function HotelRates({ hotel, meals, roomType, showRooms = false, compact = false, showInclusions = false, onChange, people, rooms, onRoomsChange }: { hotel: Hotel; meals?: { breakfast: boolean; dinner: boolean }; roomType?: string; showRooms?: boolean; compact?: boolean; showInclusions?: boolean; onChange?: (breakfast: boolean, dinner: boolean, price: number, roomType?: string) => void; people?: number; rooms?: string; onRoomsChange?: (value: string) => void }) {
   const [localBreakfast, setBreakfast] = useState(false)
@@ -16,7 +16,8 @@ export default function HotelRates({ hotel, meals, roomType, showRooms = false, 
   const { breakfast: breakfastPrice, dinner: dinnerPrice } = hotelMealPrices(hotel, selectedRoom?.roomType)
   const rateBasis = hotel.registeredHotelId || selectedRoom ? hotelRoomRateBasis(selectedRoom?.roomType) : hotel.rateBasis ?? 'per night'
   const price = hotelNightlyPrice(hotel, breakfast, dinner, selectedRoom?.roomType)
-  const regularPrice = <RegularPrice price={selectedRoom?.price ?? hotel.roomOnlyPrice ?? hotel.price} originalPrice={selectedRoom?.originalPrice ?? hotel.originalPrice} />
+  const regularPrice = <RegularPrice price={selectedRoom?.price ?? hotel.roomOnlyPrice ?? hotel.price} originalPrice={selectedRoom?.originalPrice ?? hotel.originalPrice} discountPercent={hotelPackageDiscountPercent} />
+  const acStatus = <span className="hotel-ac-status">Hot &amp; cold AC: {hotel.hotColdAc ? 'Yes' : 'No'}</span>
   const minimum = minimumHotelRooms(people ?? 2, selectedRoom?.roomType)
   const roomQuantity = rooms === undefined ? minimum : Number(rooms)
   const mealPeople = hotelRoomOccupancy(selectedRoom?.roomType)
@@ -35,6 +36,7 @@ export default function HotelRates({ hotel, meals, roomType, showRooms = false, 
     <strong>₹{price.toLocaleString('en-IN')}</strong>
     <span className="hotel-rate-basis">{rateBasis}</span>
     <span className="hotel-meal-summary">{hotel.breakfastPrice === undefined ? hotel.mealPlan : 'Room only · Meals optional'}</span>
+    {acStatus}
     {showInclusions && <small className="price-inclusions">{hotelPackagePriceInclusions}</small>}
   </div>
 
@@ -42,6 +44,7 @@ export default function HotelRates({ hotel, meals, roomType, showRooms = false, 
     <span className="hotel-rate-basis">{rateBasis}</span>
     {regularPrice}
     <div><strong>₹{price.toLocaleString('en-IN')}</strong><span>{hotel.mealPlan}</span></div>
+    {acStatus}
     {roomControls}
   </div>
 
@@ -54,6 +57,7 @@ export default function HotelRates({ hotel, meals, roomType, showRooms = false, 
     {regularPrice}
     <div><strong role="status">₹{price.toLocaleString('en-IN')}</strong></div>
     <span>{hotel.registeredHotelId && hotel.breakfastPrice === undefined ? hotel.mealPlan : breakfast && dinner ? 'Breakfast and dinner included' : breakfast ? 'Breakfast included; dinner excluded' : dinner ? 'Dinner included; breakfast excluded' : 'Without breakfast and dinner'}</span>
+    {acStatus}
     {hotel.roomOnlyPrice !== undefined && <fieldset className="hotel-meal-options">
       <legend>Meals</legend>
       <label><input type="checkbox" checked={breakfast} onChange={(event) => updateMeals(event.target.checked, dinner)} /> Breakfast for {mealPeople} people per room <span>+₹{breakfastPrice.toLocaleString('en-IN')}</span></label>

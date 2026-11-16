@@ -63,8 +63,8 @@ export async function updateHotel(details: HotelSubmission, version: number, acc
 export async function loadAdminHotels(page: number, status: HotelStatus | 'all', signal?: AbortSignal) {
   return adminList.parse(await requestHotel(`/api/hotels?${new URLSearchParams({ scope: 'admin', page: String(page), status })}`, 'GET', undefined, signal))
 }
-export async function moderateHotel(id: string, version: number, status: HotelStatus, price: number, ownerNote: string, breakfastPrice?: number, dinnerPrice?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null) {
-  return z.object({ hotel: adminHotelSchema }).parse(await requestHotel('/api/hotels', 'PATCH', { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice, roomRates, ...(coordinates === undefined ? {} : locationFields(coordinates ?? undefined)) })).hotel
+export async function moderateHotel(id: string, version: number, status: HotelStatus, price: number, ownerNote: string, breakfastPrice?: number, dinnerPrice?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null, hotColdAc?: boolean) {
+  return z.object({ hotel: adminHotelSchema }).parse(await requestHotel('/api/hotels', 'PATCH', { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice, roomRates, hotColdAc, ...(coordinates === undefined ? {} : locationFields(coordinates ?? undefined)) })).hotel
 }
 export async function deleteHotel(id: string, version: number) {
   return z.object({ deleted: z.literal(true), id: z.uuidv4() }).parse(await requestHotel('/api/hotels', 'DELETE', { id, version }))
@@ -90,7 +90,8 @@ export function toCatalogHotel(hotel: PublicHotel): Hotel {
     description: hotel.description, rateBasis: hotelRoomRateBasis(selectedHotelRoom(hotel)?.roomType),
     mealPlan: hotel.mealPlan, totalRooms: hotel.totalRooms,
     ...(hotel.breakfastPrice !== undefined && hotel.dinnerPrice !== undefined ? { roomOnlyPrice: hotel.price, breakfastPrice: hotel.breakfastPrice, dinnerPrice: hotel.dinnerPrice } : {}),
-    roomTypes: hotel.roomTypes, roomRates: hotel.roomRates, facilities: [hotel.heating, ...hotel.amenities],
+    roomTypes: hotel.roomTypes, roomRates: hotel.roomRates, hotColdAc: hotel.hotColdAc ?? hotel.heating === 'Hot & cold AC',
+    facilities: [...new Set([...(hotel.heating === 'Hot & cold AC' ? [] : [hotel.heating]), ...((hotel.hotColdAc ?? hotel.heating === 'Hot & cold AC') ? ['Hot & cold AC'] : []), ...hotel.amenities])],
     checkIn: hotel.checkIn, checkOut: hotel.checkOut, highlights: hotel.highlights,
   }
 }

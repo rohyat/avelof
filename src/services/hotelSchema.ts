@@ -29,6 +29,7 @@ const hotelDetailsObject = z.object({
   gstPercent: z.unknown().optional(), // Accept historical stored metadata without applying it.
   breakfastPrice: mealPriceSchema.optional(), dinnerPrice: mealPriceSchema.optional(),
   heating: z.enum(heatingOptions),
+  hotColdAc: z.boolean().optional(),
   amenities: z.array(z.enum(hotelAmenities)).max(hotelAmenities.length).refine((items) => new Set(items).size === items.length),
   highlights: z.array(text(160)).min(1).max(8),
   roomTypes: z.array(text(100)).min(1).max(6),
@@ -69,6 +70,7 @@ export const hotelReceiptSchema = z.object({
   accessCode: z.string().regex(partnerStatusAccessCodePattern), status: hotelStatusSchema,
 })
 export const hotelModerationObject = z.object({
+  hotColdAc: z.boolean().optional(),
   id: z.uuidv4().toLowerCase(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
   status: hotelStatusSchema, price: hotelPriceSchema, ownerNote: z.string().trim().max(1000),
   breakfastPrice: mealPriceSchema.optional(), dinnerPrice: mealPriceSchema.optional(),

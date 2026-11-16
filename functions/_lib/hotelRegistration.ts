@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { discountedHotelPackagePrice } from '../../src/services/pricing.ts'
+import { discountedHotelRoomPrice } from '../../src/services/pricing.ts'
 import { hotelDetailsSchema } from '../../src/services/hotelSchema.ts'
 import { hotelLocationCodes, hotelPhotoCount, hotelPhotoDimension, hotelPhotoLimit } from '../../src/data/hotelRegistration.ts'
 import { partnerStatusAccessCode } from '../../src/services/partnerAccessCode.ts'
@@ -32,7 +32,8 @@ export const photoKeys = (row: Pick<HotelRow, 'photo_keys_json'>) => z.array(z.s
 function hotelDetails(row: HotelRow) {
   const { latitude: _latitude, longitude: _longitude, gstPercent: _gstPercent, ...details } = hotelDetailsSchema.parse(JSON.parse(row.details_json))
   return {
-    ...details, ...(row.latitude != null && row.longitude != null ? { latitude: row.latitude, longitude: row.longitude } : {}),
+    ...details, hotColdAc: details.hotColdAc ?? details.heating === 'Hot & cold AC',
+    ...(row.latitude != null && row.longitude != null ? { latitude: row.latitude, longitude: row.longitude } : {}),
     id: row.id, hotelId: row.hotel_id, price: row.price,
     photos: photoKeys(row).map((_, index) => `/api/hotel-images/${row.id}/${index}`),
     averageRating: row.average_rating ?? null, reviewCount: row.review_count ?? 0,
@@ -44,8 +45,8 @@ export function publicHotel(row: HotelRow) {
   return {
     ...hotel,
     originalPrice: customerHotelRate(hotel.price),
-    price: discountedHotelPackagePrice(customerHotelRate(hotel.price)),
-    ...(hotel.roomRates ? { roomRates: hotel.roomRates.map((room) => ({ ...room, originalPrice: customerHotelRate(room.price), price: discountedHotelPackagePrice(customerHotelRate(room.price)) })) } : {}),
+    price: discountedHotelRoomPrice(customerHotelRate(hotel.price)),
+    ...(hotel.roomRates ? { roomRates: hotel.roomRates.map((room) => ({ ...room, originalPrice: customerHotelRate(room.price), price: discountedHotelRoomPrice(customerHotelRate(room.price)) })) } : {}),
   }
 }
 export function adminHotel(row: HotelRow) {

@@ -82,7 +82,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
       ...(!legacyRooms ? { roomRates: roomCounts } : {}),
       mealPlan: legacyRooms && editing?.breakfastPrice === undefined ? fields.get('mealPlan') : 'Room only',
       ...(!editing || editing.breakfastPrice !== undefined ? { breakfastPrice: Number(fields.get('breakfastPrice')), dinnerPrice: Number(fields.get('dinnerPrice')) } : {}),
-      heating: fields.get('heating'), amenities: fields.getAll('amenities'),
+      heating: fields.get('heating'), hotColdAc: fields.get('hotColdAc') === 'yes', amenities: fields.getAll('amenities'),
       highlights: fields.getAll('highlights'),
       roomTypes: legacyRooms ? String(fields.get('legacyRoomTypes')).split('\n').map((room) => room.trim()).filter(Boolean) : roomCounts.map(({ roomType, count }) => `${roomType} (${count} ${count === 1 ? 'room' : 'rooms'})`),
       checkIn: fields.get('checkIn'), checkOut: fields.get('checkOut'), totalRooms: legacyRooms ? Number(fields.get('totalRooms')) : roomCounts.reduce((total, { count }) => total + count, 0),
@@ -145,6 +145,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
         <section className="hotel-form-fields registration-section" aria-labelledby="hotel-facilities-title">
         <div className="registration-section-heading"><span>03</span><div><h2 id="hotel-facilities-title">The stay experience</h2><p>The comforts and little details guests can look forward to.</p></div></div>
         <label>Heating system<select name="heating" defaultValue={editing?.heating ?? ''} required><option value="" disabled>Select heating system</option>{heatingOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
+        <label>Hot &amp; cold AC<select aria-label="Hot & cold AC" name="hotColdAc" defaultValue={editing ? (editing.hotColdAc ?? editing.heating === 'Hot & cold AC') ? 'yes' : 'no' : ''} required><option value="" disabled>Select Yes or No</option><option value="yes">Yes</option><option value="no">No</option></select></label>
         <label>Check-in time<input name="checkIn" type="time" required defaultValue={editing?.checkIn ?? '14:00'} /></label>
         <label>Check-out time<input name="checkOut" type="time" required defaultValue={editing?.checkOut ?? '11:00'} /></label>
         <fieldset className="hotel-amenities hotel-amenity-options review-text-field"><legend>Amenities available</legend>{hotelAmenities.map((amenity) => <label key={amenity}><input type="checkbox" name="amenities" value={amenity} defaultChecked={editing?.amenities.includes(amenity)} /><HotelFeature label={amenity} /></label>)}</fieldset>
@@ -209,7 +210,7 @@ export function HotelStatusPage() {
       <p>{hotel.mealPlan}</p>
       {hotel.roomRates && <ul>{hotel.roomRates.map((room) => <li key={room.roomType}>{room.roomType}: INR {room.price.toLocaleString('en-IN')} {hotelRoomRateBasis(room.roomType)}</li>)}</ul>}
       {hotel.breakfastPrice !== undefined && <p>Base optional breakfast: INR {hotel.breakfastPrice}; dinner: INR {hotel.dinnerPrice}, for 2 people. Family rooms cover 4 people and use twice each meal charge.</p>}
-      <p>Heating: {hotel.heating}. Amenities: {hotel.amenities.join(', ') || 'None selected'}.</p>
+      <p>Heating: {hotel.heating}. Hot &amp; cold AC: {hotel.hotColdAc ? 'Yes' : 'No'}. Amenities: {hotel.amenities.join(', ') || 'None selected'}.</p>
       <ul>{hotel.highlights.map((point) => <li key={point}>{point}</li>)}</ul>
       {hotel.status === 'approved' ? <Link className="text-link" to={`/hotels/${hotel.id}`}>View approved listing <ArrowRight size={16} /></Link> : <p>This property is not publicly listed.</p>}
       <p>Saving edits returns your registration to awaiting approval and hides it publicly until AVELOF approves it again.</p>
@@ -218,7 +219,7 @@ export function HotelStatusPage() {
   </section>
 }
 
-function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminHotel; disabled: boolean; onSave: (hotel: AdminHotel, status: HotelStatus, price: number, note: string, breakfast?: number, dinner?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null) => Promise<void>; onDelete: (hotel: AdminHotel) => Promise<void> }) {
+function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminHotel; disabled: boolean; onSave: (hotel: AdminHotel, status: HotelStatus, price: number, note: string, breakfast?: number, dinner?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null, hotColdAc?: boolean) => Promise<void>; onDelete: (hotel: AdminHotel) => Promise<void> }) {
   const [note, setNote] = useState(hotel.ownerNote)
   const [status, setStatus] = useState<HotelStatus>(hotel.status)
   const [error, setError] = useState('')
@@ -230,7 +231,7 @@ function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminH
     if (!parsed.success) { setError('Enter a rate from INR 1 to INR 1,000,000 with at most two decimal places.'); return }
     setError('')
     if (roomRates?.some((room) => !hotelPriceSchema.safeParse(room.price).success)) { setError('Check the reviewed rate for each room type.'); return }
-    await onSave(hotel, status, parsed.data, note, hotel.breakfastPrice !== undefined ? Number(fields.get('breakfastPrice')) : undefined, hotel.dinnerPrice !== undefined ? Number(fields.get('dinnerPrice')) : undefined, roomRates)
+    await onSave(hotel, status, parsed.data, note, hotel.breakfastPrice !== undefined ? Number(fields.get('breakfastPrice')) : undefined, hotel.dinnerPrice !== undefined ? Number(fields.get('dinnerPrice')) : undefined, roomRates, undefined, fields.get('hotColdAc') === 'yes')
   }
   return <article className="admin-review-record">
     <div className="admin-review-heading"><h2>{hotel.name}</h2><span className="enquiry-status">{hotelStatusLabels[hotel.status]}</span></div>
@@ -238,13 +239,14 @@ function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminH
     <MapLocationLink location={hotel} />
     <p>Private contact: {hotel.contactName} · {hotel.phone}</p><p>{hotel.description}</p>
     <div className="hotel-photo-grid">{hotel.photos.map((photo, index) => <a href={photo} key={photo} target="_blank" rel="noreferrer"><img src={photo} alt={`${hotel.name}, submitted photo ${index + 1}`} loading="lazy" /></a>)}</div>
-    <p>Heating: {hotel.heating}. Amenities: {hotel.amenities.join(', ') || 'None selected'}.</p>
+    <p>Heating: {hotel.heating}. Hot &amp; cold AC: {hotel.hotColdAc ? 'Yes' : 'No'}. Amenities: {hotel.amenities.join(', ') || 'None selected'}.</p>
     <p>{hotel.totalRooms} rooms. Room types: {hotel.roomTypes.join(', ')}. Check-in: {hotel.checkIn}; check-out: {hotel.checkOut}.</p>
     <h3>Public highlight points</h3><ul>{hotel.highlights.map((point) => <li key={point}>{point}</li>)}</ul>
     <p>Submitted rate: INR {hotel.submittedPrice.toLocaleString('en-IN')} {hotelRoomRateBasis(selectedHotelRoom(hotel)?.roomType)}. {hotel.mealPlan}.</p>
     <p>Customer room rates are the reviewed rates plus 45%. Family room rates cover 4 people; other room rates cover 2 people. Reviewed breakfast and dinner are base charges for 2 people; Family rooms use twice each charge.</p>
     <form className="review-submission-form" onSubmit={submit}>
       <fieldset disabled={disabled} className="hotel-form-fields">
+        <label>Hot &amp; cold AC<select aria-label="Hot & cold AC" name="hotColdAc" defaultValue={hotel.hotColdAc ? 'yes' : 'no'} required><option value="yes">Yes</option><option value="no">No</option></select></label>
         {hotel.roomRates ? hotel.roomRates.map((room) => <NumberStepper key={room.roomType} label={`Reviewed ${room.roomType} rate (INR)`} name={`roomPrice_${room.roomType}`} min={1} defaultValue={room.price} step={100} currency />) : <NumberStepper label="Reviewed price (INR)" name="price" min={1} defaultValue={hotel.price} step={100} currency />}
         {hotel.breakfastPrice !== undefined && <><NumberStepper label="Reviewed breakfast (INR)" name="breakfastPrice" defaultValue={hotel.breakfastPrice} step={50} currency /><NumberStepper label="Reviewed dinner (INR)" name="dinnerPrice" defaultValue={hotel.dinnerPrice} step={50} currency /></>}
         <label>Listing status<select value={status} onChange={(event) => setStatus(hotelStatusSchema.parse(event.target.value))}><option value="pending">Awaiting approval</option><option value="approved">Approve and publish</option><option value="rejected">Reject / remove from public listings</option></select></label>
@@ -279,10 +281,10 @@ export function AdminHotelsPage() {
   function refresh(page = filters.page, status = filters.status) {
     setLoading(true); setError(''); setFilters((current) => ({ page, status, revision: current.revision + 1 }))
   }
-  async function save(hotel: AdminHotel, status: HotelStatus, price: number, note: string, breakfast?: number, dinner?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null) {
+  async function save(hotel: AdminHotel, status: HotelStatus, price: number, note: string, breakfast?: number, dinner?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null, hotColdAc?: boolean) {
     if (inFlight.current) return
     inFlight.current = true; setSaving(true); setError(''); setNotice('')
-    try { await moderateHotel(hotel.id, hotel.version, status, price, note, breakfast, dinner, roomRates, coordinates); setNotice('Hotel price and status saved.'); refresh() }
+    try { await moderateHotel(hotel.id, hotel.version, status, price, note, breakfast, dinner, roomRates, coordinates, hotColdAc); setNotice('Hotel price and status saved.'); refresh() }
     catch (failure) {
       if (failure instanceof HotelError && failure.status === 401) { setSignedOut(true); setListing(null) }
       else setError(hotelErrorText(failure))

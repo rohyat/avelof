@@ -7,7 +7,7 @@ export default function HotelFeature({ label }: { label: string }) {
     : /lift|elevator/i.test(label) ? ArrowUpDown
     : /hot water|pool|lake|river/i.test(label) ? Waves
     : /backup|power/i.test(label) ? Zap
-    : /air conditioning|ac room/i.test(label) ? Snowflake
+    : /air conditioning|ac room|hot & cold ac/i.test(label) ? Snowflake
     : /heating|heater/i.test(label) ? Flame
     : /breakfast|tea|coffee/i.test(label) ? Coffee
     : /restaurant|dining|meal/i.test(label) ? Utensils

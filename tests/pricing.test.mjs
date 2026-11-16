@@ -20,7 +20,7 @@ test('23% inclusive hotel/package prices update with dates and persist totals wh
       roomRates: [{ roomType: 'Standard', count: 6, price: 2233, originalPrice: 2900 }, { roomType: 'Family', count: 6, price: 4466, originalPrice: 5800 }],
       roomTypes: ['Standard (6 rooms)', 'Family (6 rooms)'], totalRooms: 12, mealPlan: 'Room only',
       taxDetails: 'All taxes included', gstPercent: 18,
-      heating: 'Hot & cold AC', amenities: ['Wi-Fi'], highlights: ['Mountain views'], breakfastPrice: 200, dinnerPrice: 300,
+      heating: 'Centralised heating', hotColdAc: true, amenities: ['Wi-Fi'], highlights: ['Mountain views'], breakfastPrice: 200, dinnerPrice: 300,
       checkIn: '14:00', checkOut: '11:00', photos: [`/api/hotel-images/${id}/0`],
     }], total: 1, page: 1, pageSize: 25,
   } }))
@@ -88,6 +88,7 @@ test('23% inclusive hotel/package prices update with dates and persist totals wh
     assert.equal(await hotel.locator('.discount-label').innerText(), '23% off')
     assert.ok(!/GST|INR/i.test(await hotel.innerText()))
     assert.ok((await hotel.innerText()).includes('All taxes and charges included'))
+    assert.equal(await hotel.locator('.hotel-ac-status').innerText(), 'Hot & cold AC: Yes')
     for (const width of [320, 390, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       assert.equal(await hotel.locator('.hotel-rates').evaluate((element) => element.scrollWidth > element.clientWidth), false)
@@ -98,6 +99,7 @@ test('23% inclusive hotel/package prices update with dates and persist totals wh
     await page.setViewportSize({ width: 390, height: 900 })
     await hotel.getByRole('button', { name: 'Book Now', exact: true }).click()
     const rates = form.locator('.hotel-rates')
+    assert.equal(await rates.locator('.hotel-ac-status').innerText(), 'Hot & cold AC: Yes')
     await rates.getByLabel('Breakfast', { exact: false }).check()
     await rates.getByLabel('Dinner', { exact: false }).check()
     assert.equal(await rates.locator('strong[role=status]').innerText(), '₹2,733')
@@ -116,6 +118,7 @@ test('23% inclusive hotel/package prices update with dates and persist totals wh
     assert.ok(!/GST|INR/i.test(JSON.stringify(enquiry.fields)))
     await page.goto(`${origin}/hotels/${id}`)
     assert.equal(await page.locator('.detail-aside .hotel-rates strong').innerText(), '₹2,233')
+    assert.equal(await page.locator('.detail-aside .hotel-ac-status').innerText(), 'Hot & cold AC: Yes')
     await page.locator('.hotel-end-booking').getByRole('button', { name: 'Book Now', exact: true }).click()
     await rates.getByLabel('Room type', { exact: true }).selectOption('Family')
     await rates.getByLabel('Breakfast', { exact: false }).check()

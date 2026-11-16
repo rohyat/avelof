@@ -14,11 +14,21 @@ Create a production build with `npm run build`. Run the configured linter with `
 Hotel registration and editing support Centralised heating, Hot & cold AC,
 Room heaters and No heating. The selected option is retained in private records
 and displayed with the approved hotel details.
+Hot & cold AC also has an independent required Yes/No selector on registration
+and private editing and can be reviewed by admin. It can coexist with centralised
+heating. Cards, details, enquiries and planner room prices show its Yes/No status
+after the room/meal information. Older records derive Yes only from the legacy
+Hot & cold AC heating choice; all other existing records derive No. An explicit
+saved choice takes precedence. No migration or destructive record rewrite is needed.
 
 Hotel customer room rates are the submitted/admin-reviewed rates plus 45%,
 rounded up to a whole rupee: INR 2,000 becomes INR 2,900. Private partner/admin
 rates are not changed. A fixed 23% discount applies to that regular room rate:
-INR 2,900 becomes INR 2,233, rounded to paise. The regular rate is crossed out
+INR 2,900 becomes INR 2,233. Discounted hotel room rates round to the nearest
+whole rupee, with .50 rounding up (INR 1,786.40 becomes INR 1,786). Listings,
+enquiries and planner totals use this same rounded nightly rate before multiplying
+by rooms and nights. Meal add-ons and package calculations are unchanged.
+The regular rate is crossed out
 above the discounted rate with a 23% off label. Customer-facing rates use the
 rupee symbol. Hotel/package listing cards, the front-page offer heading and
 standard hotel/package enquiry forms say All taxes and charges included.
