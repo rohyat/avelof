@@ -1,4 +1,4 @@
-import { CircleCheck, Phone, ShieldCheck, Wallet } from 'lucide-react'
+import { CircleCheck, CreditCard, Phone, ShieldCheck } from 'lucide-react'
 
 export default function HeroTrustPoints() {
   return <div className="hero-trust">
@@ -6,7 +6,7 @@ export default function HeroTrustPoints() {
       <li><CircleCheck size={21} aria-hidden="true" /><span>All-inclusive prices, with no hidden charges</span></li>
       <li><Phone size={21} aria-hidden="true" /><span>24/7 customer support, always with you</span></li>
       <li><ShieldCheck size={21} aria-hidden="true" /><span>Your safety and care, our priority</span></li>
-      <li><Wallet size={21} aria-hidden="true" /><span>Tour packages: 25% advance, 75% after the trip.</span></li>
+      <li><CreditCard size={21} aria-hidden="true" /><span>Tour packages: 25% advance, 75% after the trip.</span></li>
     </ul>
   </div>
 }
