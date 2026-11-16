@@ -23,6 +23,7 @@ import type { CatalogItem, CatalogKind, Hotel, RentalCar, TourPackage } from '..
 import type { SiteContext } from '../components/SiteLayout'
 import MapLocationLink from '../components/MapLocationLink'
 import WhatsAppIcon from '../components/WhatsAppIcon'
+import HeroTrustPoints from '../components/HeroTrustPoints'
 import { createWhatsAppUrl } from '../services/bookingService'
 
 const routeFor: Record<CatalogKind, string> = { package: '/tour-packages', car: '/car-rentals', hotel: '/hotels' }
@@ -88,11 +89,7 @@ export function HomePage() {
   return <>
     <section className="home-hero">
       <div className="hero-content page-width"><Eyebrow>Your Kashmir, thoughtfully planned</Eyebrow><h1>Experience Kashmir<br /><em>Beyond Expectations.</em></h1><p>Where Kashmir&apos;s natural beauty meets warm hospitality, memorable stays and genuine local care.</p>
-        <ul className="hero-trust-points" aria-label="Our commitment to you">
-          <li><CircleCheck size={21} aria-hidden="true" /><span>All-inclusive prices, with no hidden charges</span></li>
-          <li><Phone size={21} aria-hidden="true" /><span>24/7 customer support, always with you</span></li>
-          <li><ShieldCheck size={21} aria-hidden="true" /><span>Your safety and care, our priority</span></li>
-        </ul>
+        <HeroTrustPoints />
       </div>
     </section>
     <section className="home-shortcuts">
