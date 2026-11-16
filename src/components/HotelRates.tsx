@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Check, X } from 'lucide-react'
 import type { Hotel } from '../types'
 import { hotelMealPrices, hotelNightlyPrice, selectedHotelRoom } from '../services/hotelService'
 import { hotelRoomOccupancy, hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration'
@@ -17,7 +18,10 @@ export default function HotelRates({ hotel, meals, roomType, showRooms = false, 
   const rateBasis = hotel.registeredHotelId || selectedRoom ? hotelRoomRateBasis(selectedRoom?.roomType) : hotel.rateBasis ?? 'per night'
   const price = hotelNightlyPrice(hotel, breakfast, dinner, selectedRoom?.roomType)
   const regularPrice = <RegularPrice price={selectedRoom?.price ?? hotel.roomOnlyPrice ?? hotel.price} originalPrice={selectedRoom?.originalPrice ?? hotel.originalPrice} discountPercent={hotelPackageDiscountPercent} />
-  const acStatus = <span className="hotel-ac-status">Hot &amp; cold AC: {hotel.hotColdAc ? 'Yes' : 'No'}</span>
+  const acStatus = <span className="hotel-ac-status" role="img" aria-label={`Hot & cold AC ${hotel.hotColdAc ? 'available' : 'not available'}`}>
+    {hotel.hotColdAc ? <Check size={15} aria-hidden="true" /> : <X size={15} aria-hidden="true" />}
+    <span>Hot &amp; cold AC</span>
+  </span>
   const minimum = minimumHotelRooms(people ?? 2, selectedRoom?.roomType)
   const roomQuantity = rooms === undefined ? minimum : Number(rooms)
   const mealPeople = hotelRoomOccupancy(selectedRoom?.roomType)

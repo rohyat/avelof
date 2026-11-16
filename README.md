@@ -16,7 +16,9 @@ Room heaters and No heating. The selected option is retained in private records
 and displayed with the approved hotel details.
 Hot & cold AC also has an independent required Yes/No selector on registration
 and private editing and can be reviewed by admin. It can coexist with centralised
-heating. Cards, details, enquiries and planner room prices show its Yes/No status
+heating. Cards, details, enquiries and planner room prices show a tick before
+Hot & cold AC when available, or a cross when unavailable, without Yes/No text.
+An accessible label also states availability. This indicator appears
 after the room/meal information. Older records derive Yes only from the legacy
 Hot & cold AC heating choice; all other existing records derive No. An explicit
 saved choice takes precedence. No migration or destructive record rewrite is needed.

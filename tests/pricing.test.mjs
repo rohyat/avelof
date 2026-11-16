@@ -9,6 +9,7 @@ test('23% inclusive hotel/package prices update with dates and persist totals wh
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage({ viewport: { width: 390, height: 900 } })
   let pricingRequests = 0, enquiry
+  let acAvailable = true
   await page.route('**/api/pricing', (route) => {
     pricingRequests++
     return route.fulfill({ status: 503, json: { error: 'Retired pricing endpoint' } })
@@ -20,7 +21,7 @@ test('23% inclusive hotel/package prices update with dates and persist totals wh
       roomRates: [{ roomType: 'Standard', count: 6, price: 2233, originalPrice: 2900 }, { roomType: 'Family', count: 6, price: 4466, originalPrice: 5800 }],
       roomTypes: ['Standard (6 rooms)', 'Family (6 rooms)'], totalRooms: 12, mealPlan: 'Room only',
       taxDetails: 'All taxes included', gstPercent: 18,
-      heating: 'Centralised heating', hotColdAc: true, amenities: ['Wi-Fi'], highlights: ['Mountain views'], breakfastPrice: 200, dinnerPrice: 300,
+      heating: 'Centralised heating', hotColdAc: acAvailable, amenities: ['Wi-Fi'], highlights: ['Mountain views'], breakfastPrice: 200, dinnerPrice: 300,
       checkIn: '14:00', checkOut: '11:00', photos: [`/api/hotel-images/${id}/0`],
     }], total: 1, page: 1, pageSize: 25,
   } }))
@@ -88,7 +89,8 @@ test('23% inclusive hotel/package prices update with dates and persist totals wh
     assert.equal(await hotel.locator('.discount-label').innerText(), '23% off')
     assert.ok(!/GST|INR/i.test(await hotel.innerText()))
     assert.ok((await hotel.innerText()).includes('All taxes and charges included'))
-    assert.equal(await hotel.locator('.hotel-ac-status').innerText(), 'Hot & cold AC: Yes')
+    assert.equal(await hotel.locator('.hotel-ac-status').innerText(), 'Hot & cold AC')
+    assert.equal(await hotel.getByRole('img', { name: 'Hot & cold AC available', exact: true }).locator('svg.lucide-check').count(), 1)
     for (const width of [320, 390, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       assert.equal(await hotel.locator('.hotel-rates').evaluate((element) => element.scrollWidth > element.clientWidth), false)
@@ -99,7 +101,8 @@ test('23% inclusive hotel/package prices update with dates and persist totals wh
     await page.setViewportSize({ width: 390, height: 900 })
     await hotel.getByRole('button', { name: 'Book Now', exact: true }).click()
     const rates = form.locator('.hotel-rates')
-    assert.equal(await rates.locator('.hotel-ac-status').innerText(), 'Hot & cold AC: Yes')
+    assert.equal(await rates.locator('.hotel-ac-status').innerText(), 'Hot & cold AC')
+    assert.equal(await rates.getByRole('img', { name: 'Hot & cold AC available', exact: true }).count(), 1)
     await rates.getByLabel('Breakfast', { exact: false }).check()
     await rates.getByLabel('Dinner', { exact: false }).check()
     assert.equal(await rates.locator('strong[role=status]').innerText(), '₹2,733')
@@ -118,7 +121,7 @@ test('23% inclusive hotel/package prices update with dates and persist totals wh
     assert.ok(!/GST|INR/i.test(JSON.stringify(enquiry.fields)))
     await page.goto(`${origin}/hotels/${id}`)
     assert.equal(await page.locator('.detail-aside .hotel-rates strong').innerText(), '₹2,233')
-    assert.equal(await page.locator('.detail-aside .hotel-ac-status').innerText(), 'Hot & cold AC: Yes')
+    assert.equal(await page.locator('.detail-aside .hotel-ac-status').innerText(), 'Hot & cold AC')
     await page.locator('.hotel-end-booking').getByRole('button', { name: 'Book Now', exact: true }).click()
     await rates.getByLabel('Room type', { exact: true }).selectOption('Family')
     await rates.getByLabel('Breakfast', { exact: false }).check()
@@ -162,5 +165,11 @@ test('23% inclusive hotel/package prices update with dates and persist totals wh
     await page.goto(`${origin}/register-hotel`)
     assert.equal(await page.locator('[name=taxDetails], [name=gstPercent]').count(), 0)
     assert.equal(pricingRequests, 0)
+    acAvailable = false
+    await page.goto(`${origin}/hotels`)
+    const unavailable = page.locator('.hotel-card .hotel-ac-status')
+    assert.equal(await unavailable.innerText(), 'Hot & cold AC')
+    assert.equal(await unavailable.getAttribute('aria-label'), 'Hot & cold AC not available')
+    assert.equal(await unavailable.locator('svg.lucide-x').count(), 1)
   } finally { await browser.close() }
 })

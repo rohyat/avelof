@@ -366,6 +366,8 @@ body.enquiry-open { overflow: hidden; }
 .price-inclusions, .price .price-inclusions { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; font-weight: 400; line-height: 1.5; }
 .hotel-rates { min-width: 0; display: grid; gap: 9px; color: var(--forest); }
 .hotel-rate-basis { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.hotel-ac-status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; line-height: 1.5; }
+.hotel-ac-status > svg { flex-shrink: 0; }
 .hotel-rates > div { display: grid; gap: 3px; }
 .hotel-rates strong { font-size: 17px; font-weight: 700; line-height: 1.3; }
 .hotel-rates > div > span { color: var(--muted); font-size: 11px; line-height: 1.5; }
