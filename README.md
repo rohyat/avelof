@@ -11,7 +11,7 @@ npm run dev
 
 Create a production build with `npm run build`. Run the configured linter with `npm run lint`.
 
-The Dark mode toggle sits below the header logo. Light mode is the default;
+The Dark mode switch sits beside the header logo. Light mode is the default;
 the chosen theme is stored in the browser and shared across open tabs.
 
 Hotel registration and editing support Centralised heating, Hot & cold AC,

@@ -84,7 +84,3 @@
 :root[data-theme="dark"] .home-shortcut-link:hover { background: #294640; border-color: #6b9788; }
 :root[data-theme="dark"] .home-shortcut-link:hover .home-shortcut-icon { background: #246a5a; color: #fff; }
 :root[data-theme="dark"] .theme-toggle:hover { background: #294640; }
-@media (max-width: 820px) {
-  .site-header { height: 82px; }
-  .main-nav { top: 81px; }
-}

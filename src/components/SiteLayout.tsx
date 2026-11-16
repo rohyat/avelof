@@ -177,7 +177,7 @@ export default function SiteLayout() {
       <OfferBanner />
       <header className="site-header">
         <div className="header-brand-group"><Link className="brand" to="/" aria-label="AVELOF home" onClick={closeMenu}><img className="brand-logo" src="/app-icon-512.png?v=chinar-1" alt="" width={44} height={44} /><span>AVELOF<small>BEYOND EXPECTATIONS</small></span></Link>
-          <button type="button" className="theme-toggle" aria-pressed={darkMode} onClick={() => setDarkMode(!darkMode)}>{darkMode ? <Sun size={14} aria-hidden="true" /> : <Moon size={14} aria-hidden="true" />}<span>Dark mode</span></button>
+          <button type="button" className="theme-toggle" role="switch" aria-label="Dark mode" aria-checked={darkMode} onClick={() => setDarkMode((current) => !current)}>{darkMode ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}<span className="theme-toggle-track" aria-hidden="true"><span className="theme-toggle-thumb" /></span></button>
         </div>
         <button ref={menuToggleRef} className="icon-button menu-toggle" aria-expanded={menuOpen} aria-controls="main-navigation" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => { const next = !menuOpen; setMenuOpen(next); if (next) window.dispatchEvent(new Event('avelof:pause-review-carousel')) }}>{menuOpen ? <X /> : <Menu />}</button>
         <nav ref={menuRef} id="main-navigation" className={menuOpen ? 'main-nav is-open' : 'main-nav'} aria-label="Main navigation">
