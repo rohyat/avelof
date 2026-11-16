@@ -11,6 +11,8 @@ const packageCatalog: TourPackage[] = [
     gallery: [kashmirPhotoGallery.houseboat.image, kashmirPhotoGallery.valleyRiver.image, kashmirPhotoGallery.roomOne.image],
     galleryAlts: [kashmirPhotoGallery.houseboat.alt, kashmirPhotoGallery.valleyRiver.alt, kashmirPhotoGallery.roomOne.alt],
     category: 'Deluxe', price: 22000,
+    hotelStandard: '2-star hotels',
+    tourGuide: 'Dedicated tour guide not included; local driver provided.',
     duration: '4 nights · 5 days', description: 'A five-day Kashmir escape with stays in Srinagar and Pahalgam, plus a Gulmarg day trip.',
     itinerary: [
       { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Meet your local driver, check in at The Mallard and enjoy a relaxed first evening.' },
@@ -35,6 +37,8 @@ const packageCatalog: TourPackage[] = [
     gallery: [kashmirPhotoGallery.snowLodge.image, suppliedPhotos.sonamarg, kashmirPhotoGallery.roomTwo.image],
     galleryAlts: [kashmirPhotoGallery.snowLodge.alt, kashmirPhotoGallery.snowyPeaks.alt, kashmirPhotoGallery.roomTwo.alt],
     category: 'Premium', price: 36000,
+    hotelStandard: '3-star and 3-star Premium hotels',
+    tourGuide: 'Dedicated tour guide not included; local driver provided.',
     duration: '5 nights · 6 days', description: "A six-day Kashmir escape with a Sonamarg day trip and stays at Jamal Resorts, Hotel Signature and Twin Towers by D'foy, returning to Srinagar for the final night.",
     itinerary: [
       { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Check in at Jamal Resorts and settle into the city.' },
@@ -61,6 +65,8 @@ const packageCatalog: TourPackage[] = [
     gallery: [suppliedPhotos.sonamarg, suppliedPhotos.doodhpathri, kashmirPhotoGallery.houseboat.image],
     galleryAlts: [kashmirPhotoGallery.snowyPeaks.alt, kashmirPhotoGallery.meadow.alt, kashmirPhotoGallery.houseboat.alt],
     category: 'Luxury', price: 68829.87,
+    hotelStandard: '4-star and 5-star hotels, plus a final luxury houseboat night',
+    tourGuide: 'Dedicated tour guide throughout the trip, separate from the driver.',
     duration: '7 nights · 8 days', description: 'An eight-day Kashmir escape with a Doodhpathri day trip, overnight visits to Sonamarg, Gulmarg and Pahalgam, luxury hotel stays and a final night on a luxury houseboat in Srinagar.',
     itinerary: [
       { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Meet your driver on arrival and enjoy an easy first evening in Srinagar. Stay at a luxury hotel.' },
@@ -82,7 +88,7 @@ const packageCatalog: TourPackage[] = [
     ],
     transport: 'Private air-conditioned vehicle with a local driver throughout.',
     experiences: ['Srinagar city and lake time', 'Doodhpathri day trip', 'Sonamarg overnight stay', 'Gulmarg mountain stay and Gondola ride', 'Pahalgam valley visit', 'Final night on a luxury houseboat in Srinagar'],
-    inclusions: ['6 nights in luxury hotels and 1 night on a luxury houseboat', 'Daily breakfast and dinner', 'Private transfers and sightseeing', 'Gulmarg Gondola tickets', 'Union cabs in Tangmarg, Pahalgam and Gulmarg', 'Complimentary one-hour Shikara ride', 'Local trip assistance'],
+    inclusions: ['6 nights in luxury hotels and 1 night on a luxury houseboat', 'Daily breakfast and dinner', 'Private transfers and sightseeing', 'Gulmarg Gondola tickets', 'Union cabs in Tangmarg, Pahalgam and Gulmarg', 'Complimentary one-hour Shikara ride', 'Dedicated tour guide throughout the trip, separate from the driver', 'Local trip assistance'],
     exclusions: ['Flights and travel insurance', 'Optional activities other than the included Gondola ride', 'Lunches'],
   },
 ]

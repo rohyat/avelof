@@ -476,6 +476,14 @@ other than Gondola are excluded. The regular price is INR 68,829.87, giving a
 price of INR 52,999 after the standard 23% discount. Live admin discount changes
 and date/night pricing rules continue to apply.
 All three packages include a complimentary one-hour Shikara ride.
+Package cards and every package detail heading offer a Compare popup with the
+live discounted prices, duration, destinations, stay allocation, hotel category,
+transport, guide, inclusions and exclusions. The table scrolls horizontally on
+mobile. Deluxe targets 2-star stays, Premium 3-star/3-star Premium, and Luxury
+4-star/5-star stays plus its final luxury houseboat night. These are requested
+stay standards, not verified property certifications. Luxury includes a
+dedicated tour guide throughout, separate from the driver. Hotel categories
+and guide details are also included in the package pages and PDFs.
 PDFs include the AVELOF brand promises, a day-by-day plan, all ten supplied
 Kashmir photos, inclusions and exclusions, linked contact details on each page,
 and a final thank-you page. Cover promise tiles use compact, centred icon/text

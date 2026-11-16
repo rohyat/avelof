@@ -107,6 +107,8 @@ export function tourPackagePdfData(item: TourPackage): ItineraryPdfData {
     overview: [
       `Current displayed package rate: INR ${item.price.toLocaleString('en-IN')} per person${item.originalPrice && item.originalPrice > item.price ? ` (regular rate INR ${item.originalPrice.toLocaleString('en-IN')})` : ''}. Final price depends on dates and confirmed availability.`,
       `Route: ${item.location}.`,
+      `Hotel category: ${item.hotelStandard}.`,
+      `Tour guide: ${item.tourGuide}`,
       item.transport,
       ...item.stays.map((stay) => `${stay.location}: ${stay.nights} ${stay.nights === 1 ? 'night' : 'nights'} - ${stay.hotel}.`),
       ...item.experiences.map((experience) => `Experience: ${experience}.`),

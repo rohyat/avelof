@@ -37,6 +37,8 @@ export interface TourPackage extends CatalogBase {
   originalPrice?: number
   underDevelopment?: boolean
   duration: string
+  hotelStandard: string
+  tourGuide: string
   itinerary: { day: string; title: string; detail: string }[]
   stay: string
   stays: { location: string; nights: number; hotel: string }[]

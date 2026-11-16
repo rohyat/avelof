@@ -78,7 +78,7 @@ test('homepage trust messages keep rotating during hover and touch, with reduced
   } finally { await browser.close() }
 })
 
-test('Deluxe and Premium switch buttons align at the far right on desktop, tablet and mobile', async () => {
+test('Compare buttons align at the far right on every package across desktop, tablet and mobile', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage()
   await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
@@ -88,10 +88,10 @@ test('Deluxe and Premium switch buttons align at the far right on desktop, table
       const bounds = await page.locator('.detail-title-row').evaluate((element) => {
         const row = element.getBoundingClientRect()
         const title = element.querySelector('h1').getBoundingClientRect()
-        const anchor = element.querySelector('a')
+        const anchor = element.querySelector('.package-compare-button')
         const link = anchor.getBoundingClientRect()
         const text = document.createRange()
-        text.selectNode(anchor.firstChild)
+        text.selectNode(anchor.lastChild)
         return { rightGap: row.right - link.right, centerGap: Math.abs((title.top + title.bottom - link.top - link.bottom) / 2), overlap: title.right > link.left, overflow: element.scrollWidth > element.clientWidth, textLines: text.getClientRects().length }
       })
       assert.ok(Math.abs(bounds.rightGap) <= 1, 'Switch button sits at the far right of the heading row')
@@ -102,20 +102,22 @@ test('Deluxe and Premium switch buttons align at the far right on desktop, table
     }
     for (const width of [320, 390, 600, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 })
-      await page.goto(`${origin}/tour-packages/deluxe`)
-      const premium = page.getByRole('link', { name: 'View Premium package', exact: true })
-      await premium.waitFor()
-      assert.equal(await premium.getAttribute('href'), '/tour-packages/premium')
-      await page.mouse.move(0, 0)
-      assert.equal(await premium.evaluate((element) => getComputedStyle(element).backgroundColor), 'rgb(255, 255, 255)')
-      await assertAlignment()
-      await premium.click()
-      await page.getByRole('heading', { name: 'Premium', exact: true }).waitFor()
-      const deluxe = page.getByRole('link', { name: 'View Deluxe package', exact: true })
-      assert.equal(await deluxe.getAttribute('href'), '/tour-packages/deluxe')
-      await assertAlignment()
-      await deluxe.click()
-      await page.getByRole('heading', { name: 'Deluxe', exact: true }).waitFor()
+      for (const name of ['Deluxe', 'Premium', 'Luxury']) {
+        await page.goto(`${origin}/tour-packages/${name.toLowerCase()}`)
+        const compare = page.getByRole('button', { name: 'Compare', exact: true })
+        await compare.waitFor()
+        await assertAlignment()
+        await compare.click()
+        const dialog = page.getByRole('dialog', { name: 'Compare Kashmir packages' })
+        await dialog.waitFor()
+        assert.deepEqual(await dialog.locator('thead th').allTextContents(), ['Compare', 'DeluxeView itinerary', 'PremiumView itinerary', 'LuxuryView itinerary'])
+        for (const text of ['2-star hotels', '3-star and 3-star Premium hotels', '4-star and 5-star hotels', 'separate from the driver', '₹52,999']) assert.ok((await dialog.innerText()).includes(text))
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+        assert.ok(await dialog.evaluate((element) => element.getBoundingClientRect().right <= innerWidth))
+        await page.keyboard.press('Escape')
+        await dialog.waitFor({ state: 'detached' })
+        assert.equal(await compare.evaluate((element) => element === document.activeElement), true)
+      }
     }
   } finally { await browser.close() }
 })
