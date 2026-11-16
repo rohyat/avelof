@@ -1,3 +1,5 @@
+import { kashmirPhotoGallery } from './kashmirPhotoGallery.ts'
+
 export const catalogPhotos = {
   lake: '/images/destinations/srinagar-preview.webp',
   valley: '/images/destinations/doodhpathri-preview.webp',
@@ -16,13 +18,11 @@ export const previewPhotos = {
 
 export const providedDestinationPhotos = {
   homeHero: '/images/destinations/homepage-background.jpg',
-  pahalgam: '/images/destinations/pahalgam-user.jpg',
-  gulmarg: '/images/destinations/gulmarg-user.jpg',
-  gurez: '/images/destinations/gurez-valley-user.jpg',
-  sonamarg: '/images/destinations/sonamarg-user.jpg',
-  yusmarg: '/images/destinations/yusmarg-user.jpg',
-  doodhpathri: '/images/destinations/doodhpathri-user.jpg',
-  tulipGarden: '/images/destinations/tulip-garden-user.jpg',
-  hazratbal: '/images/destinations/hazratbal-user.jpg',
-  greatLakesTrek: '/images/destinations/kashmir-great-lakes-trek-user.jpg',
+  pahalgam: kashmirPhotoGallery.valleyRiver.image,
+  gulmarg: kashmirPhotoGallery.snowLodge.image,
+  gurez: kashmirPhotoGallery.snowyVillage.image,
+  sonamarg: kashmirPhotoGallery.snowyPeaks.image,
+  yusmarg: kashmirPhotoGallery.meadow.image,
+  doodhpathri: kashmirPhotoGallery.meadow.image,
+  greatLakesTrek: kashmirPhotoGallery.snowyPeaks.image,
 }

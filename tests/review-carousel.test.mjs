@@ -268,13 +268,13 @@ test('review carousel preserves layout and supports accessible automatic and man
         await page.clock.install()
         await page.goto(`${origin}/destinations`)
         const destinationPhotos = [
-          ['Srinagar', 'srinagar-preview.webp'],
-          ['Gulmarg', 'gulmarg-user.jpg'],
-          ['Pahalgam', 'pahalgam-user.jpg'],
-          ['Sonamarg', 'sonamarg-user.jpg'],
-          ['Yusmarg', 'yusmarg-user.jpg'],
-          ['Doodhpathri', 'doodhpathri-user.jpg'],
-          ['Gurez Valley', 'gurez-valley-user.jpg'],
+          ['Srinagar', 'kashmir-houseboat-sunset.jpg'],
+          ['Gulmarg', 'kashmir-snow-lodge.jpg'],
+          ['Pahalgam', 'kashmir-valley-river.jpg'],
+          ['Sonamarg', 'kashmir-snowy-peaks.jpg'],
+          ['Yusmarg', 'kashmir-meadow-in-bloom.jpg'],
+          ['Doodhpathri', 'kashmir-meadow-in-bloom.jpg'],
+          ['Gurez Valley', 'kashmir-snowy-village.jpg'],
         ]
         for (const [place, filename] of destinationPhotos) {
           const entry = page.locator('.place-entry').filter({ has: page.getByRole('heading', { name: place, exact: true }) }).first()
@@ -287,13 +287,13 @@ test('review carousel preserves layout and supports accessible automatic and man
         const srinagar = page.locator('.place-entry').filter({ has: page.getByRole('heading', { name: 'Srinagar', exact: true }) })
         assert.equal(await srinagar.locator('.destination-photo-frame').getAttribute('data-photo-count'), '3')
         await page.clock.fastForward(1500)
-        await srinagar.locator('img[src$="tulip-garden-user.jpg"]').waitFor()
+        await srinagar.locator('img[src$="kashmir-autumn-garden.jpg"]').waitFor()
         await page.clock.fastForward(1500)
-        await srinagar.locator('img[src$="hazratbal-user.jpg"]').waitFor()
+        await srinagar.locator('img[src$="kashmir-room-inspiration-01.jpg"]').waitFor()
         const sonamarg = page.locator('.place-entry').filter({ has: page.getByRole('heading', { name: 'Sonamarg', exact: true }) })
         assert.equal(await sonamarg.locator('.destination-photo-frame').getAttribute('data-photo-count'), '2')
         await page.clock.fastForward(1500)
-        await sonamarg.locator('img[src$="kashmir-great-lakes-trek-user.jpg"]').waitFor()
+        await sonamarg.locator('img[src$="kashmir-snowy-village.jpg"]').waitFor()
         await page.goto(origin)
         await page.getByText('Why choose AVELOF?', { exact: true }).waitFor()
         assert.ok(await page.getByRole('heading', { name: /Your Kashmir holiday/ }).isVisible())

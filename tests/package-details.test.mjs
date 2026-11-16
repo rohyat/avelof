@@ -24,7 +24,7 @@ test('package detail cards preserve itinerary, experiences, inclusions, pricing 
       assert.equal(await page.locator('.package-inclusions li > svg[aria-hidden=true]').count(), item.inclusions.length + item.exclusions.length)
       for (const stay of item.stays) assert.ok((await page.locator('.package-stay-grid').innerText()).includes(stay.hotel))
       assert.ok((await page.locator('.detail-aside').innerText()).includes(item.price.toLocaleString('en-IN', { maximumFractionDigits: 2 })))
-      assert.deepEqual(await page.getByRole('list', { name: 'Package highlights' }).getByRole('listitem').allTextContents(), [item.duration, item.id === 'luxury' ? 'Hotels with breakfast' : 'Hotels with breakfast & dinner', 'Private vehicle & local driver', 'Sightseeing included'])
+      assert.deepEqual(await page.getByRole('list', { name: 'Package highlights' }).getByRole('listitem').allTextContents(), [item.duration, 'Hotels with breakfast & dinner', 'Private vehicle & local driver', 'Sightseeing included'])
       assert.equal(await page.locator('.package-notes-grid article').count(), 3)
       const question = page.locator('.package-faq summary').first()
       await question.focus()

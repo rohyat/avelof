@@ -1,7 +1,7 @@
 import type { Destination, RentalCar, TourPackage, OwnerProvidedGuestReview } from '../types'
 import { vehiclePhotos } from './vehiclePhotos.ts'
 import { discountedHotelPackagePrice } from '../services/pricing.ts'
-import { catalogPhotos as photos, providedDestinationPhotos as suppliedPhotos } from './previewPhotos.ts'
+import { providedDestinationPhotos as suppliedPhotos } from './previewPhotos.ts'
 import { kashmirPhotoGallery } from './kashmirPhotoGallery.ts'
 
 const packageCatalog: TourPackage[] = [
@@ -26,14 +26,14 @@ const packageCatalog: TourPackage[] = [
     ],
     transport: 'Private air-conditioned vehicle with a local driver throughout.',
     experiences: ['Srinagar city and lake time', 'Gulmarg day trip', 'Pahalgam valley visit'],
-    inclusions: ['4 nights accommodation', 'Daily breakfast and dinner', 'Same private vehicle throughout the trip', 'Private transfers and sightseeing', 'All toll taxes', 'Complimentary Shikara ride'],
+    inclusions: ['4 nights accommodation', 'Daily breakfast and dinner', 'Same private vehicle throughout the trip', 'Private transfers and sightseeing', 'All toll taxes', 'Complimentary one-hour Shikara ride'],
     exclusions: ['Gondola tickets', 'Optional activities', 'Union cabs', 'Flights and travel insurance', 'Lunches'],
   },
   {
     id: 'premium', kind: 'package', name: 'Premium', location: 'Srinagar · Sonamarg · Gulmarg · Pahalgam',
     image: kashmirPhotoGallery.snowLodge.image,
     gallery: [kashmirPhotoGallery.snowLodge.image, suppliedPhotos.sonamarg, kashmirPhotoGallery.roomTwo.image],
-    galleryAlts: [kashmirPhotoGallery.snowLodge.alt, 'Sonamarg mountain scenery', kashmirPhotoGallery.roomTwo.alt],
+    galleryAlts: [kashmirPhotoGallery.snowLodge.alt, kashmirPhotoGallery.snowyPeaks.alt, kashmirPhotoGallery.roomTwo.alt],
     category: 'Premium', price: 36000,
     duration: '5 nights · 6 days', description: "A six-day Kashmir escape with a Sonamarg day trip and stays at Jamal Resorts, Hotel Signature and Twin Towers by D'foy, returning to Srinagar for the final night.",
     itinerary: [
@@ -58,10 +58,10 @@ const packageCatalog: TourPackage[] = [
   {
     id: 'luxury', kind: 'package', name: 'Luxury', location: 'Srinagar · Doodhpathri · Sonamarg · Gulmarg · Pahalgam',
     image: suppliedPhotos.sonamarg,
-    gallery: [suppliedPhotos.sonamarg, suppliedPhotos.doodhpathri, kashmirPhotoGallery.roomTwo.image],
-    galleryAlts: ['Sonamarg mountain scenery', 'Doodhpathri meadow scenery', kashmirPhotoGallery.roomTwo.alt],
-    category: 'Luxury', price: 52999,
-    duration: '7 nights · 8 days', description: 'An eight-day Kashmir escape with a Doodhpathri day trip, overnight visits to Sonamarg, Gulmarg and Pahalgam, and luxury hotel stays.',
+    gallery: [suppliedPhotos.sonamarg, suppliedPhotos.doodhpathri, kashmirPhotoGallery.houseboat.image],
+    galleryAlts: [kashmirPhotoGallery.snowyPeaks.alt, kashmirPhotoGallery.meadow.alt, kashmirPhotoGallery.houseboat.alt],
+    category: 'Luxury', price: 68829.87,
+    duration: '7 nights · 8 days', description: 'An eight-day Kashmir escape with a Doodhpathri day trip, overnight visits to Sonamarg, Gulmarg and Pahalgam, luxury hotel stays and a final night on a luxury houseboat in Srinagar.',
     itinerary: [
       { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Meet your driver on arrival and enjoy an easy first evening in Srinagar. Stay at a luxury hotel.' },
       { day: 'Day 02', title: 'Doodhpathri day trip', detail: 'Travel from Srinagar to Doodhpathri for meadow and forest scenery, then return to Srinagar. Stay at a luxury hotel.' },
@@ -69,20 +69,21 @@ const packageCatalog: TourPackage[] = [
       { day: 'Day 04', title: 'Sonamarg to Srinagar', detail: 'Return from Sonamarg to Srinagar and settle in for the evening. Stay at a luxury hotel.' },
       { day: 'Day 05', title: 'Srinagar to Gulmarg', detail: 'Head to Gulmarg for mountain scenery and the included Gondola ride, subject to weather and official operation. Stay at a luxury hotel.' },
       { day: 'Day 06', title: 'Gulmarg to Pahalgam', detail: 'Continue from Gulmarg to Pahalgam and explore the valley. Stay at a luxury hotel.' },
-      { day: 'Day 07', title: 'Pahalgam to Srinagar', detail: 'Enjoy the Pahalgam scenery before returning to Srinagar for your final night. Stay at a luxury hotel.' },
-      { day: 'Day 08', title: 'Departure', detail: 'Transfer from your Srinagar hotel to Srinagar airport for your onward journey.' },
+      { day: 'Day 07', title: 'Pahalgam to Srinagar', detail: 'Enjoy the Pahalgam scenery before returning to Srinagar for your final night. Stay on a luxury houseboat.' },
+      { day: 'Day 08', title: 'Departure', detail: 'Transfer from your Srinagar houseboat to Srinagar airport for your onward journey.' },
     ],
-    stay: 'Four nights in Srinagar (nights 1, 2, 4 and 7), one night in Sonamarg, one night in Gulmarg and one night in Pahalgam. Stay at a luxury hotel in each location.',
+    stay: 'Three luxury hotel nights in Srinagar (nights 1, 2 and 4), one luxury hotel night each in Sonamarg, Gulmarg and Pahalgam, and a final luxury houseboat night in Srinagar (night 7).',
     stays: [
-      { location: 'Srinagar', nights: 4, hotel: 'Stay at a luxury hotel' },
+      { location: 'Srinagar', nights: 3, hotel: 'Stay at a luxury hotel' },
       { location: 'Sonamarg', nights: 1, hotel: 'Stay at a luxury hotel' },
       { location: 'Gulmarg', nights: 1, hotel: 'Stay at a luxury hotel' },
       { location: 'Pahalgam', nights: 1, hotel: 'Stay at a luxury hotel' },
+      { location: 'Srinagar', nights: 1, hotel: 'Stay on a luxury houseboat (final night)' },
     ],
     transport: 'Private air-conditioned vehicle with a local driver throughout.',
-    experiences: ['Srinagar city and lake time', 'Doodhpathri day trip', 'Sonamarg overnight stay', 'Gulmarg mountain stay and Gondola ride', 'Pahalgam valley visit'],
-    inclusions: ['7 nights accommodation in luxury hotels', 'Daily breakfast', 'Private transfers and sightseeing', 'Gulmarg Gondola tickets', 'Local trip assistance'],
-    exclusions: ['Flights and travel insurance', 'Optional activities other than the included Gondola ride', 'Union cabs', 'Lunches and dinners unless stated'],
+    experiences: ['Srinagar city and lake time', 'Doodhpathri day trip', 'Sonamarg overnight stay', 'Gulmarg mountain stay and Gondola ride', 'Pahalgam valley visit', 'Final night on a luxury houseboat in Srinagar'],
+    inclusions: ['6 nights in luxury hotels and 1 night on a luxury houseboat', 'Daily breakfast and dinner', 'Private transfers and sightseeing', 'Gulmarg Gondola tickets', 'Union cabs in Tangmarg, Pahalgam and Gulmarg', 'Complimentary one-hour Shikara ride', 'Local trip assistance'],
+    exclusions: ['Flights and travel insurance', 'Optional activities other than the included Gondola ride', 'Lunches'],
   },
 ]
 
@@ -136,8 +137,8 @@ export const ownerProvidedGuestReviews: OwnerProvidedGuestReview[] = [
 
 export const destinations: Destination[] = [
   {
-    id: 'srinagar', name: 'Srinagar', aliases: [], image: photos.lake,
-    additionalPhotos: [{ image: suppliedPhotos.tulipGarden, alt: 'Tulip Garden in Srinagar' }, { image: suppliedPhotos.hazratbal, alt: 'Hazratbal Dargah in Srinagar' }, { image: kashmirPhotoGallery.houseboat.image, alt: kashmirPhotoGallery.houseboat.alt }, { image: kashmirPhotoGallery.autumnGarden.image, alt: kashmirPhotoGallery.autumnGarden.alt }], count: 'Lake & heritage',
+    id: 'srinagar', name: 'Srinagar', aliases: [], image: kashmirPhotoGallery.houseboat.image,
+    additionalPhotos: [{ image: kashmirPhotoGallery.autumnGarden.image, alt: kashmirPhotoGallery.autumnGarden.alt }, { image: kashmirPhotoGallery.roomOne.image, alt: kashmirPhotoGallery.roomOne.alt }], count: 'Lake & heritage',
     distance: '0 km (city base)', travelTime: '15-60 min within the city', maxDriveHours: 1,
     detail: 'Lake mornings, Mughal gardens and old-city lanes make Srinagar a relaxed starting point for the valley.',
     suggestedVisit: '1-2 days', season: 'Year-round; gardens at their best in spring and summer',
@@ -168,7 +169,7 @@ export const destinations: Destination[] = [
   },
   {
     id: 'sonamarg', name: 'Sonamarg', aliases: ['Sonmarg'], image: suppliedPhotos.sonamarg, photoIsUserProvided: true,
-    additionalPhotos: [{ image: suppliedPhotos.greatLakesTrek, alt: 'Kashmir Great Lakes Trek' }, { image: kashmirPhotoGallery.snowyPeaks.image, alt: kashmirPhotoGallery.snowyPeaks.alt }], count: 'Alpine day out',
+    additionalPhotos: [{ image: kashmirPhotoGallery.snowyVillage.image, alt: kashmirPhotoGallery.snowyVillage.alt }], count: 'Alpine day out',
     distance: '80-85 km', travelTime: '2-3 hours', maxDriveHours: 3,
     detail: 'An alpine valley beside the Sind River, with meadow views and access to higher mountain excursions.',
     suggestedVisit: 'Full day or 1 night', season: 'Late spring-autumn; winter operations vary',
@@ -192,7 +193,7 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Yusmarg meadow', detail: 'Easy meadow walks beside the surrounding forest.' }, { name: 'Doodh Ganga', detail: 'A forest walk to the river; route and duration depend on conditions.' }, { name: 'Nilnag Lake', detail: 'A longer guided walking excursion, arranged separately.' }, { name: 'Charar-e-Sharief', detail: 'A shrine town that can be considered on the approach route.' }, { name: 'Forest-edge scenery', detail: 'Spend unhurried time along the meadow and forest boundary; check paths locally before longer walks.' }],
   },
   {
-    id: 'peer-ki-gali', name: 'Peer Ki Gali', aliases: ['Peer Ki Gai', 'Pir Ki Gali', 'Peer Ki Gali'], image: photos.mountain, count: 'High mountain pass',
+    id: 'peer-ki-gali', name: 'Peer Ki Gali', aliases: ['Peer Ki Gai', 'Pir Ki Gali', 'Peer Ki Gali'], image: kashmirPhotoGallery.snowyPeaks.image, count: 'High mountain pass',
     distance: '140-150 km via Shopian', travelTime: '4-5 hours', maxDriveHours: 5,
     detail: 'A high pass on the Mughal Road, with dramatic mountain scenery and a journey that deserves a full day of its own.',
     suggestedVisit: 'Long full day; consider a tailored overnight route', season: 'Usually late spring-autumn when the Mughal Road is open',
@@ -200,9 +201,8 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Peer Ki Gali pass & shrine', detail: 'Mountain views and a shrine at the pass.' }, { name: 'Mughal Road viewpoints', detail: 'Scenic stops on the approach, where parking is safe.' }, { name: 'Dubjan', detail: 'Forest and river scenery along the Shopian approach.' }],
   },
   {
-    id: 'aharbal', name: 'Aharbal Waterfall', aliases: ['Herbal Waterfall', 'Aharbal', 'Aherbal'], image: '/images/destinations/aharbal.jpg',
-    additionalPhotos: [{ image: kashmirPhotoGallery.waterfall.image, alt: kashmirPhotoGallery.waterfall.alt }], count: 'Waterfall & forest',
-    photoCredit: { author: 'TheAutumnal', source: 'https://commons.wikimedia.org/wiki/File:Aharbal_Waterfall,_Kashmir.jpg', licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/' },
+    id: 'aharbal', name: 'Aharbal Waterfall', aliases: ['Herbal Waterfall', 'Aharbal', 'Aherbal'], image: kashmirPhotoGallery.waterfall.image,
+    count: 'Waterfall & forest',
     distance: '70-75 km', travelTime: '2-3 hours', maxDriveHours: 3,
     detail: 'A striking waterfall on the Veshu River, surrounded by wooded scenery in the southern valley.',
     suggestedVisit: 'Full day', season: 'Spring-autumn; winter access varies',
@@ -218,8 +218,7 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Habba Khatoon peak', detail: 'Distinctive mountain views near Dawar.' }, { name: 'Kishanganga River', detail: 'Valley scenery and village-side walks.' }, { name: 'Razdan Pass', detail: 'A seasonal viewpoint on the approach.' }, { name: 'Tulail Valley', detail: 'An additional onward excursion with extra travel and access checks.' }, { name: 'Dawar village', detail: 'A base for exploring the valley at a slower pace; respect residents and ask before photographing people.' }],
   },
   {
-    id: 'manasbal', name: 'Manasbal Lake', aliases: ['Manasbal', 'Safapora'], image: '/images/destinations/manasbal.jpg', count: 'Lake day out',
-    photoCredit: { author: 'Nsheenm', source: 'https://commons.wikimedia.org/wiki/File:Manasbal_lake.jpg', licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/' },
+    id: 'manasbal', name: 'Manasbal Lake', aliases: ['Manasbal', 'Safapora'], image: kashmirPhotoGallery.houseboat.image, count: 'Lake day out',
     distance: '30-35 km', travelTime: '1-1.5 hours', maxDriveHours: 1.5,
     detail: 'A quieter lake north of Srinagar, with garden views and relaxed time by the water.',
     suggestedVisit: 'Half day', season: 'Spring-autumn',
@@ -227,7 +226,7 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Manasbal lakefront', detail: 'Water views and relaxed time beside the lake.' }, { name: 'Jharokha Bagh', detail: 'A historic garden beside the lake.' }, { name: 'Seasonal lake vegetation', detail: 'Look for seasonal aquatic plants from permitted lakefront areas; flowering varies through the year.' }, { name: 'Lakeside birdlife', detail: 'Observe birds quietly from the shore without feeding or disturbing them; sightings vary.' }, { name: 'Lake views from the water', detail: 'Ask locally about permitted boat rides, life jackets and separate charges. Operation is not guaranteed.' }],
   },
   {
-    id: 'wular', name: 'Wular Lake', aliases: ['Wullar', 'Bandipora'], image: photos.lake, count: 'Wetland & birdlife',
+    id: 'wular', name: 'Wular Lake', aliases: ['Wullar', 'Bandipora'], image: kashmirPhotoGallery.houseboat.image, count: 'Wetland & birdlife',
     distance: '55-65 km to the Bandipora side', travelTime: '1.5-2.5 hours', maxDriveHours: 2.5,
     detail: 'Broad wetland landscapes and birdlife, with views that vary with season and water level.',
     suggestedVisit: 'Half to full day', season: 'Spring-autumn; birdlife varies by season',
@@ -235,7 +234,7 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Wular lake viewpoints', detail: 'Wide lake views from accessible designated stops.' }, { name: 'Watlab', detail: 'An alternative lake-view area with a separate approach route.' }, { name: 'Wetland birdlife', detail: 'Look for birds from permitted viewing areas; species and sightings change with the season.' }, { name: 'Bandipora-side scenery', detail: 'Explore the chosen lake approach at a relaxed pace, confirming safe stopping points with your driver.' }, { name: 'Changing water landscapes', detail: 'Seasonal water levels reshape the lake scenery. Stay on established paths rather than entering wetland edges.' }],
   },
   {
-    id: 'dachigam', name: 'Dachigam National Park', aliases: ['Dachigam', 'Harwan'], image: photos.meadow, count: 'Wildlife & woodland',
+    id: 'dachigam', name: 'Dachigam National Park', aliases: ['Dachigam', 'Harwan'], image: kashmirPhotoGallery.autumnGarden.image, count: 'Wildlife & woodland',
     distance: '20-25 km to the entrance', travelTime: '45-90 min', maxDriveHours: 1.5,
     detail: 'Protected woodland near Srinagar, home to the endangered Hangul deer and rich Himalayan habitat.',
     suggestedVisit: 'Half day, subject to permission', season: 'Seasonal visitor access; confirm in advance',

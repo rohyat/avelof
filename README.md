@@ -459,7 +459,7 @@ choices share experience icons. The public activities page does not display a
 sources accordion; availability and operator-verification notices remain visible.
 
 The custom trip planner offers a branded PDF download at the final review step,
-before contact details are submitted. Deluxe and Premium package pages provide
+before contact details are submitted. Deluxe, Premium and Luxury package pages provide
 ready-to-download itinerary PDFs generated from the current package catalog.
 The planner's outlined PDF reminder stays beside Back on all screen sizes.
 Premium includes a Sonamarg day trip on day two, returns from Pahalgam to
@@ -467,15 +467,21 @@ Srinagar on day five, and departs from Srinagar on day six. Its five nights
 are split across Srinagar (three), Gulmarg (one), and Pahalgam (one).
 Luxury is an active seven-night/eight-day package covering Srinagar, a
 Doodhpathri day trip, Sonamarg, Gulmarg and Pahalgam. Nights are split across
-Srinagar (four), Sonamarg (one), Gulmarg (one) and Pahalgam (one). Stays are
-described only as luxury hotels until properties are added. Gondola tickets
-are included, subject to weather and official operation; daily breakfast is
-included, while lunches and dinners are excluded unless stated. Its existing
-base price and the standard live package discount apply.
+Srinagar (three hotel nights plus the final night on a luxury houseboat),
+Sonamarg (one), Gulmarg (one) and Pahalgam (one). No property names are specified
+until properties are added. Gondola tickets (subject to weather and official
+operation), daily breakfast and dinner, and union cabs in Tangmarg, Pahalgam and
+Gulmarg are included. Lunches, flights, travel insurance and optional activities
+other than Gondola are excluded. The regular price is INR 68,829.87, giving a
+price of INR 52,999 after the standard 23% discount. Live admin discount changes
+and date/night pricing rules continue to apply.
+All three packages include a complimentary one-hour Shikara ride.
 PDFs include the AVELOF brand promises, a day-by-day plan, all ten supplied
 Kashmir photos, inclusions and exclusions, linked contact details on each page,
 and a final thank-you page. Photos are also used in relevant package and
 destination galleries; stay imagery is labeled illustrative, not property-verified.
+Destination, package and local-trek photos use the supplied, unlabelled gallery
+instead of the older images with destination names printed into them.
 The PDF explains that a custom plan is a guide rather than a final confirmed trip,
 and AVELOF will help refine and arrange the itinerary. AVELOF refunds the amount
 paid to AVELOF for a selected union cab if it is not used. This promise appears

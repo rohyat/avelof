@@ -1,5 +1,6 @@
 import { destinations } from './catalog.ts'
 import { providedDestinationPhotos } from './previewPhotos.ts'
+import { kashmirPhotoGallery } from './kashmirPhotoGallery.ts'
 
 export const localTripPreferences = ['Local trek', 'Local picnic / day trip'] as const
 
@@ -14,8 +15,8 @@ export const picnicPlaces = destinations.filter((destination) =>
   ['srinagar', 'gulmarg', 'pahalgam', 'sonamarg', 'doodhpathri', 'yusmarg', 'aharbal', 'manasbal'].includes(destination.id))
 
 export const localTrekPhotos: Record<(typeof localTreks)[number]['id'], { image: string; alt: string }> = {
-  'great-lakes': { image: providedDestinationPhotos.greatLakesTrek, alt: 'Kashmir Great Lakes trek' },
-  'tarsar-marsar': { image: providedDestinationPhotos.pahalgam, alt: 'Pahalgam area, starting region for Tarsar Marsar' },
-  kolahoi: { image: providedDestinationPhotos.pahalgam, alt: 'Pahalgam area, starting region for Kolahoi Glacier trekking' },
-  kungwattan: { image: '/images/destinations/aharbal.jpg', alt: 'Aharbal area, starting region for Kungwattan trekking' },
+  'great-lakes': { image: providedDestinationPhotos.greatLakesTrek, alt: kashmirPhotoGallery.snowyPeaks.alt },
+  'tarsar-marsar': { image: providedDestinationPhotos.pahalgam, alt: kashmirPhotoGallery.valleyRiver.alt },
+  kolahoi: { image: providedDestinationPhotos.pahalgam, alt: kashmirPhotoGallery.valleyRiver.alt },
+  kungwattan: { image: kashmirPhotoGallery.waterfall.image, alt: kashmirPhotoGallery.waterfall.alt },
 }
