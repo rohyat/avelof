@@ -20,6 +20,7 @@ import { onRequest as onPartnerPhotosRequest } from './partner-photos.ts'
 import { onRequest as onHotelImageRequest } from './hotel-images/[id]/[index].ts'
 import { customerHotelRate, hotelAccessCode, registrationPhotoBytes, validHotelJpeg } from '../_lib/hotelRegistration.ts'
 import { discountedHotelPackagePrice, discountedHotelRoomPrice, packagePriceForNights } from '../../src/services/pricing.ts'
+import { hotelDateValue, hotelRoomPriceForDate, hotelStayPrice } from '../../src/services/hotelPricing.ts'
 import { hotelCategories, hotelPhotoLimit, hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
 import { rentalCars, tourPackages } from '../../src/data/catalog.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
@@ -645,6 +646,43 @@ test('coordinate schemas reject non-finite numbers and migration preserves old r
       assert.throws(() => DB.sqlite.prepare(`UPDATE ${table} SET latitude = 1 WHERE id = ?`).run(id))
       assert.throws(() => DB.sqlite.prepare(`UPDATE ${table} SET latitude = 'invalid', longitude = 1 WHERE id = ?`).run(id))
     }
+  } finally { DB.sqlite.close() }
+})
+
+test('hotel seasonal room prices change only from 6 December 2026 and round to whole rupees', () => {
+  for (const [date, expected] of [['2026-12-04', 2310], ['2026-12-05', 2310], ['2026-12-06', 2541], ['2027-01-01', 2541]]) {
+    assert.equal(hotelRoomPriceForDate(2310, date), expected)
+  }
+  assert.equal(hotelRoomPriceForDate(0, '2026-12-06'), 0)
+  assert.equal(hotelRoomPriceForDate(1848, '2026-12-06'), 2033)
+  assert.equal(hotelRoomPriceForDate(15, '2026-12-06'), 17)
+  for (const invalid of ['2026-02-30', '2026-13-01', 'bad', '2026-2-01']) assert.throws(() => hotelDateValue(invalid), RangeError)
+  assert.throws(() => hotelRoomPriceForDate(-1), RangeError)
+})
+
+test('seasonal hotel estimates split nights at the boundary, exclude checkout and leave meals unchanged', () => {
+  assert.equal(hotelStayPrice(2310, 500, '2026-12-04', '2026-12-06', 1).total, 5620)
+  const mixed = hotelStayPrice(2310, 500, '2026-12-05', '2026-12-07', 2)
+  assert.deepEqual(mixed, { nights: 2, groups: [{ nights: 1, roomRate: 2310 }, { nights: 1, roomRate: 2541 }], minNightly: 2810, maxNightly: 3041, total: 11702 })
+  assert.equal(hotelStayPrice(2310, 500, '2026-12-06', '2026-12-08', 1).total, 6082)
+  assert.equal(hotelStayPrice(1848, 0, '2026-12-05', '2026-12-07', 3).total, 11643)
+  assert.equal(hotelStayPrice(0, 500, '2026-12-05', '2026-12-07', 1).total, 1000)
+  assert.equal(hotelStayPrice(2310, 500, '2027-02-28', '2027-03-01', 1).nights, 1)
+  assert.equal(hotelStayPrice(2310, 500, '2028-02-28', '2028-03-01', 1).nights, 2)
+  for (const [start, end, rooms] of [['2026-12-05', '2026-12-05', 1], ['2026-12-07', '2026-12-05', 1], ['2026-12-05', '2026-12-07', 0], ['2026-12-05', '2026-12-07', 1.5]]) {
+    assert.throws(() => hotelStayPrice(2310, 500, start, end, rooms), RangeError)
+  }
+})
+
+test('hotel enquiries preserve the selected seasonal stay estimate and breakdown in D1', async () => {
+  const DB = database()
+  try {
+    const body = payload('hotel')
+    Object.assign(body.fields, { checkInDate: '2026-12-05', checkOutDate: '2026-12-07', roomCount: '1', hotelStayEstimate: '₹5,851 for 1 room over 2 nights; subject to availability and final confirmation', hotelPriceBreakdown: '1 night × ₹2,310 room-only per room; 1 night × ₹2,541 room-only per room; meals ₹500 per room/night; 1 room. Check-out not charged.' })
+    assert.equal((await send(DB, body)).status, 201)
+    const saved = JSON.parse(DB.sqlite.prepare('SELECT fields_json FROM enquiries WHERE reference = ?').get(body.reference).fields_json)
+    assert.equal(saved.hotelStayEstimate, body.fields.hotelStayEstimate)
+    assert.equal(saved.hotelPriceBreakdown, body.fields.hotelPriceBreakdown)
   } finally { DB.sqlite.close() }
 })
 

@@ -210,7 +210,7 @@ export default function LocalTripsPage() {
                 <fieldset className="local-hotel-picker"><legend>Preferred hotel in {place?.name}</legend><div className="planner-destination-grid">
                   {placeHotels.map((hotel) => <article className={`planner-hotel-card${hotelId === hotel.id ? ' is-selected' : ''}`} key={hotel.id}>
                     <label className="local-hotel-choice"><input type="radio" name="localHotel" required checked={hotelId === hotel.id} onChange={() => setHotelId(hotel.id)} /><img src={hotel.image} alt={`${hotel.name}, hotel photo`} loading="lazy" /><strong>{hotel.name}</strong><span>{hotelCategoryLabel(hotel.category)} · {hotelLocationLabel(hotel)}</span></label>
-                    <HotelRates hotel={hotel} compact />
+                    <HotelRates hotel={hotel} date={details.arrivalDate || undefined} compact />
                   </article>)}
                   <article className={`planner-hotel-card${hotelId === 'help' ? ' is-selected' : ''}`}><label className="local-hotel-choice"><input type="radio" name="localHotel" required checked={hotelId === 'help'} onChange={() => setHotelId('help')} /><strong>Help me find a stay</strong><span>Ask AVELOF to suggest a hotel in {place?.name}. Availability and price are not confirmed.</span></label></article>
                 </div></fieldset>

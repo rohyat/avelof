@@ -6,6 +6,7 @@ import type { HotelRoomRate, HotelSubmission, HotelStatus, PublicHotel } from '.
 import type { Hotel } from '../types'
 import type { MapCoordinates } from './mapLocation'
 import { locationFields } from './mapLocation'
+import { hotelRoomPriceForDate } from './hotelPricing'
 
 const pagination = { total: z.number().int().min(0), page: z.number().int().min(1), pageSize: z.literal(25) }
 const publicList = z.object({ ...pagination, hotels: z.array(publicHotelSchema) })
@@ -136,8 +137,8 @@ export function selectedHotelRoom(hotel: Pick<Hotel, 'roomRates'>, roomType?: st
   return hotel.roomRates?.find((room) => room.roomType === roomType)
     ?? hotel.roomRates?.reduce((lowest, room) => room.price < lowest.price ? room : lowest)
 }
-export const hotelNightlyPrice = (hotel: Hotel, breakfast: boolean, dinner: boolean, roomType?: string) => {
-  const base = selectedHotelRoom(hotel, roomType)?.price ?? hotel.roomOnlyPrice ?? hotel.price
+export const hotelNightlyPrice = (hotel: Hotel, breakfast: boolean, dinner: boolean, roomType?: string, date?: string) => {
+  const base = hotelRoomPriceForDate(selectedHotelRoom(hotel, roomType)?.price ?? hotel.roomOnlyPrice ?? hotel.price, date)
   const meals = hotelMealPrices(hotel, roomType)
   const mealTotal = Math.round(((breakfast ? meals.breakfast : 0) + (dinner ? meals.dinner : 0)) * 100) / 100
   const subtotal = Math.round((base + mealTotal) * 100) / 100

@@ -62,7 +62,26 @@ Decorative falling snow stays within the banner on desktop/mobile,
 does not intercept clicks, and is hidden when reduced motion is requested.
 
 Hotel enquiry estimates update immediately from selected nights, rooms and
-meal add-ons. Standard package enquiries scale the discounted per-person price
+meal add-ons. Hotel stay nights through **5 December 2026** use the current
+discounted room rate. Nights from **6 December 2026 onward** add 10% to that
+room-only rate, rounded to the nearest whole rupee (.50 up). Meals are added
+afterward without this increase; standard packages and cab rates do not change.
+Check-out is excluded, and stays spanning the change sum each applicable nightly
+rate before multiplying by rooms. For example, a room at INR 2,310 is INR 2,541
+from 6 December; 5-7 December is INR 4,851 room-only for one room/two nights.
+The same nightly calculation is used in the enquiry form and custom trip planner,
+including each day's hotel cards and saved itinerary. Local-trip hotel cards use
+the selected stay date. Listings retain base rates with a visible seasonal notice.
+Hotel check-in/check-out fields have a price-calendar button, showing the selected
+room type's room-only nightly price below each date. Typed dates still work.
+Calendar month navigation, arrow keys, Page Up/Down, selection and Escape are
+supported; check-out days before the minimum are disabled and its date is not billed.
+Calendar prices exclude optional meals, which are shown separately in the stay
+breakdown. Current admin discounts feed both calendar and estimates. Date-sensitive
+estimates and the rate breakdown are saved with the enquiry only after D1 receipt;
+they are estimates, not availability or booking confirmation. No migration needed.
+
+Standard package enquiries scale the discounted per-person price
 by selected nights divided by the package's standard nights (sum of its stays).
 For example, Deluxe is INR 16,940 for 4 nights, INR 8,470 for 2 nights and
 INR 25,410 for 6 nights. The form labels the selected duration and saves that
