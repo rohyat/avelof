@@ -25,6 +25,8 @@ import MapLocationLink from '../components/MapLocationLink'
 import WhatsAppIcon from '../components/WhatsAppIcon'
 import HeroTrustPoints from '../components/HeroTrustPoints'
 import { createWhatsAppUrl } from '../services/bookingService'
+import DownloadItineraryPdfButton from '../components/DownloadItineraryPdfButton'
+import { tourPackagePdfData } from '../services/itineraryPdf'
 
 const routeFor: Record<CatalogKind, string> = { package: '/tour-packages', car: '/car-rentals', hotel: '/hotels' }
 function useBooking() {
@@ -254,6 +256,7 @@ function PackageDetail({ item }: { item: TourPackage }) {
       return <li key={experience}><span className="package-experience-icon"><Icon size={25} aria-hidden="true" /></span><span>{experience}</span></li>
     })}</ul></section>
     <IncludedLists inclusions={item.inclusions} exclusions={item.exclusions} enhanced />
+    <div className="package-pdf-download"><DownloadItineraryPdfButton data={tourPackagePdfData(item)} label={`Download ${item.name} package PDF`} /></div>
     <section className="detail-section package-notes" aria-labelledby="package-notes-title"><Eyebrow>Good to know</Eyebrow><h2 id="package-notes-title">A few practical notes</h2><div className="package-notes-grid"><article><MountainSnow size={23} aria-hidden="true" /><div><h3>Mountain weather</h3><p>Travel conditions in the mountains can change with the season.</p></div></article><article><Route size={23} aria-hidden="true" /><div><h3>A flexible route</h3><p>Sightseeing order may be adjusted for weather, road access or local conditions.</p></div></article><article><CalendarDays size={23} aria-hidden="true" /><div><h3>Plan optional extras</h3><p>Optional activities and tickets are subject to availability.</p></div></article></div></section>
     <section className="detail-section package-faq" aria-labelledby="package-faq-title"><Eyebrow>Frequently asked</Eyebrow><h2 id="package-faq-title">Before you decide.</h2><div className="faq-list"><details><summary><span><Route size={20} aria-hidden="true" />Can this itinerary be changed?</span><Plus size={18} aria-hidden="true" /></summary><p>Yes. This route is a starting point. Share your dates, interests and preferred pace and our team can suggest adjustments.</p></details><details><summary><span><PlaneTakeoff size={20} aria-hidden="true" />Are flights included?</span><Plus size={18} aria-hidden="true" /></summary><p>No. Flights, travel insurance and optional activities are not included unless explicitly listed in your final written quote.</p></details><details><summary><span><CalendarDays size={20} aria-hidden="true" />When is the best time to visit?</span><Plus size={18} aria-hidden="true" /></summary><p>Kashmir changes with the seasons. Tell us what you hope to experience and we can help you choose dates and plan for seasonal conditions.</p></details></div></section>
   </>

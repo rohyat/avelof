@@ -14,6 +14,7 @@
     "test:hotels-ui": "node --test tests/hotel-registration.test.mjs",
     "test:partners-ui": "node --test tests/partner-registration.test.mjs",
     "test:activities-ui": "node --test tests/activities.test.mjs",
+    "test:itinerary-pdf": "node --test tests/itinerary-pdf.test.mjs",
     "test:businesses-ui": "node --test tests/business-registration.test.mjs",
     "setup:access": "node scripts/setup-enquiry-access.mjs",
     "setup:admin-password": "node scripts/set-admin-password.mjs",
@@ -28,6 +29,7 @@
   },
   "dependencies": {
     "@block65/webcrypto-web-push": "^2.0.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.70.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

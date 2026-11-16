@@ -458,6 +458,13 @@ hotel and local rules permit. Activity headings and planner
 choices share experience icons. The public activities page does not display a
 sources accordion; availability and operator-verification notices remain visible.
 
+The custom trip planner offers a branded PDF download at the final review step,
+before contact details are submitted. Deluxe and Premium package pages provide
+ready-to-download itinerary PDFs generated from the current package catalog.
+PDFs include the AVELOF brand promises, a day-by-day plan, inclusions and
+exclusions, linked contact details on each page, and a final thank-you page.
+Union-cab refund eligibility is subject to applicable local operator terms.
+
 ## Image Storage
 
 Catalog images are local files in `public/images/` and are delivered directly by

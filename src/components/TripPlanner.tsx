@@ -22,6 +22,8 @@ import { enquiryPath } from '../services/bookingService'
 import { activitiesForPlaces, formatSelectedActivities } from '../data/activities'
 import ActivityChoices from './ActivityChoices'
 import { unionCabOptions, unionCabsForPlaces } from '../data/unionCabs'
+import DownloadItineraryPdfButton from './DownloadItineraryPdfButton'
+import type { ItineraryPdfData } from '../services/itineraryPdf'
 
 interface DayPlan {
   routeTo?: string
@@ -476,6 +478,58 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
     changeStep(5)
   }
 
+  const tripPdfData: ItineraryPdfData = {
+    title: 'Your Custom Kashmir Itinerary',
+    subtitle: 'A trip plan shaped around your dates, places and preferences.',
+    dates: tripDays ? `${formatDate(startDate)} - ${formatDate(endDate)} (${tripDays} days, ${nights} nights)` : undefined,
+    guests: `${adults} ${Number(adults) === 1 ? 'adult' : 'adults'}${Number(children) > 0 ? `, ${children} ${Number(children) === 1 ? 'child' : 'children'}` : ''}`,
+    overview: [`Places selected: ${placeIds.map(stopName).join(', ')}.`],
+    days: dayPlans.map((day, index) => {
+      const selectedHotel = day.hotelId ? availableHotels.find((hotel) => hotel.id === day.hotelId) : undefined
+      const room = selectedHotel ? selectedHotelRoom(selectedHotel, day.roomType) : undefined
+      const lastDay = index === dayPlans.length - 1
+      const included = selectedHotel?.registeredHotelId && selectedHotel.breakfastPrice === undefined
+        ? includedHotelMeals(selectedHotel)
+        : { breakfast: Boolean(day.breakfast), dinner: Boolean(day.dinner) }
+      const stay = lastDay
+        ? 'Departure day.'
+        : `Overnight in ${stopName(day.stayAt)}${selectedHotel ? ` at ${selectedHotel.name}${room ? ` (${room.roomType} room)` : ''}, ${Number(day.roomCount ?? minimumHotelRooms(people, room?.roomType))} room(s)` : '; hotel recommendation requested'}.`
+      const meals = selectedHotel ? ` Meals: breakfast ${included.breakfast ? 'included' : 'not selected'}, dinner ${included.dinner ? 'included' : 'not selected'}.` : ''
+      return {
+        label: `Day ${index + 1} - ${formatDate(addDays(startDate, index))}`,
+        title: dayRouteLabel(day, index, dayPlans.length),
+        detail: `${stay}${meals}`,
+      }
+    }),
+    stays: dayPlans.slice(0, -1).map((day, index) => {
+      const selectedHotel = day.hotelId ? availableHotels.find((hotel) => hotel.id === day.hotelId) : undefined
+      const room = selectedHotel ? selectedHotelRoom(selectedHotel, day.roomType) : undefined
+      if (!selectedHotel) return `${formatDate(addDays(startDate, index))}: no hotel selected in ${stopName(day.stayAt)}; AVELOF recommendation requested.`
+      const rate = hotelNightlyPrice(selectedHotel, Boolean(day.breakfast), Boolean(day.dinner), room?.roomType, addDays(startDate, index))
+      const rooms = Number(day.roomCount ?? minimumHotelRooms(people, room?.roomType))
+      return `${formatDate(addDays(startDate, index))}: ${selectedHotel.name}, ${stopName(day.stayAt)}${room ? ` - ${room.roomType} room` : ''}, ${rooms} room(s). Selected rate: INR ${(rate * rooms).toLocaleString('en-IN')} for the night.`
+    }),
+    vehicle: `${selectedVehicle.name} - INR ${selectedVehicle.price.toLocaleString('en-IN')} per day, ${tripDays} days; vehicle estimate INR ${vehicleTotal.toLocaleString('en-IN')}.`,
+    activities: selectedActivities ? selectedActivities.split('\n').filter(Boolean) : [],
+    unionCabs: unionCabsForPlaces(unionCabIds, placeIds).map((option) => `${option.label}. ${option.description}`),
+    estimate: `Vehicle plus selected stays estimate: INR ${(Math.round((vehicleTotal + hotelTotal) * 100) / 100).toLocaleString('en-IN')}. Selected stays cover ${selectedStays.length} of ${nights} nights. ${pendingNights > 0 ? `${pendingNights} hotel night(s) are not included yet. ` : ''}Estimate only; not a final quote.`,
+    inclusions: [
+      `Requested private vehicle: ${selectedVehicle.name} for ${tripDays} days.`,
+      `${selectedStays.length} selected hotel night(s); see the selected-stays section for details.`,
+      'Only services explicitly listed in this plan are requested; final availability and inclusions are confirmed by AVELOF.',
+    ],
+    exclusions: [
+      'Optional activity, guide, ticket and local-transfer costs unless specifically included in a confirmed quote.',
+      'Hotel nights not selected in this itinerary.',
+      'Flights and travel insurance.',
+      'Union-cab charges are separate unless included in a confirmed quote.',
+    ],
+    notes: [
+      'Day allocations and routes are provisional. Travel times, road access, local requirements and availability need confirmation.',
+      'Requested activities are not bookings; activity availability and any separate charges must be confirmed.',
+    ],
+  }
+
   return <section className="custom-trip-section" id={sectionId}>
     {receipt && <SubmissionSuccess title="Enquiry saved"><p>Booking enquiry ID: <strong>{receipt.reference}</strong></p><p>Your enquiry has been saved. This is not a confirmed booking.</p></SubmissionSuccess>}
     <div className="page-width custom-trip-inner">
@@ -622,7 +676,13 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
 
         {step === 4 && invalidRooms && <p className="enquiry-error" role="alert">Enter a whole number of rooms with enough capacity for everyone, including children.</p>}
         {step === 4 && !invalidRooms && dayPlans.length > 0 && <div className="planner-trip-estimate" role="status"><strong>Vehicle + selected stays: ₹{(Math.round((vehicleTotal + hotelTotal) * 100) / 100).toLocaleString('en-IN')}</strong><span>Vehicle: ₹{vehicleTotal.toLocaleString('en-IN')} · Selected stays: ₹{(Math.round(hotelTotal * 100) / 100).toLocaleString('en-IN')} ({selectedStays.length}/{nights} nights)</span><span>{stayOccupancyNote} Selected meals are included. {pendingNights > 0 ? `${pendingNights} unselected hotel nights are not included. ` : ''}Optional extras and charges outside the listed rates are excluded. Estimate only; AVELOF will confirm a final quote.</span></div>}
-        {step === 5 && (receipt ? <section className="review-ready" role="status"><h3>Thank you for submitting your details.</h3><p>Your enquiry has been saved. This is not a confirmed booking.</p><p>Booking enquiry ID: <strong>{receipt.reference}</strong></p><a className="text-link" href={enquiryPath(receipt)}>View your bookings <ArrowRight size={16} /></a></section> : <><h3>Contact details</h3><p>Your selected dates, guests, vehicle, hotel rooms, activity and union-cab requests will be included automatically.</p>{selectedActivities && <section className="planner-activity-summary" aria-label="Requested activities"><h4>Requested activities</h4><p>{selectedActivities}</p><small>Subject to confirmation. Activity costs are separate from the estimate.</small></section>}{unionCabRequests && <section className="planner-activity-summary" aria-label="Requested union cabs"><h4>Requested union cabs</h4><p>{unionCabRequests}</p><small>Subject to confirmation. Union-cab charges are separate from the estimate.</small></section>}<EnquiryForm kind="package" selectedItem="Custom package" additionalFields={enquiryFields} onSubmittingChange={setSubmitting} onPrepared={(saved) => { setReceipt(saved); requestAnimationFrame(() => { plannerRef.current?.focus(); plannerRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) }) }} /></>)}
+        {step === 5 && (receipt ? <section className="review-ready" role="status"><h3>Thank you for submitting your details.</h3><p>Your enquiry has been saved. This is not a confirmed booking.</p><p>Booking enquiry ID: <strong>{receipt.reference}</strong></p><a className="text-link" href={enquiryPath(receipt)}>View your bookings <ArrowRight size={16} /></a></section> : <>
+          <section className="planner-pdf-prompt" aria-label="Download your itinerary">
+            <div><h3>Your trip plan is ready.</h3><p>Download a branded PDF of your selected dates, places, stays, vehicle, activities and estimates before you send your contact details.</p></div>
+            <DownloadItineraryPdfButton data={tripPdfData} label="Download your trip PDF" />
+          </section>
+          <h3>Contact details</h3><p>Your selected dates, guests, vehicle, hotel rooms, activity and union-cab requests will be included automatically.</p>{selectedActivities && <section className="planner-activity-summary" aria-label="Requested activities"><h4>Requested activities</h4><p>{selectedActivities}</p><small>Subject to confirmation. Activity costs are separate from the estimate.</small></section>}{unionCabRequests && <section className="planner-activity-summary" aria-label="Requested union cabs"><h4>Requested union cabs</h4><p>{unionCabRequests}</p><small>Subject to confirmation. If you pay for a requested union cab but do not use it, any eligible refund is subject to applicable local operator terms.</small></section>}<EnquiryForm kind="package" selectedItem="Custom package" additionalFields={enquiryFields} onSubmittingChange={setSubmitting} onPrepared={(saved) => { setReceipt(saved); requestAnimationFrame(() => { plannerRef.current?.focus(); plannerRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) }) }} />
+        </>)}
         {step < 5 && <div className="planner-footer"><p>Your route is a starting point. Our local team will help check travel times, access and availability.</p>{step < 4 ? <button className="button button-dark" type="button" disabled={!tripDays} onClick={() => changeStep(step + 1)}>Next: {step === 0 ? 'places' : step === 1 ? 'vehicle' : step === 2 ? 'activities' : 'hotels'} <ArrowRight size={16} /></button> : <button className="button button-dark" type="button" disabled={!tripDays || invalidRooms} onClick={continueToEnquiry}>Continue with this plan <ArrowRight size={16} /></button>}</div>}
       </div>
     </div>

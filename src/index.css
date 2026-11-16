@@ -536,6 +536,13 @@ body.enquiry-open { overflow: hidden; }
 .include-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 23px; }
 .include-grid > div { padding: 18px; background: #efefe8; }
 .include-grid .detail-list { margin-top: 13px; }
+.package-pdf-download { margin: -20px 0 34px; }
+.itinerary-pdf-action { display: grid; justify-items: start; gap: 8px; }
+.itinerary-pdf-action .enquiry-error { margin: 0; }
+.planner-pdf-prompt { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 22px 0 28px; padding: 20px; border: 1px solid #d6e5da; border-radius: 12px; background: linear-gradient(145deg, #f3f7f1, #fbfaf6); }
+.planner-pdf-prompt h3 { margin: 0 0 6px; color: var(--forest); font-size: 19px; }
+.planner-pdf-prompt p { max-width: 470px; margin: 0; color: #52665c; font-size: 13px; line-height: 1.65; }
+.planner-pdf-prompt .itinerary-pdf-action { flex: 0 0 auto; }
 .spec-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 11px; margin-top: 22px; }
 .spec-grid span { display: flex; align-items: center; gap: 9px; padding: 13px; border: 1px solid #e1e4dc; color: #53645a; font-size: 10px; }
 .spec-grid svg { width: 16px; height: 16px; color: var(--copper); }
@@ -1414,6 +1421,8 @@ dialog.registration-success, dialog.registration-progress { position: fixed; ins
   .planner-swipe-rail { scrollbar-width: none; -ms-overflow-style: none; }
   .planner-swipe-rail::-webkit-scrollbar { display: none; }
   .planner-swipe-dots { display: flex; }
+  .planner-pdf-prompt { align-items: stretch; flex-direction: column; gap: 14px; padding: 16px; }
+  .planner-pdf-prompt .itinerary-pdf-action, .planner-pdf-prompt .itinerary-pdf-action .button { width: 100%; }
 }
 
 @media (max-width: 820px) {
