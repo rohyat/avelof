@@ -1,6 +1,7 @@
 import type { jsPDF as JsPDFDocument } from 'jspdf'
 import { business } from '../config.ts'
 import { brandPromises } from '../data/brandPromises.ts'
+import { kashmirPhotosForPdf } from '../data/kashmirPhotoGallery.ts'
 import type { TourPackage } from '../types.ts'
 
 export interface ItineraryPdfDay {
@@ -91,6 +92,11 @@ export function tourPackagePdfData(item: TourPackage): ItineraryPdfData {
 export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
   const { jsPDF } = await import('jspdf')
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: false })
+  const photoImages = await Promise.all(kashmirPhotosForPdf.map(async (photo) => {
+    const response = await fetch(photo.image)
+    if (!response.ok) throw new Error(`Unable to load PDF photo ${photo.image}: ${response.status} ${response.statusText}`)
+    return new Uint8Array(await response.arrayBuffer())
+  }))
   pdf.setProperties({ title: `${printable(data.title)} | AVELOF`, author: business.name, subject: 'Kashmir travel itinerary' })
   let y = 0
 
@@ -306,6 +312,46 @@ export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
   if (data.notes?.length) {
     sectionHeading('Helpful notes')
     bulletList(data.notes)
+  }
+
+  for (let firstPhoto = 0; firstPhoto < kashmirPhotosForPdf.length; firstPhoto += 6) {
+    startContentPage()
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(15)
+    setPdfTextColor(pdf, forest)
+    pdf.text('A glimpse of Kashmir', margin, y)
+    pdf.setDrawColor(...copper)
+    pdf.setLineWidth(0.8)
+    pdf.line(margin, y + 3, margin + 18, y + 3)
+    y += 11
+    writeWrapped('Illustrative travel and stay imagery; scenes and accommodation may vary by season and availability.', margin, y, pageWidth - margin * 2, 8, muted)
+    const imageWidth = (pageWidth - margin * 2 - 8) / 2
+    const imageHeight = 56
+    for (let index = firstPhoto; index < Math.min(firstPhoto + 6, kashmirPhotosForPdf.length); index += 1) {
+      const position = index - firstPhoto
+      const x = margin + (position % 2) * (imageWidth + 8)
+      const imageTop = y + 8 + Math.floor(position / 2) * 70
+      pdf.setFillColor(...paper)
+      pdf.roundedRect(x, imageTop, imageWidth, imageHeight, 2, 2, 'F')
+      const imageProperties = pdf.getImageProperties(photoImages[index])
+      const scale = Math.min((imageWidth - 2) / imageProperties.width, (imageHeight - 2) / imageProperties.height)
+      const renderedWidth = imageProperties.width * scale
+      const renderedHeight = imageProperties.height * scale
+      pdf.addImage(
+        photoImages[index],
+        'JPEG',
+        x + (imageWidth - renderedWidth) / 2,
+        imageTop + (imageHeight - renderedHeight) / 2,
+        renderedWidth,
+        renderedHeight,
+        `kashmir-photo-${index}`,
+        'FAST',
+      )
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(7.5)
+      setPdfTextColor(pdf, ink)
+      pdf.text(printable(kashmirPhotosForPdf[index].caption), x, imageTop + imageHeight + 5)
+    }
   }
 
   startContentPage()

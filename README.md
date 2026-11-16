@@ -461,8 +461,10 @@ sources accordion; availability and operator-verification notices remain visible
 The custom trip planner offers a branded PDF download at the final review step,
 before contact details are submitted. Deluxe and Premium package pages provide
 ready-to-download itinerary PDFs generated from the current package catalog.
-PDFs include the AVELOF brand promises, a day-by-day plan, inclusions and
-exclusions, linked contact details on each page, and a final thank-you page.
+PDFs include the AVELOF brand promises, a day-by-day plan, all ten supplied
+Kashmir photos, inclusions and exclusions, linked contact details on each page,
+and a final thank-you page. Photos are also used in relevant package and
+destination galleries; stay imagery is labeled illustrative, not property-verified.
 Union-cab refund eligibility is subject to applicable local operator terms.
 
 ## Image Storage

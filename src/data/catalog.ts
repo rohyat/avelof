@@ -2,11 +2,15 @@ import type { Destination, RentalCar, TourPackage, OwnerProvidedGuestReview } fr
 import { vehiclePhotos } from './vehiclePhotos.ts'
 import { discountedHotelPackagePrice } from '../services/pricing.ts'
 import { catalogPhotos as photos, providedDestinationPhotos as suppliedPhotos } from './previewPhotos.ts'
+import { kashmirPhotoGallery } from './kashmirPhotoGallery.ts'
 
 const packageCatalog: TourPackage[] = [
   {
     id: 'deluxe', kind: 'package', name: 'Deluxe', location: 'Srinagar · Gulmarg · Pahalgam',
-    image: photos.lake, gallery: [photos.lake, photos.valley, photos.meadow], category: 'Deluxe', price: 22000,
+    image: kashmirPhotoGallery.houseboat.image,
+    gallery: [kashmirPhotoGallery.houseboat.image, kashmirPhotoGallery.valleyRiver.image, kashmirPhotoGallery.roomOne.image],
+    galleryAlts: [kashmirPhotoGallery.houseboat.alt, kashmirPhotoGallery.valleyRiver.alt, kashmirPhotoGallery.roomOne.alt],
+    category: 'Deluxe', price: 22000,
     duration: '4 nights · 5 days', description: 'A five-day Kashmir escape with stays in Srinagar and Pahalgam, plus a Gulmarg day trip.',
     itinerary: [
       { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Meet your local driver, check in at The Mallard and enjoy a relaxed first evening.' },
@@ -27,7 +31,10 @@ const packageCatalog: TourPackage[] = [
   },
   {
     id: 'premium', kind: 'package', name: 'Premium', location: 'Srinagar · Gulmarg · Pahalgam',
-    image: photos.mountain, gallery: [photos.mountain, photos.snow, photos.lake], category: 'Premium', price: 36000,
+    image: kashmirPhotoGallery.snowLodge.image,
+    gallery: [kashmirPhotoGallery.snowLodge.image, kashmirPhotoGallery.snowyPeaks.image, kashmirPhotoGallery.roomTwo.image],
+    galleryAlts: [kashmirPhotoGallery.snowLodge.alt, kashmirPhotoGallery.snowyPeaks.alt, kashmirPhotoGallery.roomTwo.alt],
+    category: 'Premium', price: 36000,
     duration: '5 nights · 6 days', description: "A six-day Kashmir stay with Jamal Resorts, Hotel Signature and Twin Towers by D'foy.",
     itinerary: [
       { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Check in at Jamal Resorts and settle into the city.' },
@@ -124,7 +131,7 @@ export const ownerProvidedGuestReviews: OwnerProvidedGuestReview[] = [
 export const destinations: Destination[] = [
   {
     id: 'srinagar', name: 'Srinagar', aliases: [], image: photos.lake,
-    additionalPhotos: [{ image: suppliedPhotos.tulipGarden, alt: 'Tulip Garden in Srinagar' }, { image: suppliedPhotos.hazratbal, alt: 'Hazratbal Dargah in Srinagar' }], count: 'Lake & heritage',
+    additionalPhotos: [{ image: suppliedPhotos.tulipGarden, alt: 'Tulip Garden in Srinagar' }, { image: suppliedPhotos.hazratbal, alt: 'Hazratbal Dargah in Srinagar' }, { image: kashmirPhotoGallery.houseboat.image, alt: kashmirPhotoGallery.houseboat.alt }, { image: kashmirPhotoGallery.autumnGarden.image, alt: kashmirPhotoGallery.autumnGarden.alt }], count: 'Lake & heritage',
     distance: '0 km (city base)', travelTime: '15-60 min within the city', maxDriveHours: 1,
     detail: 'Lake mornings, Mughal gardens and old-city lanes make Srinagar a relaxed starting point for the valley.',
     suggestedVisit: '1-2 days', season: 'Year-round; gardens at their best in spring and summer',
@@ -132,7 +139,12 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Dal Lake', detail: 'Shikara rides and lake-side walks; boat charges are separate.' }, { name: 'Mughal gardens', detail: 'Nishat Bagh, Shalimar Bagh and Chashme Shahi.' }, { name: 'Pari Mahal', detail: 'Terraced gardens with views over the lake.' }, { name: 'Old city & Hazratbal', detail: 'Heritage lanes and the lake-side shrine; respect local dress and visiting rules.' }, { name: 'Tulip Garden', detail: 'A seasonal spring visit, subject to official opening dates.' }],
   },
   {
-    id: 'gulmarg', name: 'Gulmarg', aliases: [], image: suppliedPhotos.gulmarg, photoIsUserProvided: true, count: 'Mountain escape',
+    id: 'gulmarg', name: 'Gulmarg', aliases: [], image: suppliedPhotos.gulmarg, photoIsUserProvided: true,
+    additionalPhotos: [
+      { image: kashmirPhotoGallery.meadow.image, alt: kashmirPhotoGallery.meadow.alt },
+      { image: kashmirPhotoGallery.snowyVillage.image, alt: kashmirPhotoGallery.snowyVillage.alt },
+      { image: kashmirPhotoGallery.snowLodge.image, alt: kashmirPhotoGallery.snowLodge.alt },
+    ], count: 'Mountain escape',
     distance: '50-55 km', travelTime: '1.5-2.5 hours', maxDriveHours: 2.5,
     detail: 'Wide meadows and high mountain scenery, with snow activities in winter and walking trails in warmer months.',
     suggestedVisit: 'Full day or 1-2 nights', season: 'Spring-autumn for meadows; winter for snow',
@@ -140,7 +152,8 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Gulmarg Gondola', detail: 'A cable-car journey with separately booked tickets and weather-dependent operations.' }, { name: 'Gulmarg meadow', detail: 'Gentle walks around the meadow and golf-course area.' }, { name: 'Drung Waterfall', detail: 'A nearby stop via Tangmarg; winter paths can be icy.' }, { name: 'Kongdori', detail: 'Mountain scenery at the first Gondola phase, subject to tickets and operation.' }, { name: 'Apharwat views', detail: 'Higher-altitude scenery reached by the second Gondola phase when permitted; check weather and suitability.' }],
   },
   {
-    id: 'pahalgam', name: 'Pahalgam', aliases: [], image: suppliedPhotos.pahalgam, photoIsUserProvided: true, count: 'River country',
+    id: 'pahalgam', name: 'Pahalgam', aliases: [], image: suppliedPhotos.pahalgam, photoIsUserProvided: true,
+    additionalPhotos: [{ image: kashmirPhotoGallery.valleyRiver.image, alt: kashmirPhotoGallery.valleyRiver.alt }], count: 'River country',
     distance: '90-100 km', travelTime: '2.5-3.5 hours', maxDriveHours: 3.5,
     detail: 'Pine-fringed paths and the Lidder River reward a slower stay, with several valleys to explore from town.',
     suggestedVisit: '1-2 nights; a day trip is possible but long', season: 'Spring-autumn; winter access depends on snow',
@@ -149,7 +162,7 @@ export const destinations: Destination[] = [
   },
   {
     id: 'sonamarg', name: 'Sonamarg', aliases: ['Sonmarg'], image: suppliedPhotos.sonamarg, photoIsUserProvided: true,
-    additionalPhotos: [{ image: suppliedPhotos.greatLakesTrek, alt: 'Kashmir Great Lakes Trek' }], count: 'Alpine day out',
+    additionalPhotos: [{ image: suppliedPhotos.greatLakesTrek, alt: 'Kashmir Great Lakes Trek' }, { image: kashmirPhotoGallery.snowyPeaks.image, alt: kashmirPhotoGallery.snowyPeaks.alt }], count: 'Alpine day out',
     distance: '80-85 km', travelTime: '2-3 hours', maxDriveHours: 3,
     detail: 'An alpine valley beside the Sind River, with meadow views and access to higher mountain excursions.',
     suggestedVisit: 'Full day or 1 night', season: 'Late spring-autumn; winter operations vary',
@@ -181,7 +194,8 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Peer Ki Gali pass & shrine', detail: 'Mountain views and a shrine at the pass.' }, { name: 'Mughal Road viewpoints', detail: 'Scenic stops on the approach, where parking is safe.' }, { name: 'Dubjan', detail: 'Forest and river scenery along the Shopian approach.' }],
   },
   {
-    id: 'aharbal', name: 'Aharbal Waterfall', aliases: ['Herbal Waterfall', 'Aharbal', 'Aherbal'], image: '/images/destinations/aharbal.jpg', count: 'Waterfall & forest',
+    id: 'aharbal', name: 'Aharbal Waterfall', aliases: ['Herbal Waterfall', 'Aharbal', 'Aherbal'], image: '/images/destinations/aharbal.jpg',
+    additionalPhotos: [{ image: kashmirPhotoGallery.waterfall.image, alt: kashmirPhotoGallery.waterfall.alt }], count: 'Waterfall & forest',
     photoCredit: { author: 'TheAutumnal', source: 'https://commons.wikimedia.org/wiki/File:Aharbal_Waterfall,_Kashmir.jpg', licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/' },
     distance: '70-75 km', travelTime: '2-3 hours', maxDriveHours: 3,
     detail: 'A striking waterfall on the Veshu River, surrounded by wooded scenery in the southern valley.',

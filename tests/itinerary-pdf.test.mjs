@@ -2,12 +2,22 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
-import { tourPackages } from '../src/data/catalog.ts'
+import { destinations, tourPackages } from '../src/data/catalog.ts'
 import { business } from '../src/config.ts'
 import { brandPromises } from '../src/data/brandPromises.ts'
+import { kashmirPhotosForPdf } from '../src/data/kashmirPhotoGallery.ts'
 import { buildBrandedItineraryPdf, tourPackagePdfData } from '../src/services/itineraryPdf.ts'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://127.0.0.1:8792'
+const nativeFetch = globalThis.fetch
+globalThis.fetch = async (input, init) => {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.pathname : input.url
+  if (url.startsWith('/images/')) {
+    const photoPath = new URL(`../public${url}`, import.meta.url)
+    return new Response(await readFile(photoPath), { headers: { 'content-type': 'image/jpeg' } })
+  }
+  return nativeFetch(input, init)
+}
 
 test('branded PDF contains the current promises, every contact link, itinerary, inclusions, and final thanks', async () => {
   const pdf = await buildBrandedItineraryPdf({
@@ -28,7 +38,7 @@ test('branded PDF contains the current promises, every contact link, itinerary, 
   })
   const contents = Buffer.from(pdf.output('arraybuffer')).toString('latin1')
   assert.ok(contents.startsWith('%PDF-'))
-  assert.ok(pdf.getNumberOfPages() >= 4, 'Includes cover, itinerary, inclusions/exclusions and thank-you pages')
+  assert.ok(pdf.getNumberOfPages() >= 6, 'Includes cover, itinerary, photo gallery, inclusions/exclusions and thank-you pages')
   for (const promise of brandPromises) assert.ok(contents.includes(promise), `Cover includes: ${promise}`)
   for (const contact of [business.phone, business.email, business.instagramHandle, 'avelof.in']) assert.ok(contents.includes(contact))
   for (const url of [business.website, `mailto:${business.email}`, business.instagram]) assert.ok(contents.includes(url))
@@ -36,6 +46,21 @@ test('branded PDF contains the current promises, every contact link, itinerary, 
     assert.ok(contents.includes(text), `PDF contains ${text}`)
   }
   assert.ok((contents.match(/info@avelof\.in/g) ?? []).length >= pdf.getNumberOfPages(), 'Contact details appear in each page footer')
+  assert.ok((contents.match(/\/Subtype\s*\/Image/g) ?? []).length >= kashmirPhotosForPdf.length, 'All ten supplied photos are embedded')
+  for (const photo of kashmirPhotosForPdf) assert.ok(contents.includes(photo.caption), `PDF includes photo caption: ${photo.caption}`)
+})
+
+test('all supplied photos exist and are used in relevant package and destination galleries', async () => {
+  const catalogPhotos = [
+    ...tourPackages.flatMap((item) => [item.image, ...item.gallery]),
+    ...destinations.flatMap((place) => [place.image, ...(place.additionalPhotos ?? []).map((photo) => photo.image)]),
+  ]
+  for (const photo of kashmirPhotosForPdf) {
+    const path = new URL(`../public${photo.image}`, import.meta.url)
+    const bytes = await readFile(path)
+    assert.ok(bytes.length > 10_000, `${photo.image} is present and optimized`)
+    assert.ok(catalogPhotos.includes(photo.image), `${photo.image} is mapped into a package or destination gallery`)
+  }
 })
 
 test('Deluxe and Premium PDFs use their current package itinerary and union-cab terms', () => {
@@ -58,6 +83,15 @@ test('planner and ready-made packages download branded PDFs at the intended step
     for (const packageName of ['Deluxe', 'Premium']) {
       await page.goto(`${origin}/tour-packages/${packageName.toLowerCase()}`)
       const packageDownload = page.getByRole('button', { name: `Download ${packageName} package PDF`, exact: true })
+      const displayedPhotos = await page.locator('.detail-gallery img').evaluateAll((images) => images.map((image) => ({
+        src: new URL(image.src).pathname,
+        alt: image.alt,
+        loaded: image.complete && image.naturalWidth > 0,
+      })))
+      assert.equal(displayedPhotos.length, 3)
+      assert.ok(displayedPhotos.every((photo) => photo.loaded), `${packageName} package photos load`)
+      assert.deepEqual(displayedPhotos.map((photo) => photo.alt), tourPackages.find((item) => item.name === packageName).galleryAlts)
+      assert.ok(await page.getByText('Illustrative travel and stay photos. The listed hotels and their availability are confirmed separately.', { exact: true }).isVisible())
       for (const width of [320, 390, 768, 1024, 1440]) {
         await page.setViewportSize({ width, height: 900 })
         assert.equal(await documentWidthOverflows(page), false)
@@ -75,6 +109,7 @@ test('planner and ready-made packages download branded PDFs at the intended step
       assert.ok(packagePdf.subarray(0, 5).toString().startsWith('%PDF-'))
       assert.ok(packagePdf.toString('latin1').includes(`${packageName} Kashmir Tour Package`))
       assert.ok(packagePdf.toString('latin1').includes('Union-cab charges and usage depend on the package'))
+      assert.ok((packagePdf.toString('latin1').match(/\/Subtype\s*\/Image/g) ?? []).length >= kashmirPhotosForPdf.length)
     }
 
     await page.goto(origin)
@@ -116,6 +151,7 @@ test('planner and ready-made packages download branded PDFs at the intended step
     assert.ok(tripPdf.toString('latin1').includes('applicable local operator terms'))
     assert.ok(tripPdf.toString('latin1').includes('Inclusions'))
     assert.ok(tripPdf.toString('latin1').includes('Thank you.'))
+    assert.ok((tripPdf.toString('latin1').match(/\/Subtype\s*\/Image/g) ?? []).length >= kashmirPhotosForPdf.length)
   } finally {
     await browser.close()
   }

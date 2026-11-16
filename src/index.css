@@ -507,6 +507,7 @@ body.enquiry-open { overflow: hidden; }
 .detail-gallery { height: 430px; display: grid; grid-template-columns: 1.65fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; overflow: hidden; }
 .detail-gallery img { width: 100%; height: 100%; object-fit: cover; }
 .detail-gallery .gallery-main { grid-row: span 2; }
+.package-image-note { margin: 10px auto 0; padding: 0 24px; }
 .hotel-detail-photo > img { width: 100%; aspect-ratio: 16 / 7; min-height: 240px; max-height: 430px; object-fit: cover; }
 .hotel-photo-carousel { overflow: hidden; }
 .hotel-photo-carousel img { width: 100%; aspect-ratio: 16 / 7; min-height: 240px; max-height: 430px; object-fit: cover; }
