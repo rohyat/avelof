@@ -67,7 +67,7 @@ async function fillRegistration(page) {
   await page.getByLabel('Standard rate (INR)', { exact: true }).pressSequentially('abc')
   assert.equal(await page.getByLabel('Standard rate (INR)', { exact: true }).inputValue(), String(hotel.submittedPrice))
   const heating = page.getByLabel('Heating system')
-  assert.deepEqual(await page.locator('select[name="taxDetails"] option').allTextContents(), ['Rates exclude GST'])
+  assert.equal(await page.locator('select[name="taxDetails"]').count(), 0)
   assert.deepEqual(await heating.locator('option:not([disabled])').allTextContents(), ['Centralised heating', 'Hot & cold AC', 'Room heaters', 'No heating'])
   await heating.selectOption('Hot & cold AC')
   assert.equal(await heating.inputValue(), 'Hot & cold AC')
@@ -81,41 +81,38 @@ async function fillRegistration(page) {
 test('hotel registration, private lookup and moderation integrate with public stays', async (context) => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   try {
-    await context.test('saved hotel discounts show regular rates and preserve undiscounted meal charges', async () => {
+    await context.test('simple hotel prices preserve meal charges and ignore legacy GST metadata', async () => {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
       const current = {
-        ...publicHotel(), price: 2320, originalPrice: 2900, discountPercent: 20, mealPlan: 'Room only', breakfastPrice: 250, dinnerPrice: 400, gstPercent: 5,
-        roomRates: [{ roomType: 'Standard', count: 6, price: 2320, originalPrice: 2900 }, { roomType: 'Suite', count: 6, price: 4640, originalPrice: 5800 }],
+        ...publicHotel(), price: 2900, mealPlan: 'Room only', breakfastPrice: 250, dinnerPrice: 400, gstPercent: 5,
+        roomRates: [{ roomType: 'Standard', count: 6, price: 2900 }, { roomType: 'Suite', count: 6, price: 5800 }],
       }
       await page.route('**/api/hotels*', (route) => route.fulfill({ json: list([current]) }))
       try {
         await page.goto(`${origin}/hotels`)
         const card = page.locator('.hotel-card')
         await card.waitFor()
-        assert.ok((await card.locator('.hotel-rates strong').innerText()).includes('2,436'))
-        assert.equal(await card.locator('.hotel-discount-price s').innerText(), 'INR 2,900')
-        assert.equal(await card.locator('.hotel-discount-price .discount-label').innerText(), '20% off')
+        assert.ok((await card.locator('.hotel-rates strong').innerText()).includes('2,900'))
+        assert.equal(await card.locator('s, .discount-label').count(), 0)
         assert.equal(await card.locator('.hotel-price-comparison').count(), 0)
-        assert.equal(await card.locator('.hotel-gst-line').innerText(), 'GST (5%): INR 116 included in total')
+        assert.ok(!/GST|tax/i.test(await card.innerText()))
         for (const width of [320, 390, 1440]) {
           await page.setViewportSize({ width, height: 900 })
-          assert.equal(await card.locator('.hotel-discount-price').evaluate((element) => element.scrollWidth > element.clientWidth), false)
+          assert.equal(await card.locator('.hotel-rates').evaluate((element) => element.scrollWidth > element.clientWidth), false)
         }
         await page.setViewportSize({ width: 390, height: 844 })
         await page.goto(`${origin}/hotels/${id}`)
-        await page.locator('.detail-aside .hotel-discount-price').waitFor()
-        assert.equal(await page.locator('.detail-aside .hotel-discount-price s').innerText(), 'INR 2,900')
+        assert.equal(await page.locator('.detail-aside .hotel-rates strong').innerText(), 'INR 2,900')
         await page.getByRole('button', { name: 'Book Now', exact: true }).click()
         const form = page.locator('.enquiry-form')
         await form.getByLabel('Room type', { exact: true }).selectOption('Suite')
         const rates = form.locator('.hotel-rates')
-        assert.equal(await rates.locator('.hotel-discount-price s').innerText(), 'INR 5,800')
-        assert.equal(await rates.locator('.hotel-discount-price .discount-label').innerText(), '20% off')
+        assert.equal(await rates.locator('strong[role="status"]').innerText(), 'INR 5,800')
+        assert.equal(await rates.locator('s, .discount-label').count(), 0)
         await rates.getByLabel('Breakfast', { exact: false }).check()
-        assert.equal(await rates.locator('strong[role="status"]').innerText(), 'INR 5,134.5')
+        assert.equal(await rates.locator('strong[role="status"]').innerText(), 'INR 6,050')
         assert.ok((await rates.locator('.hotel-meal-coverage').innerText()).includes('breakfast for 2 people per room per day'))
-        assert.equal(await rates.locator('.hotel-gst-line').innerText(), 'GST (5%): INR 244.5')
-        assert.equal(await rates.locator('.hotel-discount-price s').innerText(), 'INR 5,800', 'Meals do not inflate the regular room rate')
+        assert.ok(!/GST|tax|discount/i.test(await rates.innerText()))
       } finally { await page.close() }
     })
     await context.test('exact areas follow destination, clear stale choices and display on hotel pages', async () => {
@@ -434,7 +431,7 @@ test('hotel registration, private lookup and moderation integrate with public st
           await page.setViewportSize({ width, height: 900 })
           await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
-          assert.ok((await plannedHotel.boundingBox()).height < 900, `Selected hotel including separate GST and meal-coverage disclosures should fit within 900px at ${width}px`)
+          assert.ok((await plannedHotel.boundingBox()).height < 900, `Selected hotel and meal coverage should fit within 900px at ${width}px`)
           const cardWidth = (await plannedHotel.boundingBox()).width
           const railWidth = (await plannedHotel.locator('..').locator('..').boundingBox()).width
           assert.ok(width > 560 ? cardWidth >= 250 : cardWidth >= 220 && cardWidth >= railWidth * 0.84, `Hotel cards should be wider at ${width}px: card ${cardWidth}px, rail ${railWidth}px`)
@@ -685,7 +682,7 @@ test('hotel registration, private lookup and moderation integrate with public st
         assert.equal(submissions[1].reference, submissions[2].reference)
         assert.equal(submissions[2].fields.adults, '6')
         assert.equal(submissions[2].fields.children, '2')
-        assert.ok(submissions[2].fields.placesToVisit.includes('rooms: 3; all rooms per night including GST: INR 12,000'))
+        assert.ok(submissions[2].fields.placesToVisit.includes('rooms: 3; all rooms per night: INR 12,000'))
         await dismissSubmission(page)
         assert.equal(await page.getByRole('dialog').count(), 0)
         await page.goto(`${origin}/`)
@@ -855,7 +852,7 @@ test('hotel registration, private lookup and moderation integrate with public st
         assert.equal(saved.longitude, null)
         assert.equal(saved.category, 'Premium')
         assert.equal(saved.heating, 'Centralised heating')
-        assert.equal(saved.taxDetails, 'Rates exclude GST')
+        assert.equal(saved.taxDetails, undefined)
         assert.equal(saved.mealPlan, 'Room only')
         assert.equal(saved.breakfastPrice, 550)
         assert.equal(saved.dinnerPrice, 450)
@@ -1064,13 +1061,12 @@ test('hotel registration, private lookup and moderation integrate with public st
         await page.getByRole('heading', { name: hotel.name }).waitFor()
         assert.equal(await page.locator('.hotel-photo-grid img').count(), 1)
         await page.getByLabel('Reviewed price (INR)', { exact: true }).fill('3900.25')
-        await page.getByLabel('Confirmed hotel GST (%)', { exact: false }).fill('5')
+        assert.equal(await page.getByLabel('Confirmed hotel GST (%)', { exact: false }).count(), 0)
         await page.getByLabel('Listing status').selectOption('approved')
         await page.getByLabel('Note to hotel owner').fill('Approved at the agreed rate.')
         await page.getByRole('button', { name: 'Save price and status' }).click()
         await page.getByRole('status').filter({ hasText: 'Hotel price and status saved.' }).waitFor()
-        assert.deepEqual(update, { id, version: 0, status: 'approved', price: 3900.25, ownerNote: 'Approved at the agreed rate.', gstPercent: 5 })
-        assert.equal(await page.getByLabel('Confirmed hotel GST (%)', { exact: false }).inputValue(), '5')
+        assert.deepEqual(update, { id, version: 0, status: 'approved', price: 3900.25, ownerNote: 'Approved at the agreed rate.' })
         page.once('dialog', (dialog) => dialog.accept())
         await page.getByRole('button', { name: 'Delete hotel registration' }).click()
         await page.getByRole('status').filter({ hasText: 'Hotel registration permanently deleted.' }).waitFor()
@@ -1103,7 +1099,7 @@ test('hotel registration, private lookup and moderation integrate with public st
         await page.locator('.selected-hotel-field').waitFor()
         assert.equal(await page.locator('[name="preferredStay"]').inputValue(), `${hotel.name} (${hotelId})`)
         assert.ok((await page.locator('.enquiry-form .hotel-rates').innerText()).includes('4,500'))
-        assert.ok((await page.locator('.enquiry-form .hotel-rates').innerText()).includes('Includes GST (0%)'))
+        assert.ok(!/GST|tax/i.test(await page.locator('.enquiry-form .hotel-rates').innerText()))
       } finally { await page.close() }
     })
   } finally { await browser.close() }

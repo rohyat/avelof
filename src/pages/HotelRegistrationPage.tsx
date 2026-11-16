@@ -11,8 +11,8 @@ import PartnerRegistrationLayout from '../components/PartnerRegistrationLayout'
 import HotelFeature from '../components/HotelFeature'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import NumberStepper from '../components/NumberStepper'
-import { heatingOptions, hotelAmenities, hotelCategories, hotelCategoryLabels, hotelHighlightOptions, hotelMealPlans, hotelPhotoCount, hotelRoomRateBasis, hotelRoomTypes, hotelStatusLabels, hotelTaxLabel, registrationLocations } from '../data/hotelRegistration'
-import { hotelGstPercentSchema, hotelPriceSchema, hotelStatusSchema, hotelSubmissionSchema } from '../services/hotelSchema'
+import { heatingOptions, hotelAmenities, hotelCategories, hotelCategoryLabels, hotelHighlightOptions, hotelMealPlans, hotelPhotoCount, hotelRoomRateBasis, hotelRoomTypes, hotelStatusLabels, registrationLocations } from '../data/hotelRegistration'
+import { hotelPriceSchema, hotelStatusSchema, hotelSubmissionSchema } from '../services/hotelSchema'
 import type { AdminHotel, HotelRoomRate, HotelStatus } from '../services/hotelSchema'
 import { compressHotelPhotos, deleteHotel, hotelErrorText, HotelError, loadAdminHotels, lookupHotel, moderateHotel, saveHotel, selectedHotelRoom, updateHotel } from '../services/hotelService'
 import type { HotelReceipt, OwnerHotel } from '../services/hotelService'
@@ -80,7 +80,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
       description: editing ? fields.get('description') : `${String(fields.get('category'))} accommodation in ${String(fields.get('location'))}.`,
       price: legacyRooms ? Number(fields.get('legacyPrice')) : Math.min(...roomCounts.map(({ price }) => price)),
       ...(!legacyRooms ? { roomRates: roomCounts } : {}),
-      mealPlan: legacyRooms && editing?.breakfastPrice === undefined ? fields.get('mealPlan') : 'Room only', taxDetails: fields.get('taxDetails'),
+      mealPlan: legacyRooms && editing?.breakfastPrice === undefined ? fields.get('mealPlan') : 'Room only',
       ...(!editing || editing.breakfastPrice !== undefined ? { breakfastPrice: Number(fields.get('breakfastPrice')), dinnerPrice: Number(fields.get('dinnerPrice')) } : {}),
       heating: fields.get('heating'), amenities: fields.getAll('amenities'),
       highlights: fields.getAll('highlights'),
@@ -140,8 +140,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
         {legacyRooms ? <><label className="review-text-field">Room types (one per line)<textarea name="legacyRoomTypes" required defaultValue={editing?.roomTypes.join('\n')} /></label><NumberStepper label="Total rooms" name="totalRooms" min={1} max={10000} defaultValue={editing?.totalRooms} /><NumberStepper label="Nightly rate (INR)" name="legacyPrice" min={1} defaultValue={editing?.price} currency />{editing?.breakfastPrice === undefined && <label>Meal plan<select name="mealPlan" defaultValue={editing?.mealPlan}>{hotelMealPlans.map((plan) => <option key={plan}>{plan}</option>)}</select></label>}</> : <fieldset className="hotel-amenities hotel-room-types review-text-field"><legend>Room types, quantity & nightly rates</legend><p className="review-text-field">All room types start at 0. Increase the quantity for the rooms you offer, and leave the others at 0. Add at least one room.</p>{hotelRoomTypes.map((roomType) => <div className="registration-room-rate" key={roomType}><NumberStepper label={`${roomType} rooms`} name={`roomCount_${roomType.toLowerCase()}`} min={0} max={10000} defaultValue={editing?.roomRates?.find((room) => room.roomType === roomType)?.count ?? 0} /><NumberStepper label={`${roomType} rate (INR)`} name={`roomPrice_${roomType.toLowerCase()}`} min={1} defaultValue={editing?.roomRates?.find((room) => room.roomType === roomType)?.price ?? 2000} step={100} currency /></div>)}<small className="review-text-field">Only available room types and their rates are listed. Hotel cards show the lowest room rate.</small></fieldset>}
         {(!editing || editing.breakfastPrice !== undefined) && <><NumberStepper label="Breakfast add-on (INR)" name="breakfastPrice" defaultValue={editing?.breakfastPrice ?? 500} step={50} currency />
         <NumberStepper label="Dinner add-on (INR)" name="dinnerPrice" defaultValue={editing?.dinnerPrice ?? 500} step={50} currency /></>}
-        <p className="privacy-note review-text-field">Enter all room and meal rates without GST. Rates are per room per night: Family rooms cover 4 people; other room types cover 2 people. Enter the base breakfast and dinner add-ons for 2 people; Family rooms automatically use twice each meal charge for 4 people. AVELOF may edit these prices before approval and will confirm GST separately.</p>
-        <label>Taxes<select name="taxDetails" required defaultValue={hotelTaxLabel}><option>{hotelTaxLabel}</option></select></label>
+        <p className="privacy-note review-text-field">Rates are per room per night: Family rooms cover 4 people; other room types cover 2 people. Enter the base breakfast and dinner add-ons for 2 people; Family rooms automatically use twice each meal charge for 4 people. AVELOF may edit these prices before approval. Customer room rates are the reviewed rates plus 45%.</p>
         </section>
         <section className="hotel-form-fields registration-section" aria-labelledby="hotel-facilities-title">
         <div className="registration-section-heading"><span>03</span><div><h2 id="hotel-facilities-title">The stay experience</h2><p>The comforts and little details guests can look forward to.</p></div></div>
@@ -207,7 +206,7 @@ export function HotelStatusPage() {
       <h2>{hotel.name}</h2><p className="hotel-identifier">{hotel.hotelId}</p><p role="status">{hotelStatusLabels[hotel.status]}</p>
       <p>{hotelLocationLabel(hotel)} · {hotelCategoryLabels[hotel.category]}</p><p>{hotel.description}</p>
       <p>{hotel.status === 'approved' ? 'Published' : 'Current'} rate: INR {hotel.price.toLocaleString('en-IN')} {hotelRoomRateBasis(selectedHotelRoom(hotel)?.roomType)}.</p>
-      <p>{hotel.mealPlan} · {hotel.taxDetails}</p>
+      <p>{hotel.mealPlan}</p>
       {hotel.roomRates && <ul>{hotel.roomRates.map((room) => <li key={room.roomType}>{room.roomType}: INR {room.price.toLocaleString('en-IN')} {hotelRoomRateBasis(room.roomType)}</li>)}</ul>}
       {hotel.breakfastPrice !== undefined && <p>Base optional breakfast: INR {hotel.breakfastPrice}; dinner: INR {hotel.dinnerPrice}, for 2 people. Family rooms cover 4 people and use twice each meal charge.</p>}
       <p>Heating: {hotel.heating}. Amenities: {hotel.amenities.join(', ') || 'None selected'}.</p>
@@ -219,7 +218,7 @@ export function HotelStatusPage() {
   </section>
 }
 
-function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminHotel; disabled: boolean; onSave: (hotel: AdminHotel, status: HotelStatus, price: number, note: string, breakfast?: number, dinner?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null, gstPercent?: number | null) => Promise<void>; onDelete: (hotel: AdminHotel) => Promise<void> }) {
+function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminHotel; disabled: boolean; onSave: (hotel: AdminHotel, status: HotelStatus, price: number, note: string, breakfast?: number, dinner?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null) => Promise<void>; onDelete: (hotel: AdminHotel) => Promise<void> }) {
   const [note, setNote] = useState(hotel.ownerNote)
   const [status, setStatus] = useState<HotelStatus>(hotel.status)
   const [error, setError] = useState('')
@@ -231,10 +230,7 @@ function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminH
     if (!parsed.success) { setError('Enter a rate from INR 1 to INR 1,000,000 with at most two decimal places.'); return }
     setError('')
     if (roomRates?.some((room) => !hotelPriceSchema.safeParse(room.price).success)) { setError('Check the reviewed rate for each room type.'); return }
-    const gstInput = String(fields.get('gstPercent') ?? '').trim()
-    const gstPercent = gstInput === '' ? null : Number(gstInput)
-    if (gstPercent !== null && !hotelGstPercentSchema.safeParse(gstPercent).success) { setError('Enter confirmed GST from 0 to 28%, with at most two decimal places, or leave it blank for pending confirmation.'); return }
-    await onSave(hotel, status, parsed.data, note, hotel.breakfastPrice !== undefined ? Number(fields.get('breakfastPrice')) : undefined, hotel.dinnerPrice !== undefined ? Number(fields.get('dinnerPrice')) : undefined, roomRates, undefined, gstPercent)
+    await onSave(hotel, status, parsed.data, note, hotel.breakfastPrice !== undefined ? Number(fields.get('breakfastPrice')) : undefined, hotel.dinnerPrice !== undefined ? Number(fields.get('dinnerPrice')) : undefined, roomRates)
   }
   return <article className="admin-review-record">
     <div className="admin-review-heading"><h2>{hotel.name}</h2><span className="enquiry-status">{hotelStatusLabels[hotel.status]}</span></div>
@@ -245,13 +241,12 @@ function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminH
     <p>Heating: {hotel.heating}. Amenities: {hotel.amenities.join(', ') || 'None selected'}.</p>
     <p>{hotel.totalRooms} rooms. Room types: {hotel.roomTypes.join(', ')}. Check-in: {hotel.checkIn}; check-out: {hotel.checkOut}.</p>
     <h3>Public highlight points</h3><ul>{hotel.highlights.map((point) => <li key={point}>{point}</li>)}</ul>
-    <p>Submitted rate: INR {hotel.submittedPrice.toLocaleString('en-IN')} {hotelRoomRateBasis(selectedHotelRoom(hotel)?.roomType)}. {hotel.mealPlan} · {hotel.taxDetails}.</p>
-    <p>All reviewed room and meal rates exclude GST. Family room rates cover 4 people; other room rates cover 2 people. Reviewed breakfast and dinner are base charges for 2 people; Family rooms use twice each charge.</p>
+    <p>Submitted rate: INR {hotel.submittedPrice.toLocaleString('en-IN')} {hotelRoomRateBasis(selectedHotelRoom(hotel)?.roomType)}. {hotel.mealPlan}.</p>
+    <p>Customer room rates are the reviewed rates plus 45%. Family room rates cover 4 people; other room rates cover 2 people. Reviewed breakfast and dinner are base charges for 2 people; Family rooms use twice each charge.</p>
     <form className="review-submission-form" onSubmit={submit}>
       <fieldset disabled={disabled} className="hotel-form-fields">
         {hotel.roomRates ? hotel.roomRates.map((room) => <NumberStepper key={room.roomType} label={`Reviewed ${room.roomType} rate (INR)`} name={`roomPrice_${room.roomType}`} min={1} defaultValue={room.price} step={100} currency />) : <NumberStepper label="Reviewed price (INR)" name="price" min={1} defaultValue={hotel.price} step={100} currency />}
         {hotel.breakfastPrice !== undefined && <><NumberStepper label="Reviewed breakfast (INR)" name="breakfastPrice" defaultValue={hotel.breakfastPrice} step={50} currency /><NumberStepper label="Reviewed dinner (INR)" name="dinnerPrice" defaultValue={hotel.dinnerPrice} step={50} currency /></>}
-        <label>Confirmed hotel GST (%)<input type="number" name="gstPercent" min={0} max={28} step="0.01" defaultValue={hotel.gstPercent ?? ''} placeholder="Pending confirmation" /><small>Confirm the applicable rate with the hotel/accountant for these rooms and selected meals, including who invoices the guest. Use 0 only for confirmed nil GST. Leave blank if not confirmed. GST is added after the 45% room markup, discount and selected meals. Reconfirm if room prices, discounts or tax treatment change; owner edits clear this confirmation.</small></label>
         <label>Listing status<select value={status} onChange={(event) => setStatus(hotelStatusSchema.parse(event.target.value))}><option value="pending">Awaiting approval</option><option value="approved">Approve and publish</option><option value="rejected">Reject / remove from public listings</option></select></label>
         <label className="review-text-field">Note to hotel owner<textarea maxLength={1000} rows={2} value={note} onChange={(event) => setNote(event.target.value)} /></label>
         {error && <p className="enquiry-error" role="alert">{error}</p>}
@@ -284,10 +279,10 @@ export function AdminHotelsPage() {
   function refresh(page = filters.page, status = filters.status) {
     setLoading(true); setError(''); setFilters((current) => ({ page, status, revision: current.revision + 1 }))
   }
-  async function save(hotel: AdminHotel, status: HotelStatus, price: number, note: string, breakfast?: number, dinner?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null, gstPercent?: number | null) {
+  async function save(hotel: AdminHotel, status: HotelStatus, price: number, note: string, breakfast?: number, dinner?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null) {
     if (inFlight.current) return
     inFlight.current = true; setSaving(true); setError(''); setNotice('')
-    try { await moderateHotel(hotel.id, hotel.version, status, price, note, breakfast, dinner, roomRates, coordinates, gstPercent); setNotice('Hotel price and status saved.'); refresh() }
+    try { await moderateHotel(hotel.id, hotel.version, status, price, note, breakfast, dinner, roomRates, coordinates); setNotice('Hotel price and status saved.'); refresh() }
     catch (failure) {
       if (failure instanceof HotelError && failure.status === 401) { setSignedOut(true); setListing(null) }
       else setError(hotelErrorText(failure))

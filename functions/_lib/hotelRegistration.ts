@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { discountedPrice } from '../../src/services/pricingSchema.ts'
 import { hotelDetailsSchema } from '../../src/services/hotelSchema.ts'
 import { hotelLocationCodes, hotelPhotoCount, hotelPhotoDimension, hotelPhotoLimit } from '../../src/data/hotelRegistration.ts'
 import { partnerStatusAccessCode } from '../../src/services/partnerAccessCode.ts'
@@ -30,7 +29,7 @@ export async function resolveHotelId(DB: D1Database, hotelId: string) {
 }
 export const photoKeys = (row: Pick<HotelRow, 'photo_keys_json'>) => z.array(z.string().regex(/^hotels\/[a-f0-9-]{36}\/[a-f0-9-]{36}\/[0-4]\.jpg$/)).min(1).max(hotelPhotoCount).parse(JSON.parse(row.photo_keys_json))
 function hotelDetails(row: HotelRow) {
-  const { latitude: _latitude, longitude: _longitude, ...details } = hotelDetailsSchema.parse(JSON.parse(row.details_json))
+  const { latitude: _latitude, longitude: _longitude, gstPercent: _gstPercent, ...details } = hotelDetailsSchema.parse(JSON.parse(row.details_json))
   return {
     ...details, ...(row.latitude != null && row.longitude != null ? { latitude: row.latitude, longitude: row.longitude } : {}),
     id: row.id, hotelId: row.hotel_id, price: row.price,
@@ -39,17 +38,12 @@ function hotelDetails(row: HotelRow) {
   }
 }
 export const customerHotelRate = (price: number) => Math.ceil(Math.round(price * 100) * 145 / 10000)
-export function publicHotel(row: HotelRow, discountPercent = 0) {
+export function publicHotel(row: HotelRow) {
   const hotel = hotelDetails(row)
-  const originalPrice = customerHotelRate(hotel.price)
   return {
     ...hotel,
-    originalPrice, discountPercent,
-    price: discountedPrice(originalPrice, discountPercent),
-    ...(hotel.roomRates ? { roomRates: hotel.roomRates.map((room) => {
-      const originalPrice = customerHotelRate(room.price)
-      return { ...room, originalPrice, price: discountedPrice(originalPrice, discountPercent) }
-    }) } : {}),
+    price: customerHotelRate(hotel.price),
+    ...(hotel.roomRates ? { roomRates: hotel.roomRates.map((room) => ({ ...room, price: customerHotelRate(room.price) })) } : {}),
   }
 }
 export function adminHotel(row: HotelRow) {

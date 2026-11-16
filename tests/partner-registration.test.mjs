@@ -496,7 +496,7 @@ test('partner onboarding and approved listings work separately from customer nav
         await page.getByRole('heading', { name: 'Thank you for submitting your details.' }).waitFor()
         assert.equal(enquiry.fields.breakfast, 'Included')
         assert.equal(enquiry.fields.dinner, 'Included')
-        assert.equal(enquiry.fields.nightlyRate, 'INR 5,200 per room per night for 2 people; breakfast included, dinner included; Includes GST (0%)')
+        assert.equal(enquiry.fields.nightlyRate, 'INR 5,200 per room per night for 2 people; breakfast included, dinner included')
         await page.goto(`${origin}/car-rentals/${id}`)
         await page.getByRole('heading', { name: driver.vehicleName, exact: true }).waitFor()
         assert.equal(await page.locator('.detail-aside').getByText('Price on enquiry', { exact: true }).count(), 1)

@@ -6,14 +6,14 @@ import { Link } from 'react-router-dom'
 import { rentalCars } from '../data/catalog'
 import { combinedExcursionId, destinationOptionId, destinationOptions } from '../data/destinationOptions'
 import { clearSavedTripPlan, tripPlanStorageKey, tripReturnStorageKey } from '../services/tripPlanStorage'
-import { hotelNightlyPrice, hotelRateSummary, hotelsInLocation, includedHotelMeals, selectedHotelRoom, useRegisteredHotels } from '../services/hotelService'
+import { hotelNightlyPrice, hotelsInLocation, includedHotelMeals, selectedHotelRoom, useRegisteredHotels } from '../services/hotelService'
 import type { Hotel, PreparedRequest } from '../types'
 import HotelRates from './HotelRates'
 import OfferPrice from './OfferPrice'
 import DestinationPhotos from './DestinationPhotos'
 import RotatingPhotos from './RotatingPhotos'
 import TripPlannerSteps from './TripPlannerSteps'
-import { hotelRoomOccupancy, minimumHotelRooms } from '../data/hotelRegistration'
+import { hotelRoomOccupancy, hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration'
 import NumberStepper from './NumberStepper'
 import { EnquiryForm } from './BookingModal'
 import { SubmissionSuccess } from './SubmissionFeedback'
@@ -303,14 +303,9 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
     return !/^(?:[1-9]\d?|100)$/.test(day.roomCount) || Number(day.roomCount) < minimumHotelRooms(people, selectedHotelRoom(hotel, day.roomType)?.roomType)
   })
   const hotelTotal = selectedStays.reduce((total, rate) => total + rate, 0)
-  const hotelGstPending = dayPlans.slice(0, -1).some((day) => {
-    const hotel = availableHotels.find((hotel) => hotel.id === day.hotelId)
-    return hotel && hotel.gstPercent == null
-  })
-  const taxNote = hotelGstPending ? 'Selected hotel GST is unconfirmed and is not included; final price pending GST confirmation.' : 'Confirmed hotel GST is included.'
   const pendingNights = nights - selectedStays.length
   const stayOccupancyNote = `Room quantities cover ${people} people, including children: Family rooms cover 4 people; other room types cover 2 people.`
-  const estimateSummary = `Vehicle + selected stays ${hotelGstPending ? 'subtotal before unconfirmed GST' : 'estimate'}: INR ${(Math.round((vehicleTotal + hotelTotal) * 100) / 100).toLocaleString('en-IN')}. Vehicle: INR ${vehicleTotal.toLocaleString('en-IN')}; selected stays: INR ${(Math.round(hotelTotal * 100) / 100).toLocaleString('en-IN')} for ${selectedStays.length} of ${nights} nights. ${taxNote} ${stayOccupancyNote}${pendingNights > 0 ? ` ${pendingNights} unselected hotel nights are not included.` : ''} Excludes optional extras and charges not included in the listed rates. Not a final quote.`
+  const estimateSummary = `Vehicle + selected stays estimate: INR ${(Math.round((vehicleTotal + hotelTotal) * 100) / 100).toLocaleString('en-IN')}. Vehicle: INR ${vehicleTotal.toLocaleString('en-IN')}; selected stays: INR ${(Math.round(hotelTotal * 100) / 100).toLocaleString('en-IN')} for ${selectedStays.length} of ${nights} nights. ${stayOccupancyNote}${pendingNights > 0 ? ` ${pendingNights} unselected hotel nights are not included.` : ''} Excludes optional extras and charges not included in the listed rates. Not a final quote.`
 
   useEffect(() => {
     try {
@@ -458,8 +453,8 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
       const rate = selectedHotel ? hotelNightlyPrice(selectedHotel, Boolean(day.breakfast), Boolean(day.dinner), room?.roomType) : 0
       const roomCount = Number(day.roomCount ?? minimumHotelRooms(people, room?.roomType))
       const included = selectedHotel?.registeredHotelId && selectedHotel.breakfastPrice === undefined ? includedHotelMeals(selectedHotel) : { breakfast: day.breakfast, dinner: day.dinner }
-      const mealNote = selectedHotel ? `; breakfast: ${included.breakfast ? 'included' : 'not included'}; dinner: ${included.dinner ? 'included' : 'not included'}; ${included.breakfast || included.dinner ? `meals cover ${hotelRoomOccupancy(room?.roomType)} people per room per day` : 'no meals selected'}${selectedHotel.registeredHotelId ? `; hotel ID: ${selectedHotel.registeredHotelId}` : ''}; ${hotelRateSummary(selectedHotel, Boolean(day.breakfast), Boolean(day.dinner), room?.roomType)}` : ''
-      const hotelNote = index < dayPlans.length - 1 ? `; hotel: ${selectedHotel?.name ?? 'please recommend a stay'}${room ? `; room type: ${room.roomType}` : ''}${selectedHotel ? `; rooms: ${roomCount}; all rooms per night${selectedHotel.gstPercent == null ? ' before GST' : ' including GST'}: INR ${(Math.round(rate * roomCount * 100) / 100).toLocaleString('en-IN')}` : ''}${mealNote}` : ''
+      const mealNote = selectedHotel ? `; breakfast: ${included.breakfast ? 'included' : 'not included'}; dinner: ${included.dinner ? 'included' : 'not included'}; ${included.breakfast || included.dinner ? `meals cover ${hotelRoomOccupancy(room?.roomType)} people per room per day` : 'no meals selected'}${selectedHotel.registeredHotelId ? `; hotel ID: ${selectedHotel.registeredHotelId}` : ''}; hotel rate: INR ${rate.toLocaleString('en-IN')} ${hotelRoomRateBasis(room?.roomType)}` : ''
+      const hotelNote = index < dayPlans.length - 1 ? `; hotel: ${selectedHotel?.name ?? 'please recommend a stay'}${room ? `; room type: ${room.roomType}` : ''}${selectedHotel ? `; rooms: ${roomCount}; all rooms per night: INR ${(Math.round(rate * roomCount * 100) / 100).toLocaleString('en-IN')}` : ''}${mealNote}` : ''
       return `Day ${index + 1} (${date}): ${route}${overnight}${hotelNote}.`
     }).join('\n')
 
@@ -626,7 +621,7 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
         </div> : <p className="planner-empty">{capacityError ? 'Your itinerary will appear once your selected places fit within your dates.' : 'Choose your start and end dates to build your day-by-day plan.'}</p>)}
 
         {step === 4 && invalidRooms && <p className="enquiry-error" role="alert">Enter a whole number of rooms with enough capacity for everyone, including children.</p>}
-        {step === 4 && !invalidRooms && dayPlans.length > 0 && <div className="planner-trip-estimate" role="status"><strong>Vehicle + selected stays{hotelGstPending ? ' subtotal before unconfirmed GST' : ''}: INR {(Math.round((vehicleTotal + hotelTotal) * 100) / 100).toLocaleString('en-IN')}</strong><span>Vehicle: INR {vehicleTotal.toLocaleString('en-IN')} · Selected stays: INR {(Math.round(hotelTotal * 100) / 100).toLocaleString('en-IN')} ({selectedStays.length}/{nights} nights)</span><span>{taxNote} {stayOccupancyNote} Selected meals are included. {pendingNights > 0 ? `${pendingNights} unselected hotel nights are not included. ` : ''}Optional extras and charges outside the listed rates are excluded. Estimate only; AVELOF will confirm a final quote.</span></div>}
+        {step === 4 && !invalidRooms && dayPlans.length > 0 && <div className="planner-trip-estimate" role="status"><strong>Vehicle + selected stays: INR {(Math.round((vehicleTotal + hotelTotal) * 100) / 100).toLocaleString('en-IN')}</strong><span>Vehicle: INR {vehicleTotal.toLocaleString('en-IN')} · Selected stays: INR {(Math.round(hotelTotal * 100) / 100).toLocaleString('en-IN')} ({selectedStays.length}/{nights} nights)</span><span>{stayOccupancyNote} Selected meals are included. {pendingNights > 0 ? `${pendingNights} unselected hotel nights are not included. ` : ''}Optional extras and charges outside the listed rates are excluded. Estimate only; AVELOF will confirm a final quote.</span></div>}
         {step === 5 && (receipt ? <section className="review-ready" role="status"><h3>Thank you for submitting your details.</h3><p>Your enquiry has been saved. This is not a confirmed booking.</p><p>Booking enquiry ID: <strong>{receipt.reference}</strong></p><a className="text-link" href={enquiryPath(receipt)}>View your bookings <ArrowRight size={16} /></a></section> : <><h3>Contact details</h3><p>Your selected dates, guests, vehicle, hotel rooms, activity and union-cab requests will be included automatically.</p>{selectedActivities && <section className="planner-activity-summary" aria-label="Requested activities"><h4>Requested activities</h4><p>{selectedActivities}</p><small>Subject to confirmation. Activity costs are separate from the estimate.</small></section>}{unionCabRequests && <section className="planner-activity-summary" aria-label="Requested union cabs"><h4>Requested union cabs</h4><p>{unionCabRequests}</p><small>Subject to confirmation. Union-cab charges are separate from the estimate.</small></section>}<EnquiryForm kind="package" selectedItem="Custom package" additionalFields={enquiryFields} onSubmittingChange={setSubmitting} onPrepared={(saved) => { setReceipt(saved); requestAnimationFrame(() => { plannerRef.current?.focus(); plannerRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) }) }} /></>)}
         {step < 5 && <div className="planner-footer"><p>Your route is a starting point. Our local team will help check travel times, access and availability.</p>{step < 4 ? <button className="button button-dark" type="button" disabled={!tripDays} onClick={() => changeStep(step + 1)}>Next: {step === 0 ? 'places' : step === 1 ? 'vehicle' : step === 2 ? 'activities' : 'hotels'} <ArrowRight size={16} /></button> : <button className="button button-dark" type="button" disabled={!tripDays || invalidRooms} onClick={continueToEnquiry}>Continue with this plan <ArrowRight size={16} /></button>}</div>}
       </div>

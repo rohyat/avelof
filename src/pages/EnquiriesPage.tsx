@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import AdminPricing from '../components/AdminPricing'
 import type { FormEvent } from 'react'
 import { ArrowLeft, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, LockKeyhole, LogOut, RefreshCw, Save, Search, Trash2 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -275,7 +274,6 @@ export function AdminEnquiriesPage() {
     </form> : <>
       <nav className="admin-section-nav" aria-label="Owner sections"><span aria-current="page">Enquiries</span><Link to="/admin/panel/reviews">Reviews</Link><Link to="/admin/panel/hotels">Hotels</Link><Link to="/admin/panel/drivers">Drivers</Link><Link to="/admin/panel/businesses">Food & Shopping</Link></nav>
       <OwnerPushNotifications />
-      <AdminPricing />
       <div className="admin-enquiry-toolbar">
         <strong>{total} {total === 1 ? 'enquiry' : 'enquiries'}</strong>
         <form className="admin-enquiry-search" onSubmit={(event) => { event.preventDefault(); reload({ ...filters, reference: query.trim().toUpperCase(), page: 1 }) }}>

@@ -1,20 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { rentalCars } from '../data/catalog'
-import { useTourPackages } from '../services/pricingContext'
+import { rentalCars, tourPackages } from '../data/catalog'
 import { diwaliReferencePrice } from '../data/offers'
 import DiscountLabel from './DiscountLabel'
 
 const startingCab = rentalCars.reduce((lowest, car) => car.price < lowest.price ? car : lowest)
-function availableOffers(tourPackages: ReturnType<typeof useTourPackages>) { return [
+const offers = [
   ...tourPackages.filter((item) => !item.underDevelopment).map((item) => ({
     id: item.id,
     title: `${item.name} package`,
     description: `Kashmir escape · ${item.duration}`,
     image: item.image,
     price: item.price,
-    originalPrice: item.originalPrice,
+    originalPrice: undefined,
     priceLabel: 'per person',
     referenceLabel: 'Original price',
     href: `/tour-packages/${item.id}`,
@@ -24,11 +23,9 @@ function availableOffers(tourPackages: ReturnType<typeof useTourPackages>) { ret
     image: startingCab.image, price: startingCab.price, originalPrice: diwaliReferencePrice(startingCab.price),
     priceLabel: 'from / day', referenceLabel: 'Before offer', href: '/car-rentals',
   },
-] }
+]
 
 export default function OfferBanner() {
-  const tourPackages = useTourPackages()
-  const offers = availableOffers(tourPackages)
   const railRef = useRef<HTMLDivElement>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const activeOfferIndex = Math.min(activeIndex, offers.length - 1)
@@ -45,10 +42,6 @@ export default function OfferBanner() {
   }, [])
 
   useEffect(() => {
-    railRef.current?.scrollTo({ left: 0, behavior: 'instant' })
-  }, [offers.length])
-
-  useEffect(() => {
     if (stopped) return
     const timer = window.setInterval(() => {
       const rail = railRef.current
@@ -57,7 +50,7 @@ export default function OfferBanner() {
       rail.scrollTo({ left: index * rail.clientWidth, behavior: 'smooth' })
     }, 2500)
     return () => window.clearInterval(timer)
-  }, [stopped, offers.length])
+  }, [stopped])
 
   function showOffer(index: number) {
     const rail = railRef.current

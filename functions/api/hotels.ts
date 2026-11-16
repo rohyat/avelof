@@ -5,7 +5,6 @@ import { accessConfigured, allowAccessAttempt, hashText, isAdmin, privateReply, 
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 import { adminHotel, assignHotelId, deleteRegistrationPhotos, hotelAccessCode, hotelColumns, legacyHotelId, limitedBody, publicHotel, resolveHotelId, saveRegistrationPhoto, validHotelJpeg } from '../_lib/hotelRegistration.ts'
 import type { HotelEnv, HotelRow } from '../_lib/hotelRegistration.ts'
-import { loadPricingSettings } from '../_lib/pricing.ts'
 
 const listSchema = z.object({
   scope: z.enum(['public', 'admin']).default('public'),
@@ -37,8 +36,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       const total = await DB.prepare(`SELECT count(*) AS total FROM hotel_registrations ${where}`).bind(...values).first<{ total: number }>()
       const listingColumns = admin ? hotelColumns : `${hotelColumns}, (SELECT avg(rating) FROM reviews WHERE reviews.hotel_id = hotel_registrations.hotel_id AND reviews.status = 'published') AS average_rating, (SELECT count(*) FROM reviews WHERE reviews.hotel_id = hotel_registrations.hotel_id AND reviews.status = 'published') AS review_count`
       const rows = await DB.prepare(`SELECT ${listingColumns} FROM hotel_registrations ${where} ORDER BY created_at DESC, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<HotelRow>()
-      const discountPercent = admin ? 0 : (await loadPricingSettings(DB)).discountPercent
-      return privateReply({ hotels: rows.results.map((row) => admin ? adminHotel(row) : publicHotel(row, discountPercent)), total: total?.total ?? 0, page, pageSize: 25 })
+      return privateReply({ hotels: rows.results.map((row) => admin ? adminHotel(row) : publicHotel(row)), total: total?.total ?? 0, page, pageSize: 25 })
     }
     if (request.method === 'PATCH' || request.method === 'DELETE') {
       if (!await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
@@ -56,7 +54,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       }
       const parsed = hotelModerationSchema.safeParse(input)
       if (!parsed.success || (parsed.data.breakfastPrice === undefined) !== (parsed.data.dinnerPrice === undefined)) return privateReply({ error: 'Check the hotel price and moderation details. Supply both meal prices together.' }, 400)
-      const { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice, roomRates, latitude, longitude, gstPercent } = parsed.data
+      const { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice, roomRates, latitude, longitude } = parsed.data
       const current = await DB.prepare('SELECT details_json FROM hotel_registrations WHERE id = ? AND version = ?').bind(id, version).first<{ details_json: string }>()
       if (!current) return privateReply({ error: 'This hotel changed. Refresh before updating it.' }, 409)
       const details = hotelDetailsSchema.parse(JSON.parse(current.details_json))
@@ -66,7 +64,6 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
         details.roomRates = roomRates
       }
       details.price = price
-      if (gstPercent !== undefined) details.gstPercent = gstPercent
       if (!validHotelRoomRates(details)) return privateReply({ error: 'The listing price must match the lowest available room rate.' }, 400)
       if (breakfastPrice !== undefined && dinnerPrice !== undefined) Object.assign(details, { breakfastPrice, dinnerPrice, mealPlan: 'Room only' })
       const row = await DB.prepare(`UPDATE hotel_registrations SET status = ?, price = ?, owner_note = ?, details_json = ?, latitude = CASE WHEN ? THEN ? ELSE latitude END, longitude = CASE WHEN ? THEN ? ELSE longitude END, version = version + 1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND version = ? RETURNING ${hotelColumns}`)
