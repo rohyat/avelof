@@ -44,7 +44,15 @@ export default function PackageComparison({ className = '' }: { className?: stri
       <header className="comparison-heading"><div><p className="eyebrow">Find your kind of journey</p><h2>Compare packages</h2></div><button type="button" className="icon-button" aria-label="Close package comparison" autoFocus onClick={() => setOpen(false)}><X size={22} /></button></header>
       <p id="package-comparison-description">Compare all three packages. Prices depend on travel dates and availability; your enquiry is not a confirmed booking.</p>
       <p className="privacy-note">Hotel categories describe the requested stay standard; individual properties and official classifications are confirmed separately.</p>
-      <p className="comparison-scroll-hint">On smaller screens, swipe the table sideways to see every package.</p>
+      <p className="comparison-tier-note">Premium includes all Deluxe services, with upgraded stays, heating and union cabs. Luxury includes all Premium services, plus Gondola tickets, a dedicated guide and a final luxury houseboat night. Trip lengths and hotel categories differ by package.</p>
+      <p className="comparison-mobile-hint">Compare each feature below. Tap a heading to expand all three packages.</p>
+      <div className="comparison-mobile">
+        {rows.map((row, index) => <details className="comparison-feature" key={row.label} open={index < 2 || row.label === 'Hotel category'}>
+          <summary>{row.label}</summary>
+          <dl>{packages.map((item) => <div key={item.id}><dt>{item.name}</dt><dd>{row.render(item)}</dd></div>)}</dl>
+        </details>)}
+        <nav className="comparison-mobile-links" aria-label="Explore compared packages">{packages.map((item) => <Link className="button button-outline" key={item.id} to={`/tour-packages/${item.id}`} onClick={() => setOpen(false)}>View {item.name} itinerary</Link>)}</nav>
+      </div>
       <div className="comparison-table-scroll" tabIndex={0} role="region" aria-label="Package comparison table">
         <table><caption className="sr-only">Days, hotel categories, stays, current prices, inclusions and exclusions</caption>
           <thead><tr><th scope="col">Compare</th>{packages.map((item) => <th scope="col" key={item.id}>{item.name}<Link to={`/tour-packages/${item.id}`} onClick={() => setOpen(false)}>View itinerary</Link></th>)}</tr></thead>

@@ -111,6 +111,7 @@ test('Compare buttons align at the far right on every package across desktop, ta
         const dialog = page.getByRole('dialog', { name: 'Compare Kashmir packages' })
         await dialog.waitFor()
         assert.deepEqual(await dialog.locator('thead th').allTextContents(), ['Compare', 'DeluxeView itinerary', 'PremiumView itinerary', 'LuxuryView itinerary'])
+        if (width <= 860) await dialog.locator('.comparison-feature').filter({ has: page.locator('summary', { hasText: /^Tour guide$/ }) }).locator('summary').click()
         for (const text of ['2-star hotels', '3-star and 3-star Premium hotels', '4-star and 5-star hotels', 'separate from the driver', '₹52,999']) assert.ok((await dialog.innerText()).includes(text))
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
         assert.ok(await dialog.evaluate((element) => element.getBoundingClientRect().right <= innerWidth))

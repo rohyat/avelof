@@ -190,7 +190,7 @@ export function CollectionPage() {
   return <>
     <section className="page-hero"><div className="page-width"><div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>{headings[kind].label}</span></div><Eyebrow>{headings[kind].label}</Eyebrow><h1>{headings[kind].title}</h1><p>{headings[kind].copy}</p>{kind === 'car' && <Link className="button button-outline" to="/drivers">Meet our drivers <ArrowRight size={16} /></Link>}{kind === 'hotel' && tripReturn && <button className="button button-outline trip-return-button" type="button" onClick={() => navigate(-1)}><ArrowLeft size={16} /> Back to your trip</button>}</div></section>
     <section className="catalog-page page-width">
-      {kind === 'package' && <PricingNotice />}
+      {kind === 'package' && <><PricingNotice /><div className="package-comparison-intro"><div><h2>Which package suits you?</h2><p>Deluxe essentials, Premium upgrades, or our most complete Luxury journey.</p></div><PackageComparison /></div></>}
       {kind === 'hotel' && <>{registered.loading && <p role="status">Loading registered hotels...</p>}{registered.error && <p className="enquiry-error" role="alert">{registered.error} <button className="text-link" onClick={registered.reload}>Retry loading hotels</button></p>}</>}
       {kind === 'hotel' && <div className="filters-bar">
         <div className="filter-guidance"><strong>Need help choosing?</strong><p>Our local team can help you find the right fit.</p></div>

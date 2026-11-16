@@ -584,8 +584,32 @@ body.enquiry-open { overflow: hidden; }
 .comparison-price, .comparison-table-scroll small { display: block; }
 .comparison-price { font-size: 19px; }
 .comparison-table-scroll .regular-price { display: flex; flex-wrap: wrap; }
+.package-comparison-intro { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--ivory); }
+.package-comparison-intro h2 { margin: 0 0 6px; font-family: var(--serif); font-size: 24px; }
+.package-comparison-intro p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
+.package-comparison-intro > button { flex-shrink: 0; }
+.comparison-mobile, .comparison-mobile-hint { display: none; }
+@media (max-width: 860px) {
+  .comparison-table-scroll { display: none; }
+  .comparison-mobile, .package-comparison > .comparison-mobile-hint { display: block; }
+  .package-comparison { padding: 0 16px 16px; max-height: calc(100dvh - 16px); width: calc(100vw - 16px); }
+  .comparison-heading { position: sticky; top: 0; z-index: 2; padding-block: 16px; background: var(--ivory); border-bottom: 1px solid var(--line); }
+  .comparison-heading h2 { font-size: 25px; }
+  .comparison-heading .icon-button { flex-shrink: 0; min-width: 44px; min-height: 44px; }
+  .comparison-feature { margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .comparison-feature summary { padding: 14px; background: var(--glacier); font-size: 14px; font-weight: 700; cursor: pointer; }
+  .comparison-feature dl { margin: 0; }
+  .comparison-feature dl > div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; padding: 14px; border-top: 1px solid var(--line); font-size: 13px; line-height: 1.65; }
+  .comparison-feature dt { font-weight: 700; color: var(--forest); }
+  .comparison-feature dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+  .comparison-feature ul { margin: 0; padding-left: 16px; }
+  .comparison-feature li + li { margin-top: 8px; }
+  .comparison-feature small { display: block; }
+  .comparison-feature .regular-price { display: flex; flex-wrap: wrap; }
+  .comparison-mobile-links { display: grid; gap: 10px; margin-top: 16px; }
+}
 @media (max-width: 600px) {
-  .package-comparison { padding: 16px; }
+  .package-comparison-intro { align-items: flex-start; flex-direction: column; }
 }
 @media (max-width: 600px) {
   .package-detail-top .detail-title-row { gap: 10px; }

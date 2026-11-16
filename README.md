@@ -478,12 +478,20 @@ and date/night pricing rules continue to apply.
 All three packages include a complimentary one-hour Shikara ride.
 Package cards and every package detail heading offer a Compare popup with the
 live discounted prices, duration, destinations, stay allocation, hotel category,
-transport, guide, inclusions and exclusions. The table scrolls horizontally on
-mobile. Deluxe targets 2-star stays, Premium 3-star/3-star Premium, and Luxury
+transport, guide, inclusions and exclusions. Desktop keeps the side-by-side
+table, while mobiles and small tablets use expandable feature sections showing
+all three packages without horizontal scrolling. A prominent Compare button also
+appears above the package listing. Deluxe targets 2-star stays, Premium 3-star/3-star Premium, and Luxury
 4-star/5-star stays plus its final luxury houseboat night. These are requested
 stay standards, not verified property certifications. Luxury includes a
 dedicated tour guide throughout, separate from the driver. Hotel categories
 and guide details are also included in the package pages and PDFs.
+Service inclusions are cumulative: Premium inherits Deluxe's meals, same private
+vehicle, transfers/sightseeing, toll taxes and one-hour Shikara ride, and adds
+central heating and union cabs. Luxury inherits those Premium services and adds
+Gondola tickets, a dedicated guide and local trip assistance alongside its longer
+stay and final houseboat night. Accommodation durations and categories remain
+specific to each tier.
 PDFs include the AVELOF brand promises, a day-by-day plan, all ten supplied
 Kashmir photos, inclusions and exclusions, linked contact details on each page,
 and a final thank-you page. Cover promise tiles use compact, centred icon/text

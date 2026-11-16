@@ -4,6 +4,9 @@ import { discountedHotelPackagePrice } from '../services/pricing.ts'
 import { providedDestinationPhotos as suppliedPhotos } from './previewPhotos.ts'
 import { kashmirPhotoGallery } from './kashmirPhotoGallery.ts'
 
+const deluxeServices = ['Daily breakfast and dinner', 'Same private vehicle throughout the trip', 'Private transfers and sightseeing', 'All toll taxes', 'Complimentary one-hour Shikara ride']
+const premiumServices = [...deluxeServices, 'Centralized heating system', 'Union cabs in Tangmarg, Pahalgam and Gulmarg']
+
 const packageCatalog: TourPackage[] = [
   {
     id: 'deluxe', kind: 'package', name: 'Deluxe', location: 'Srinagar · Gulmarg · Pahalgam',
@@ -28,7 +31,7 @@ const packageCatalog: TourPackage[] = [
     ],
     transport: 'Private air-conditioned vehicle with a local driver throughout.',
     experiences: ['Srinagar city and lake time', 'Gulmarg day trip', 'Pahalgam valley visit'],
-    inclusions: ['4 nights accommodation', 'Daily breakfast and dinner', 'Same private vehicle throughout the trip', 'Private transfers and sightseeing', 'All toll taxes', 'Complimentary one-hour Shikara ride'],
+    inclusions: ['4 nights accommodation', ...deluxeServices],
     exclusions: ['Gondola tickets', 'Optional activities', 'Union cabs', 'Flights and travel insurance', 'Lunches'],
   },
   {
@@ -56,7 +59,7 @@ const packageCatalog: TourPackage[] = [
     ],
     transport: 'Private air-conditioned vehicle with a local driver throughout.',
     experiences: ['Srinagar city and lake time', 'Sonamarg day trip', 'Gulmarg mountain stay', 'Pahalgam valley visit'],
-    inclusions: ['5 nights accommodation', 'Daily breakfast and dinner', 'Private transfers', 'Sightseeing', 'All toll taxes', 'Complimentary one-hour Shikara ride', 'Premium hotels with breakfast and dinner', 'Centralized heating system', 'Union cabs in Tangmarg, Pahalgam and Gulmarg'],
+    inclusions: ['5 nights accommodation', ...premiumServices],
     exclusions: ['Gondola tickets', 'Optional activities', 'Flights and travel insurance', 'Lunches'],
   },
   {
@@ -88,7 +91,7 @@ const packageCatalog: TourPackage[] = [
     ],
     transport: 'Private air-conditioned vehicle with a local driver throughout.',
     experiences: ['Srinagar city and lake time', 'Doodhpathri day trip', 'Sonamarg overnight stay', 'Gulmarg mountain stay and Gondola ride', 'Pahalgam valley visit', 'Final night on a luxury houseboat in Srinagar'],
-    inclusions: ['6 nights in luxury hotels and 1 night on a luxury houseboat', 'Daily breakfast and dinner', 'Private transfers and sightseeing', 'Gulmarg Gondola tickets', 'Union cabs in Tangmarg, Pahalgam and Gulmarg', 'Complimentary one-hour Shikara ride', 'Dedicated tour guide throughout the trip, separate from the driver', 'Local trip assistance'],
+    inclusions: ['6 nights in luxury hotels and 1 night on a luxury houseboat', ...premiumServices, 'Gulmarg Gondola tickets', 'Dedicated tour guide throughout the trip, separate from the driver', 'Local trip assistance'],
     exclusions: ['Flights and travel insurance', 'Optional activities other than the included Gondola ride', 'Lunches'],
   },
 ]
