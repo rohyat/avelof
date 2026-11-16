@@ -8,6 +8,8 @@ const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8791'
 test('package detail cards preserve itinerary, experiences, inclusions, pricing and booking actions', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage()
+  await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
+  await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
   try {
     for (const item of tourPackages.filter((item) => !item.underDevelopment)) {
       await page.goto(`${origin}/tour-packages/${item.id}`)
@@ -22,7 +24,7 @@ test('package detail cards preserve itinerary, experiences, inclusions, pricing 
       assert.equal(await page.locator('.package-inclusions li > svg[aria-hidden=true]').count(), item.inclusions.length + item.exclusions.length)
       for (const stay of item.stays) assert.ok((await page.locator('.package-stay-grid').innerText()).includes(stay.hotel))
       assert.ok((await page.locator('.detail-aside').innerText()).includes(item.price.toLocaleString('en-IN', { maximumFractionDigits: 2 })))
-      assert.deepEqual(await page.getByRole('list', { name: 'Package highlights' }).getByRole('listitem').allTextContents(), [item.duration, 'Hotels with breakfast & dinner', 'Private vehicle & local driver', 'Sightseeing included'])
+      assert.deepEqual(await page.getByRole('list', { name: 'Package highlights' }).getByRole('listitem').allTextContents(), [item.duration, item.id === 'luxury' ? 'Hotels with breakfast' : 'Hotels with breakfast & dinner', 'Private vehicle & local driver', 'Sightseeing included'])
       assert.equal(await page.locator('.package-notes-grid article').count(), 3)
       const question = page.locator('.package-faq summary').first()
       await question.focus()
@@ -73,15 +75,15 @@ test('package detail cards preserve itinerary, experiences, inclusions, pricing 
       await page.setViewportSize({ width: 390, height: 900 })
       for (const section of ['.package-end-booking', '.detail-aside']) {
         await page.locator(section).getByRole('button', { name: 'Book Now', exact: true }).click()
-        const dialog = page.getByRole('dialog')
+        const dialog = page.getByRole('dialog', { name: 'Send us your trip enquiry.' })
         await dialog.waitFor()
         assert.equal(await dialog.locator('select[name=packagePreference]').inputValue(), item.name)
-        await dialog.getByRole('button', { name: /Close/ }).click()
+        await dialog.getByRole('button', { name: 'Close enquiry', exact: true }).click()
       }
     }
     await page.goto(`${origin}/tour-packages/luxury`)
     await page.getByRole('heading', { name: 'Luxury', exact: true }).waitFor()
-    assert.equal(await page.getByRole('button', { name: 'Book Now', exact: true }).count(), 0)
+    assert.ok(await page.getByRole('button', { name: 'Book Now', exact: true }).count() > 0)
     await page.goto(`${origin}/car-rentals/swift-dzire`)
     assert.equal(await page.locator('.package-detail-top, .package-detail-layout').count(), 0)
     assert.equal(await page.locator('.detail-heading > button').count(), 1, 'Non-package header layout stays unchanged')

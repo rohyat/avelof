@@ -63,14 +63,35 @@ test('all supplied photos exist and are used in relevant package and destination
   }
 })
 
-test('Deluxe and Premium PDFs use their current package itinerary and union-cab terms', () => {
-  for (const item of tourPackages.filter((candidate) => candidate.id === 'deluxe' || candidate.id === 'premium')) {
+test('all package PDFs use their current package itinerary and union-cab terms', () => {
+  for (const item of tourPackages) {
     const data = tourPackagePdfData(item)
     assert.equal(data.days.length, item.itinerary.length)
     assert.deepEqual(data.inclusions, item.inclusions)
     assert.deepEqual(data.exclusions, item.exclusions)
     assert.ok(data.notes?.some((note) => note.includes('AVELOF will refund the amount you paid for that cab')))
   }
+})
+
+test('Luxury is bookable for eight days with seven unnamed luxury hotel nights and Gondola tickets', () => {
+  const luxury = tourPackages.find((item) => item.id === 'luxury')
+  assert.ok(luxury)
+  assert.ok(!luxury.underDevelopment)
+  assert.equal(luxury.originalPrice, 52999)
+  assert.equal(luxury.duration, '7 nights · 8 days')
+  assert.deepEqual(luxury.itinerary.map((day) => day.title), [
+    'Arrive in Srinagar', 'Doodhpathri day trip', 'Srinagar to Sonamarg', 'Sonamarg to Srinagar',
+    'Srinagar to Gulmarg', 'Gulmarg to Pahalgam', 'Pahalgam to Srinagar', 'Departure',
+  ])
+  assert.deepEqual(luxury.stays.map(({ location, nights }) => ({ location, nights })), [
+    { location: 'Srinagar', nights: 4 }, { location: 'Sonamarg', nights: 1 },
+    { location: 'Gulmarg', nights: 1 }, { location: 'Pahalgam', nights: 1 },
+  ])
+  assert.ok(luxury.stays.every((stay) => stay.hotel === 'Stay at a luxury hotel'))
+  assert.ok(luxury.itinerary.slice(0, -1).every((day) => day.detail.includes('Stay at a luxury hotel')))
+  assert.ok(luxury.inclusions.includes('Gulmarg Gondola tickets'))
+  assert.ok(!luxury.exclusions.some((entry) => /Gondola tickets/i.test(entry)))
+  assert.deepEqual(tourPackagePdfData(luxury).days, luxury.itinerary.map((day) => ({ label: day.day, title: day.title, detail: day.detail })))
 })
 
 test('Premium includes a Sonamarg day trip and the final night in Srinagar', () => {
@@ -98,7 +119,7 @@ test('planner and ready-made packages download branded PDFs at the intended step
   await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
   await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
   try {
-    for (const packageName of ['Deluxe', 'Premium']) {
+    for (const packageName of ['Deluxe', 'Premium', 'Luxury']) {
       await page.goto(`${origin}/tour-packages/${packageName.toLowerCase()}`)
       const packageDownload = page.getByRole('button', { name: `Download ${packageName} package PDF`, exact: true })
       const displayedPhotos = await page.locator('.detail-gallery img').evaluateAll((images) => images.map((image) => ({
@@ -132,6 +153,12 @@ test('planner and ready-made packages download branded PDFs at the intended step
         assert.ok(packagePdf.toString('latin1').includes('Sonamarg day trip'))
         assert.ok(packagePdf.toString('latin1').includes('Pahalgam to Srinagar'))
         assert.ok(packagePdf.toString('latin1').includes('from your Srinagar hotel'))
+      }
+      if (packageName === 'Luxury') {
+        assert.ok(packagePdf.toString('latin1').includes('Doodhpathri day trip'))
+        assert.ok(packagePdf.toString('latin1').includes('Sonamarg to Srinagar'))
+        assert.ok(packagePdf.toString('latin1').includes('Gulmarg Gondola tickets'))
+        assert.ok(packagePdf.toString('latin1').includes('Stay at a luxury hotel'))
       }
       assert.ok((packagePdf.toString('latin1').match(/\/Subtype\s*\/Image/g) ?? []).length >= kashmirPhotosForPdf.length)
     }

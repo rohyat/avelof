@@ -465,6 +465,13 @@ The planner's outlined PDF reminder stays beside Back on all screen sizes.
 Premium includes a Sonamarg day trip on day two, returns from Pahalgam to
 Srinagar on day five, and departs from Srinagar on day six. Its five nights
 are split across Srinagar (three), Gulmarg (one), and Pahalgam (one).
+Luxury is an active seven-night/eight-day package covering Srinagar, a
+Doodhpathri day trip, Sonamarg, Gulmarg and Pahalgam. Nights are split across
+Srinagar (four), Sonamarg (one), Gulmarg (one) and Pahalgam (one). Stays are
+described only as luxury hotels until properties are added. Gondola tickets
+are included, subject to weather and official operation; daily breakfast is
+included, while lunches and dinners are excluded unless stated. Its existing
+base price and the standard live package discount apply.
 PDFs include the AVELOF brand promises, a day-by-day plan, all ten supplied
 Kashmir photos, inclusions and exclusions, linked contact details on each page,
 and a final thank-you page. Photos are also used in relevant package and
