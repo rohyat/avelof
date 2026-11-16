@@ -13,22 +13,23 @@ test('holiday destinations sit above the hero in a centred responsive row with o
     await page.goto(origin)
     const navigation = page.getByRole('navigation', { name: 'Holiday destinations' })
     await navigation.waitFor()
-    assert.deepEqual(await navigation.locator('.home-destination-name').allTextContents(), ['Kashmir', 'Ladakh', 'Shimla', 'Manali'])
+    assert.deepEqual(await navigation.locator('.home-destination-name').allTextContents(), ['Kashmir', 'Ladakh', 'Shimla', 'Manali', 'Spiti Valley'])
     assert.equal(await navigation.getByRole('link').count(), 1)
     const kashmir = navigation.getByRole('link', { name: 'Kashmir Explore places' })
     assert.equal(await kashmir.getAttribute('href'), '/destinations')
-    for (const name of ['Ladakh', 'Shimla', 'Manali']) {
+    for (const name of ['Ladakh', 'Shimla', 'Manali', 'Spiti Valley']) {
       assert.equal(await navigation.getByRole('button', { name: `${name} Coming soon` }).isDisabled(), true)
     }
-    assert.equal(await navigation.locator('svg').count(), 4)
+    assert.equal(await navigation.locator('svg').count(), 5)
     for (const width of [320, 390, 600, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       const bounds = await navigation.locator('.home-destination-card').evaluateAll((cards) => cards.map((card) => {
         const { x, y, width, height } = card.getBoundingClientRect()
         return { x, y, width, height, fits: card.scrollWidth <= card.clientWidth }
       }))
-      assert.ok(bounds.every((box) => box.y === bounds[0].y && box.fits), `All four cards fit one row at ${width}px`)
-      assert.ok(Math.abs((bounds[0].x + bounds[3].x + bounds[3].width) / 2 - width / 2) < 1)
+      assert.ok(bounds.every((box) => box.y === bounds[0].y && box.fits), `All five cards fit one row at ${width}px`)
+      assert.ok(Math.abs((bounds[0].x + bounds[4].x + bounds[4].width) / 2 - width / 2) < 1)
+      if (width > 600) assert.ok(bounds.every((box) => Math.abs(box.width - box.height) < 1 && box.width <= 113), 'Desktop tiles are compact squares')
       const navBounds = await navigation.boundingBox()
       const heroBounds = await page.locator('.home-hero').boundingBox()
       assert.ok(navBounds.y + navBounds.height <= heroBounds.y, 'Destination row is above the Kashmir introduction')
