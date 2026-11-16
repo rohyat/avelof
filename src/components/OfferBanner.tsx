@@ -91,13 +91,15 @@ export default function OfferBanner() {
   return <section className="offer-banner" aria-label="Travel offers">
     <div className="offer-snow" aria-hidden="true">{Array.from({ length: 36 }, (_, index) => <span key={index} style={{
       left: `${(index * 37) % 100}%`,
-      '--snow-size': `${1.5 + (index * 7 % 8) * .5}px`,
+      '--snow-size': `${6 + (index * 7 % 8) * .75}px`,
       '--snow-opacity': .25 + (index * 3 % 6) * .1,
       '--snow-blur': `${index % 3 === 0 ? .6 : 0}px`,
       '--snow-drift': `${(index % 2 ? -1 : 1) * (12 + index * 7 % 32)}px`,
-      '--snow-duration': `${8 + index * 3 % 9}s`,
+      '--snow-duration': `${4 + (index * 5 % 7) * .5}s`,
+      '--snow-rotation': `${index * 47 % 360}deg`,
+      '--snow-turn': `${index % 2 ? -90 : 90}deg`,
       '--snow-delay': `${-index * 2.7}s`,
-    } as CSSProperties} />)}</div>
+    } as CSSProperties}><Snowflake size={12} strokeWidth={1.5} /></span>)}</div>
     <div className="offer-banner-heading"><div className="offer-heading-line"><Snowflake className="offer-winter-icon" size={28} aria-hidden="true" /><strong>Winter offers are live</strong></div><span className="offer-heading-subtitle">Flat {pricing.settings.discountPercent}% off on packages &amp; hotels · 30% off on cabs</span><span className="offer-heading-subtitle">{hotelPackagePriceInclusions}</span></div>
     <div className="offer-carousel" role="region" aria-roledescription="carousel" aria-label="Packages, hotels and cabs offers"
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}

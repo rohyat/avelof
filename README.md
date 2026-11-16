@@ -57,7 +57,8 @@ The winter offer banner shows the saved hotel/package percentage alongside the
 30% cab offer. The Hotels slide uses Crown Prince's current public photo, regular
 and discounted rates, discount percentage and detail link, with explicit loading,
 unavailable and retry states rather than a hardcoded rate. Snowflakes vary in size,
-depth, opacity, speed and drift against a deep-blue winter background.
+depth, opacity, speed and drift against a deep-blue winter background. Small
+six-armed flakes gently rotate as they fall, crossing the banner in 4-7 seconds.
 Decorative falling snow stays within the banner on desktop/mobile,
 does not intercept clicks, and is hidden when reduced motion is requested.
 

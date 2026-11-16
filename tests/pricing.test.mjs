@@ -37,6 +37,13 @@ test('winter offers show both discounts with bounded snowfall on desktop/mobile 
     await page.waitForFunction(() => document.querySelector('.offer-tile:nth-child(3) img')?.naturalWidth > 0)
     assert.equal(await banner.locator('.offer-snow > span').count(), 36)
     const snow = banner.locator('.offer-snow')
+    assert.equal(await snow.locator('span > svg.lucide-snowflake').count(), 36)
+    assert.equal(await snow.locator('span').evaluateAll((flakes) => flakes.every((flake) => {
+      const style = getComputedStyle(flake)
+      const duration = parseFloat(style.animationDuration)
+      const size = parseFloat(style.width)
+      return duration >= 4 && duration <= 7 && size >= 6 && size <= 12 && style.backgroundColor === 'rgba(0, 0, 0, 0)'
+    })), true)
     assert.equal(await snow.getAttribute('aria-hidden'), 'true')
     assert.equal(await snow.evaluate((element) => getComputedStyle(element).pointerEvents), 'none')
     for (const width of [320, 390, 768, 1440]) {
