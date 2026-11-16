@@ -175,8 +175,8 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     </fieldset>}
     {kind === 'hotel' ? <>
       <div className="form-grid trip-dates enquiry-date-fields">
-        <HotelDateInput label="Start date" name="checkInDate" value={checkInDate} onChange={setCheckInDate} roomRate={selectedRoomRate} />
-        <HotelDateInput label="End date" name="checkOutDate" value={checkOutDate} min={earliestCheckout} onChange={setCheckOutDate} roomRate={selectedRoomRate} checkout />
+        <HotelDateInput label="Check-in date" name="checkInDate" value={checkInDate} onChange={setCheckInDate} roomRate={selectedRoomRate} />
+        <HotelDateInput label="Check-out date" name="checkOutDate" value={checkOutDate} min={earliestCheckout} onChange={setCheckOutDate} checkout />
       </div>
       <p className="privacy-note" role="status">{stayDuration ? <strong>{stayDuration}</strong> : checkInDate && checkOutDate ? 'Check-out must be after check-in.' : null}</p>
       {registered.loading && <p role="status">Loading registered hotels...</p>}

@@ -72,8 +72,9 @@ from 6 December; 5-7 December is INR 4,851 room-only for one room/two nights.
 The same nightly calculation is used in the enquiry form and custom trip planner,
 including each day's hotel cards and saved itinerary. Local-trip hotel cards use
 the selected stay date. Listings retain base rates with a visible seasonal notice.
-Hotel check-in/check-out fields have a price-calendar button, showing the selected
-room type's room-only nightly price below each date. Typed dates still work.
+Hotel enquiry fields are labelled Check-in date and Check-out date. Only the
+check-in calendar shows the selected room type's room-only nightly price below
+each date; the check-out calendar shows dates without prices. Typed dates still work.
 Calendar month navigation, arrow keys, Page Up/Down, selection and Escape are
 supported; check-out days before the minimum are disabled and its date is not billed.
 Calendar prices exclude optional meals, which are shown separately in the stay

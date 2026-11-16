@@ -153,7 +153,7 @@ test('admin discount saves across reloads, propagates to packages/hotels and han
       assert.equal(await page.locator('.hotel-rates strong').innerText(), '₹2,400')
       assert.equal(await page.locator('.hotel-rates .discount-label').innerText(), '20% off')
       await page.locator('.hotel-card').getByRole('button', { name: 'Book Now', exact: true }).click()
-      await page.locator('.enquiry-form').getByLabel('Start date', { exact: true }).fill('2026-12-05')
+      await page.locator('.enquiry-form').getByLabel('Check-in date', { exact: true }).fill('2026-12-05')
       await page.getByRole('button', { name: 'View check-in calendar prices' }).click()
       const calendar = page.getByRole('dialog', { name: 'December 2026', exact: true })
       assert.equal(await calendar.getByRole('button', { name: '6 December 2026, ₹2,640 per room for this night', exact: true }).locator('small').innerText(), '₹2,640')

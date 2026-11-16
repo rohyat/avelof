@@ -40,7 +40,7 @@ export default function HotelDateInput({ label, name, value, min, roomRate, onCh
 
   function close() { setOpen(false); trigger.current?.focus() }
   function openCalendar() {
-    if (roomRate === undefined) return
+    if (!checkout && roomRate === undefined) return
     if (open) { close(); return }
     const initial = value || min || dateValue(new Date())
     setFocusedDate(min && initial < min ? min : initial); setOpen(true)
@@ -66,32 +66,32 @@ export default function HotelDateInput({ label, name, value, min, roomRate, onCh
   }
   return <div ref={wrapper} className={`hotel-date-field${open ? ' is-open' : ''}`}>
     <label htmlFor={id}>{label}</label>
-    <DateInput id={id} name={name} value={value} min={min} required onChange={(event) => onChange(event.target.value)} onOpenCalendar={openCalendar} calendarLabel={`Open ${label.toLowerCase()} price calendar`} onKeyDown={(event) => {
+    <DateInput id={id} name={name} value={value} min={min} required onChange={(event) => onChange(event.target.value)} onOpenCalendar={openCalendar} calendarLabel={`Open ${label.toLowerCase()}${checkout ? '' : ' price'} calendar`} onKeyDown={(event) => {
       if (event.altKey && event.key === 'ArrowDown') { event.preventDefault(); openCalendar() }
     }} />
-    <button ref={trigger} className="text-link hotel-calendar-trigger" type="button" aria-expanded={open} aria-controls={`${id}-calendar`} disabled={roomRate === undefined} onClick={openCalendar}>View {checkout ? 'check-out' : 'check-in'} calendar prices</button>
-    {open && roomRate !== undefined && <div id={`${id}-calendar`} className="hotel-price-calendar" role="dialog" aria-labelledby={`${id}-title`} aria-describedby={`${id}-help`} onKeyDown={(event) => {
+    <button ref={trigger} className="text-link hotel-calendar-trigger" type="button" aria-expanded={open} aria-controls={`${id}-calendar`} disabled={!checkout && roomRate === undefined} onClick={openCalendar}>View {checkout ? 'check-out calendar' : 'check-in calendar prices'}</button>
+    {open && (checkout || roomRate !== undefined) && <div id={`${id}-calendar`} className="hotel-price-calendar" role="dialog" aria-labelledby={`${id}-title`} aria-describedby={`${id}-help`} onKeyDown={(event) => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close() }
     }}>
       <div className="hotel-calendar-heading">
         <button type="button" aria-label="Previous month" onClick={() => moveMonth(-1)} disabled={Boolean(min && focusedDate.slice(0, 7) <= min.slice(0, 7))}><ChevronLeft size={18} /></button>
         <strong id={`${id}-title`} aria-live="polite">{monthLabel}</strong>
         <button type="button" aria-label="Next month" onClick={() => moveMonth(1)}><ChevronRight size={18} /></button>
-        <button type="button" aria-label="Close price calendar" onClick={close}><X size={18} /></button>
+        <button type="button" aria-label={checkout ? 'Close check-out calendar' : 'Close price calendar'} onClick={close}><X size={18} /></button>
       </div>
-      <p id={`${id}-help`}>Room-only price per room for the night of each date. Meals extra. {checkout ? 'Your check-out date is not charged.' : 'Select your check-in date.'}</p>
+      <p id={`${id}-help`}>{checkout ? 'Select your check-out date. Your check-out date is not charged.' : 'Room-only price per room for the night of each date. Meals extra. Select your check-in date.'}</p>
       <div className="hotel-calendar-weekdays" aria-hidden="true">{['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => <span key={day}>{day}</span>)}</div>
       <div className="hotel-calendar-days" role="group" aria-label={`${label} dates`}>
         {Array.from({ length: first.getUTCDay() }, (_, index) => <span key={`blank-${index}`} />)}
         {Array.from({ length: dayCount }, (_, index) => {
           const date = dateValue(calendarDate(year, month, index + 1))
-          const price = hotelRoomPriceForDate(roomRate, date)
-          return <button key={date} type="button" data-date={date} tabIndex={date === focusedDate ? 0 : -1} disabled={Boolean(min && date < min)} aria-pressed={date === value} aria-label={`${longDate(date)}, ₹${price.toLocaleString('en-IN')} per room for this night`} onKeyDown={(event) => keyDown(event, date)} onClick={() => { onChange(date); close() }}>
-            <span>{index + 1}</span><small>₹{price.toLocaleString('en-IN')}</small>
+          const price = !checkout && roomRate !== undefined ? hotelRoomPriceForDate(roomRate, date) : undefined
+          return <button key={date} type="button" data-date={date} tabIndex={date === focusedDate ? 0 : -1} disabled={Boolean(min && date < min)} aria-pressed={date === value} aria-label={`${longDate(date)}${price !== undefined ? `, ₹${price.toLocaleString('en-IN')} per room for this night` : ''}`} onKeyDown={(event) => keyDown(event, date)} onClick={() => { onChange(date); close() }}>
+            <span>{index + 1}</span>{price !== undefined && <small>₹{price.toLocaleString('en-IN')}</small>}
           </button>
         })}
       </div>
-      <p>{hotelSeasonNotice}</p>
+      {!checkout && <p>{hotelSeasonNotice}</p>}
     </div>}
   </div>
 }
