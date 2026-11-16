@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, ArrowUpRight, BedDouble, BookOpen, CalendarDays, CarFront, Check, CircleCheck, CircleMinus, ClipboardList, Compass, Landmark, Mail, MapPin, MountainSnow, Package, Phone, PlaneLanding, PlaneTakeoff, Plus, Route, Sailboat, ShieldCheck, ShoppingBag, Sparkles, Star, TentTree, Trees, UserRound, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, BedDouble, BookOpen, CalendarDays, CarFront, Check, CircleCheck, CircleMinus, ClipboardList, Compass, Mail, MapPin, Mountain, MountainSnow, Package, Phone, PlaneLanding, PlaneTakeoff, Plus, Route, Sailboat, ShieldCheck, ShoppingBag, Sparkles, Star, TentTree, Trees, UserRound, Users } from 'lucide-react'
 import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import { business } from '../config'
 import { rentalCars } from '../data/catalog'
@@ -94,10 +94,10 @@ export function HomePage() {
     <nav className="home-destinations page-width" aria-label="Holiday destinations">
       <div className="home-destination-grid">
         <button className="home-destination-card" type="button" aria-pressed="true"><span className="home-destination-icon"><Sailboat size={26} aria-hidden="true" /></span><span className="home-destination-name">Kashmir</span></button>
-        <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><MountainSnow size={26} aria-hidden="true" /></span><span className="home-destination-name">Ladakh</span><span className="home-destination-status">Coming soon</span></button>
+        <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><svg className="ladakh-snowy-peaks" width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 20 9 4l7 16H2Z" /><path d="m6 11 3 2 3-2M13 9l2-4 7 15h-6m-2-9 2 2 2-2" /></svg></span><span className="home-destination-name">Ladakh</span><span className="home-destination-status">Coming soon</span></button>
         <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><Trees size={26} aria-hidden="true" /></span><span className="home-destination-name">Shimla</span><span className="home-destination-status">Coming soon</span></button>
         <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><TentTree size={26} aria-hidden="true" /></span><span className="home-destination-name">Manali</span><span className="home-destination-status">Coming soon</span></button>
-        <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><Landmark size={26} aria-hidden="true" /></span><span className="home-destination-name">Spiti Valley</span><span className="home-destination-status">Coming soon</span></button>
+        <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><Mountain size={26} aria-hidden="true" /></span><span className="home-destination-name">Spiti Valley</span><span className="home-destination-status">Coming soon</span></button>
       </div>
     </nav>
     <section className="home-hero">
