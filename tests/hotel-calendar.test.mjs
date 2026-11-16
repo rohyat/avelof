@@ -108,6 +108,9 @@ test('priced hotel calendars and mixed-season enquiries use nightly room rates w
     }
     assert.ok((await planner.locator('.planner-trip-estimate').innerText()).includes('Selected stays: ₹4,851'))
     await planner.getByRole('button', { name: 'Continue with this plan' }).click()
+    const arrivalWindow = form.getByRole('checkbox', { name: 'Will you be arriving between 6:00 PM and 7:00 AM?' })
+    assert.equal(await arrivalWindow.isChecked(), false)
+    await arrivalWindow.check()
     await form.getByLabel('Name', { exact: true }).fill('Seasonal Planner Guest')
     await form.getByLabel('Phone number').fill('9876543210')
     await form.getByRole('button', { name: 'Submit enquiry', exact: true }).click()
@@ -115,5 +118,6 @@ test('priced hotel calendars and mixed-season enquiries use nightly room rates w
     assert.ok(enquiry.fields.placesToVisit.includes('hotel rate: ₹2,310'))
     assert.ok(enquiry.fields.placesToVisit.includes('hotel rate: ₹2,541'))
     assert.ok(enquiry.fields.planningNote.includes('selected stays: ₹4,851'))
+    assert.equal(enquiry.fields.arrivalBetween6PmAnd7Am, 'Yes')
   } finally { await browser.close() }
 })

@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from 'react'
 import { ArrowRight, Check, CircleCheck, Copy, MessageCircle, X } from 'lucide-react'
 import DateInput from './DateInput'
 import HotelDateInput from './HotelDateInput'
+import DateCalendarInput from './DateCalendarInput'
 import SubmissionProgress from './SubmissionFeedback'
 import { rentalCars, tourPackages } from '../data/catalog'
 import { createWhatsAppUrl, enquiryPath, formatEnquiryDetails, prepareRequest, saveEnquiry } from '../services/bookingService'
@@ -45,7 +46,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   const availableHotels = registered.hotels
   const [preferredCar, setPreferredCar] = useState(catalogCarSelection(additionalFields.carRental ?? (kind === 'car' ? selectedItem : undefined)))
   const [checkInDate, setCheckInDate] = useState(kind === 'package' ? additionalFields.arrivalDate ?? '' : '')
-  const [checkOutDate, setCheckOutDate] = useState(kind === 'package' ? additionalFields.departureDate ?? '' : '')
+  const [chosenCheckOutDate, setCheckOutDate] = useState(kind === 'package' ? additionalFields.departureDate ?? '' : '')
   const plannerDates = kind === 'package' && Boolean(additionalFields.arrivalDate && additionalFields.departureDate && additionalFields.placesToVisit)
   const [staySelection, setPreferredStay] = useState(selectedItem ?? '')
   const preferredStay = staySelection || (availableHotels[0] ? hotelSelectionValue(availableHotels[0]) : '')
@@ -63,6 +64,11 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   const lockedHotel = kind === 'hotel' && selectedItem ? selectedHotel : undefined
   const customPackage = kind === 'package' && (packagePreference === 'Custom package' || selectedItem === 'Custom package' || Boolean(additionalFields.placesToVisit))
   const selectedPackage = pricedPackages.find((item) => item.name === packagePreference && !item.underDevelopment)
+  const fixedPackage = kind === 'package' && !customPackage
+  const packageNights = selectedPackage?.stays.reduce((total, stay) => total + stay.nights, 0) ?? 0
+  const departureTime = checkInDate ? Date.parse(checkInDate) + packageNights * 86400000 : NaN
+  const automaticDeparture = Number.isFinite(departureTime) ? new Date(departureTime).toISOString().slice(0, 10) : ''
+  const checkOutDate = fixedPackage ? automaticDeparture : chosenCheckOutDate
   const room = selectedHotel ? selectedHotelRoom(selectedHotel, roomSelection.hotelId === selectedHotel.id ? roomSelection.roomType : undefined) : undefined
   const people = Number(adults) + Number(childCount)
   const roomQuantity = Number(rooms ?? minimumHotelRooms(people, room?.roomType))
@@ -76,7 +82,6 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   const stayDuration = nights > 0 ? `${nights + 1} days, ${nights} ${nights === 1 ? 'night' : 'nights'}` : ''
   const rentalDays = checkInDate && checkOutDate && nights >= 0 ? nights + 1 : 0
   const earliestCheckout = checkInDate ? new Date(Date.parse(checkInDate) + millisecondsPerDay).toISOString().slice(0, 10) : undefined
-  const packageNights = selectedPackage?.stays.reduce((total, stay) => total + stay.nights, 0) ?? 0
   const seasonalPackage = Boolean(checkInDate && checkInDate >= packageSeasonStart)
   const selectedPackagePrice = selectedPackage && nights > 0 && !customPackage ? packagePriceForNights(selectedPackage.price, packageNights, nights, checkInDate) : undefined
   const stayPrice = selectedRoomRate !== undefined && nights > 0 && validRoomQuantity ? hotelStayPrice(selectedRoomRate, Math.round((baseNightlyRate - selectedRoomRate) * 100) / 100, checkInDate, checkOutDate, roomQuantity) : undefined
@@ -95,6 +100,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     const website = String(data.get('website') ?? '')
     data.delete('website')
     const fields = Object.fromEntries([...data.entries()].map(([key, value]) => [key, String(value)]))
+    if (kind === 'package' || kind === 'car') fields.arrivalBetween6PmAnd7Am = data.has('arrivalBetween6PmAnd7Am') ? 'Yes' : 'No'
     const phone = indianPhoneNumber(fields.phoneNumber ?? '')
     if (!phone) {
       setSubmitError('Enter a 10-digit Indian phone number. The 91 or +91 prefix is optional.')
@@ -146,11 +152,13 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     </div>
     {!plannerDates && (kind === 'car' || kind === 'package') && <>
       <div className="form-grid trip-dates enquiry-date-fields">
-        <label>Start date<DateInput name={kind === 'package' ? 'arrivalDate' : 'startDate'} value={checkInDate} onChange={(event) => setCheckInDate(event.target.value)} required /></label>
-        <label>End date<DateInput name={kind === 'package' ? 'departureDate' : 'endDate'} value={checkOutDate} min={kind === 'package' ? earliestCheckout : checkInDate || undefined} onChange={(event) => setCheckOutDate(event.target.value)} required /></label>
+        {fixedPackage ? <DateCalendarInput label="Start date" name="arrivalDate" value={checkInDate} onChange={setCheckInDate} defaultOpen helpText="Select your package start date. The end date is calculated from the included nights." /> : <label>Start date<DateInput name={kind === 'package' ? 'arrivalDate' : 'startDate'} value={checkInDate} onChange={(event) => setCheckInDate(event.target.value)} required /></label>}
+        {!fixedPackage && <label>End date<DateInput name={kind === 'package' ? 'departureDate' : 'endDate'} value={checkOutDate} min={kind === 'package' ? earliestCheckout : checkInDate || undefined} onChange={(event) => setCheckOutDate(event.target.value)} required /></label>}
       </div>
       <p className="privacy-note" role="status">{kind === 'package' ? stayDuration ? <strong>{stayDuration}</strong> : checkInDate && checkOutDate ? 'End date must be after the start date.' : null : rentalDays ? <strong>{rentalDays} {rentalDays === 1 ? 'day' : 'days'}</strong> : checkInDate && checkOutDate ? 'End date must be on or after the start date.' : null}</p>
+      {fixedPackage && checkOutDate && <p className="privacy-note package-end-date">End date: {new Date(`${checkOutDate}T00:00:00Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })} (calculated from {packageNights} included nights).</p>}
     </>}
+    {(kind === 'package' || kind === 'car') && <label className="arrival-window-checkbox full-field"><input type="checkbox" name="arrivalBetween6PmAnd7Am" value="Yes" />Will you be arriving between 6:00 PM and 7:00 AM?</label>}
     {(kind === 'package' || kind === 'contact') && (customPackage
       ? <input type="hidden" name="packagePreference" value="Custom package" />
       : <label className="full-field">Package preference<select name="packagePreference" value={packagePreference} onChange={(event) => setPackagePreference(event.target.value)} required>
@@ -161,7 +169,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       <RegularPrice price={selectedPackage.price} originalPrice={selectedPackage.originalPrice} />
       <p>Package rate: ₹{selectedPackage.price.toLocaleString('en-IN')} per person for {packageNights} nights.</p>
       <p>{packageSeasonNotice}</p>
-      {selectedPackagePrice !== undefined && <p className="package-stay-estimate" role="status"><strong>Selected dates: ₹{selectedPackagePrice.toLocaleString('en-IN')} per person for {nights} {nights === 1 ? 'night' : 'nights'}.</strong> Price scales proportionally from the {packageNights}-night package.{seasonalPackage && ' Includes 10% seasonal increase based on your arrival date.'} Itinerary changes are subject to availability and final confirmation.</p>}
+      {selectedPackagePrice !== undefined && <p className="package-stay-estimate" role="status"><strong>Selected dates: ₹{selectedPackagePrice.toLocaleString('en-IN')} per person for {nights} {nights === 1 ? 'night' : 'nights'}.</strong> Includes the package's {packageNights} nights.{seasonalPackage && ' Includes 10% seasonal increase based on your arrival date.'} Itinerary changes are subject to availability and final confirmation.</p>}
       <p>{hotelPackagePriceInclusions}.</p>
     </div>}
     {kind === 'hotel' && (lockedHotel
@@ -211,7 +219,7 @@ export default function BookingModal({ kind, selectedItem, initialRequest, onClo
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const alreadyLocked = document.body.classList.contains('enquiry-open')
     document.body.classList.add('enquiry-open')
-    dialogRef.current?.focus()
+    if (!dialogRef.current?.contains(document.activeElement)) dialogRef.current?.focus()
     function handleKey(event: KeyboardEvent) {
       if (event.key === 'Escape') onClose()
       if (event.key !== 'Tab') return

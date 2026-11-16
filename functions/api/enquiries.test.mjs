@@ -1367,6 +1367,7 @@ test('all enquiry types save with unique references and preserve custom itinerar
       const body = payload(kind)
       if (kind === 'hotel' || kind === 'package') body.fields.priceInclusions = 'All taxes and charges included'
       if (kind === 'package') body.fields.packageRate = '₹8,470 per person for 2 nights; based on ₹16,940 for 4 nights'
+      if (kind === 'package' || kind === 'car') body.fields.arrivalBetween6PmAnd7Am = kind === 'package' ? 'Yes' : 'No'
       body.fields.customDetails = 'Day 1: Srinagar\nDay 2: Gulmarg; vegetarian meals'
       const response = await send(DB, body)
       assert.equal(response.status, 201)

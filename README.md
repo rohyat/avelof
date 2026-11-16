@@ -84,21 +84,28 @@ breakdown. Current admin discounts feed both calendar and estimates. Date-sensit
 estimates and the rate breakdown are saved with the enquiry only after D1 receipt;
 they are estimates, not availability or booking confirmation. No migration needed.
 
-Standard package enquiries scale the discounted per-person price
-by selected nights divided by the package's standard nights (sum of its stays).
+Fixed-package enquiries ask only for a start date and automatically open its
+calendar. The end date is calculated from the package's included nights (sum of
+its stays), displayed as read-only text, and saved with the enquiry. Changing
+package or start date recalculates both the end date and estimate. Custom trips
+and car rentals retain their existing date selection.
 When the selected arrival date is 6 December 2026 or later, the entire
-duration-adjusted package price increases by 10%, rounded to paise. Arrivals
+package price increases by 10%, rounded to paise. Arrivals
 through 5 December keep current rates even when the trip crosses the cutoff.
 Listed starting prices remain unchanged; the form explains the rule and saves
 the seasonal price and increase with the enquiry. Deluxe's standard 4-night
 price becomes INR 18,634; Premium's 5-night price becomes INR 30,492.
 Custom trip estimates retain their component pricing, including date-based hotel
 rates, without an additional package-wide increase.
-For example, Deluxe is INR 16,940 for 4 nights, INR 8,470 for 2 nights and
-INR 25,410 for 6 nights. The form labels the selected duration and saves that
-adjusted rate, not the full-duration base rate. Changing packages recalculates
-the estimate. Custom planner estimates remain based on actual selected stays
-and vehicles rather than prorating a standard package.
+Deluxe includes 4 nights and Premium includes 5 nights. Custom planner estimates
+remain based on actual selected stays and vehicles rather than prorating a
+standard package.
+
+All package (including custom planner) and car enquiry forms include an optional
+"Will you be arriving between 6:00 PM and 7:00 AM?" checkbox, unchecked by default.
+The explicit Yes/No response is saved with the private enquiry details and request
+summary; checking it does not add a charge or confirm availability. No migration
+is needed because it uses the existing enquiry JSON.
 
 Driver vehicle numbers temporarily allow non-JK state prefixes as well as JK.
 Public driver phone numbers show only the first digit and final two digits

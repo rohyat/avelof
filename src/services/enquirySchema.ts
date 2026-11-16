@@ -23,6 +23,7 @@ export const enquirySchema = z.object({
     carRental: shortText.optional(),
     arrivalDate: dateText.optional(),
     departureDate: dateText.optional(),
+    arrivalBetween6PmAnd7Am: z.enum(['Yes', 'No']).optional(),
     startDate: dateText.optional(),
     endDate: dateText.optional(),
     checkInDate: dateText.optional(),
