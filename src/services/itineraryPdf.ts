@@ -271,25 +271,37 @@ export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
 
     const cardTop = 151
     const cardWidth = (pageWidth - margin * 2 - 8) / 2
-    const cardHeight = 30
+    const cardHeight = 22
+    const cardGap = 6
     brandPromises.forEach((promise, index) => {
       const x = margin + (index % 2) * (cardWidth + 8)
-      const top = cardTop + Math.floor(index / 2) * (cardHeight + 8)
+      const top = cardTop + Math.floor(index / 2) * (cardHeight + cardGap)
       pdf.setFillColor(255, 255, 255)
       pdf.setDrawColor(85, 130, 115)
+      pdf.setLineWidth(0.5)
       pdf.roundedRect(x, top, cardWidth, cardHeight, 3, 3, 'FD')
-      drawPromiseIcon(pdf, index, x + 5, top + 8)
-      writeWrapped(promise, x + 16, top + 9, cardWidth - 22, 8.5, deepForest)
+      drawPromiseIcon(pdf, index, x + 5, top + (cardHeight - 8) / 2)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(8.5)
+      setPdfTextColor(pdf, deepForest)
+      const lines = pdf.splitTextToSize(printable(promise), cardWidth - 22) as string[]
+      const textHeight = pdf.getTextDimensions(printable(promise), { maxWidth: cardWidth - 22 }).h
+      pdf.text(lines, x + 16, top + (cardHeight - textHeight) / 2, { baseline: 'top' })
     })
 
     const summary = [data.dates, data.guests].filter(Boolean).join('  |  ')
+    const cardsBottom = cardTop + Math.ceil(brandPromises.length / 2) * (cardHeight + cardGap) - cardGap
+    let summaryBottom = cardsBottom
     if (summary) {
-      writeWrapped(summary, margin, 220, pageWidth - margin * 2, 8.5, [225, 238, 230])
+      const summaryTop = cardsBottom + 9
+      summaryBottom = summaryTop + writeWrapped(summary, margin, summaryTop, pageWidth - margin * 2, 8.5, [225, 238, 230])
     }
+    const noteTop = Math.max(231, summaryBottom + 6)
     pdf.setFillColor(255, 255, 255)
     pdf.setDrawColor(85, 130, 115)
-    pdf.roundedRect(margin, 231, pageWidth - margin * 2, 30, 3, 3, 'FD')
-    writeWrapped(planningNote, margin + 6, 240, pageWidth - margin * 2 - 12, 8, deepForest)
+    pdf.setLineWidth(0.5)
+    pdf.roundedRect(margin, noteTop, pageWidth - margin * 2, 30, 3, 3, 'FD')
+    writeWrapped(planningNote, margin + 6, noteTop + 9, pageWidth - margin * 2 - 12, 8, deepForest)
     pdf.setDrawColor(85, 130, 115)
     pdf.line(margin, 263, pageWidth - margin, 263)
     drawFooter(true)

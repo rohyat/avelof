@@ -478,7 +478,9 @@ and date/night pricing rules continue to apply.
 All three packages include a complimentary one-hour Shikara ride.
 PDFs include the AVELOF brand promises, a day-by-day plan, all ten supplied
 Kashmir photos, inclusions and exclusions, linked contact details on each page,
-and a final thank-you page. Photos are also used in relevant package and
+and a final thank-you page. Cover promise tiles use compact, centred icon/text
+layouts; dates and traveller details flow below the tile grid without overlap.
+Photos are also used in relevant package and
 destination galleries; stay imagery is labeled illustrative, not property-verified.
 Destination, package and local-trek photos use the supplied, unlabelled gallery
 instead of the older images with destination names printed into them.

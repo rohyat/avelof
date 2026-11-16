@@ -79,6 +79,70 @@ test('all package PDFs use their current package itinerary and union-cab terms',
   }
 })
 
+test('every PDF cover has compact tiles with centred icons/text and clear dates below', async () => {
+  const { jsPDF } = await import('jspdf')
+  const covers = []
+  const recordCover = function () {
+    const operations = []
+    covers.push(operations)
+    for (const method of ['text', 'roundedRect', 'circle', 'line']) {
+      const original = this[method]
+      this[method] = function (...args) {
+        if (this.getCurrentPageInfo().pageNumber === 1) {
+          operations.push({
+            method, args,
+            ...(method === 'text' ? { height: this.getTextDimensions(args[0]).h } : {}),
+          })
+        }
+        return original.apply(this, args)
+      }
+    }
+  }
+  const event = ['initialized', recordCover]
+  jsPDF.API.events.push(event)
+  try {
+    const custom = {
+      title: 'Custom Kashmir Itinerary',
+      subtitle: 'A trip planned around your selections.',
+      dates: '18 Nov 2026 - 22 Nov 2026 (5 days, 4 nights)',
+      guests: '2 adults',
+      days: [], inclusions: [], exclusions: [],
+    }
+    for (const data of [custom, ...tourPackages.map(tourPackagePdfData)]) {
+      await buildBrandedItineraryPdf(data)
+      const operations = covers.at(-1)
+      const tiles = operations.filter(({ method, args }) => method === 'roundedRect' && args[2] > 80 && args[2] < 100)
+      assert.equal(tiles.length, brandPromises.length)
+      for (const [index, tile] of tiles.entries()) {
+        const [x, top, width, height] = tile.args
+        assert.ok(height <= 22, 'Promise tiles are smaller than the previous 30 mm height')
+        const text = operations.find(({ method, args }) => method === 'text' && [].concat(args[0]).join(' ') === brandPromises[index])
+        assert.ok(text, `Cover includes promise ${index + 1}`)
+        assert.equal(text.args[3].baseline, 'top')
+        assert.ok(Math.abs(text.args[2] + text.height / 2 - (top + height / 2)) < 0.1, 'Wrapped promise text is vertically centred')
+        assert.ok(text.args[1] >= x + 16 && text.args[1] < x + width, 'Text leaves room for the icon')
+        const iconBounds = operations.flatMap(({ method, args }) => {
+          if (method === 'circle') return [{ left: args[0] - args[2], right: args[0] + args[2], top: args[1] - args[2], bottom: args[1] + args[2] }]
+          if (method === 'line') return [{ left: Math.min(args[0], args[2]), right: Math.max(args[0], args[2]), top: Math.min(args[1], args[3]), bottom: Math.max(args[1], args[3]) }]
+          if (method === 'roundedRect' && args[2] < 8) return [{ left: args[0], right: args[0] + args[2], top: args[1], bottom: args[1] + args[3] }]
+          return []
+        }).filter((bounds) => bounds.left >= x + 5 && bounds.right <= x + 13 && bounds.top > top && bounds.bottom < top + height)
+        assert.ok(iconBounds.length > 0)
+        const iconCentre = (Math.min(...iconBounds.map((bounds) => bounds.top)) + Math.max(...iconBounds.map((bounds) => bounds.bottom))) / 2
+        assert.ok(Math.abs(iconCentre - (top + height / 2)) < 0.6, 'Icon and text share the tile centre')
+      }
+      const cardsBottom = Math.max(...tiles.map(({ args }) => args[1] + args[3]))
+      const summary = operations.find(({ method, args }) => method === 'text' && [].concat(args[0]).join(' ').startsWith(data.dates.replace(/·/g, '-')))
+      assert.ok(summary.args[2] - summary.height > cardsBottom + 2, 'Dates and guests are fully below the tiles')
+      const note = operations.find(({ method, args }) => method === 'roundedRect' && args[2] > 180)
+      assert.ok(summary.args[2] + summary.height < note.args[1], 'Wrapped package summary does not reach the planning note')
+      assert.ok(note.args[1] + note.args[3] < 263, 'Planning note stays above the footer')
+    }
+  } finally {
+    jsPDF.API.events.splice(jsPDF.API.events.indexOf(event), 1)
+  }
+})
+
 test('Luxury costs 52999 after 23% off and includes six hotel nights, a final houseboat night and the requested inclusions', () => {
   const luxury = tourPackages.find((item) => item.id === 'luxury')
   assert.ok(luxury)
