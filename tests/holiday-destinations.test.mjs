@@ -24,7 +24,7 @@ test('holiday destinations sit above the hero in a centred responsive row with o
     assert.equal(await navigation.locator('svg').count(), 5)
     const ladakhIcon = navigation.getByRole('button', { name: 'Ladakh Coming soon' }).locator('svg')
     const spitiIcon = navigation.getByRole('button', { name: 'Spiti Valley Coming soon' }).locator('svg')
-    assert.equal(await kashmir.locator('svg').evaluate((icon) => icon.classList.contains('kashmir-chinar-leaf')), true)
+    assert.equal(await kashmir.locator('svg').evaluate((icon) => icon.classList.contains('lucide-sailboat')), true)
     assert.equal(await ladakhIcon.evaluate((icon) => icon.classList.contains('lucide-mountain')), true)
     assert.equal(await spitiIcon.evaluate((icon) => icon.classList.contains('spiti-monastery')), true)
     assert.notEqual(await spitiIcon.innerHTML(), await ladakhIcon.innerHTML())
