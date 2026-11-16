@@ -19,6 +19,10 @@ the save; failures keep the form available for retry. Enquiry receipts do not
 confirm a booking. Shared feedback lives in `src/components/SubmissionFeedback.tsx`;
 registration receipts retain their private reference and access-code details.
 
+Hotel detail pages show the hotel ID, room count, ratings and review link above
+the photos. At widths up to 820px, Book Now appears after the hotel details,
+below pricing; wider layouts use only the existing sticky booking sidebar.
+
 Planner, booking and local-trip dates use the shared `DateInput` control with a
 persistent Lucide calendar icon. The native date picker, validation and ISO
 form values are preserved; no third-party calendar service or library is used.

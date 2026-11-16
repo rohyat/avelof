@@ -549,7 +549,8 @@ body.enquiry-open { overflow: hidden; }
   .package-detail-layout .package-day-copy h3 { font-size: 21px; }
   .package-inclusions .include-grid { grid-template-columns: minmax(0, 1fr); }
 }
-.hotel-photo-summary { margin-block: 16px 24px; }
+.hotel-heading-summary { margin-top: 20px; }
+.hotel-end-booking { display: none; margin: 24px 0 32px; }
 .detail-related { padding: 7px 0; }
 .detail-related h2 { margin-bottom: 18px; }
 .related-links { display: flex; flex-wrap: wrap; gap: 9px; }
@@ -1112,6 +1113,9 @@ dialog.registration-success, dialog.registration-progress { position: fixed; ins
   .detail-aside { position: static; grid-row: 1; margin-bottom: 35px; }
   .detail-aside > p { max-width: 480px; }
   .detail-aside .button { width: auto; }
+  .hotel-detail-layout .detail-aside .button { display: none; }
+  .hotel-end-booking { display: block; }
+  .hotel-end-booking .button { width: 100%; }
   .detail-aside > strong { font-size: 32px; }
   .review-grid { --review-columns: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .review-submission-form { max-width: none; }
