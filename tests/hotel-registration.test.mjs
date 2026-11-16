@@ -74,6 +74,44 @@ async function fillRegistration(page) {
 test('hotel registration, private lookup and moderation integrate with public stays', async (context) => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   try {
+    await context.test('five hotel tiers appear in registration, public badges, filters and details', async () => {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+      const tiers = [
+        ['Deluxe', 'Deluxe - 2-star'], ['Premium', 'Premium - 3-star'],
+        ['Premium Plus', 'Premium Plus - 3-star Plus'], ['Diamond', 'Diamond - 4-star'], ['Luxury', 'Luxury - 5-star'],
+      ]
+      const hotels = tiers.map(([category], index) => ({
+        ...publicHotel(), category, name: `${category} Test Stay`,
+        id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+        hotelId: `AVELOF_HTL_${10001 + index}GLM`,
+      }))
+      await page.route('**/api/hotels*', (route) => route.fulfill({ json: list(hotels) }))
+      try {
+        await page.goto(`${origin}/register-hotel`)
+        const category = page.getByLabel('AVELOF category')
+        assert.deepEqual(await category.locator('option:not([value=""])').allTextContents(), tiers.map(([, label]) => label))
+        for (const [value] of tiers) {
+          await category.selectOption(value)
+          assert.equal(await category.inputValue(), value)
+        }
+        await page.goto(`${origin}/hotels`)
+        await page.locator('.hotel-card').nth(4).waitFor()
+        for (const [value, label] of tiers) {
+          await page.locator('.filters-bar select').first().selectOption(value)
+          await page.waitForFunction(() => document.querySelectorAll('.hotel-card').length === 1)
+          assert.equal(await page.locator('.hotel-card').count(), 1)
+          assert.equal(await page.locator('.hotel-card .image-tag').textContent(), label)
+          assert.equal(new URL(page.url()).searchParams.get('category'), value)
+          await page.reload()
+          await page.locator('.hotel-card').waitFor()
+          assert.equal(await page.locator('.hotel-card .image-tag').textContent(), label)
+        }
+        await page.locator('.filters-bar select').first().selectOption('Premium Plus')
+        await page.getByRole('link', { name: 'Premium Plus Test Stay', exact: true }).click()
+        assert.ok((await page.locator('.detail-heading .eyebrow').textContent()).includes('Premium Plus - 3-star Plus'))
+        assert.ok(await page.getByText('Hotel-provided photos reviewed for listing. Category labels are AVELOF categories, not official star certifications.', { exact: true }).isVisible())
+      } finally { await page.close() }
+    })
     await context.test('hotel price bands filter minimum room rates at every boundary and survive reload', async () => {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
       const prices = [1499, 1500, 2499.99, 2500, 3500, 4500, 5500, 6500, 7500, 8500, 9500, 10500, 10500.01]
@@ -287,7 +325,7 @@ test('hotel registration, private lookup and moderation integrate with public st
         await page.waitForFunction(({ name, src }) => document.querySelector(`[aria-label="${name} hotel photos"] img`)?.getAttribute('src') !== src, { name: hotel.name, src: firstPhoto })
         await plannedHotel.locator('.planner-hotel-tile').click()
         assert.equal(await plannedHotel.locator('.hotel-feature-chips').count(), 0)
-        assert.equal(await plannedHotel.locator('.planner-hotel-category').textContent(), hotel.category)
+        assert.equal(await plannedHotel.locator('.planner-hotel-category').textContent(), 'Premium - 3-star')
         assert.equal((await plannedHotel.innerText()).includes('Wi-Fi'), false)
         assert.equal((await plannedHotel.innerText()).includes('Centralised heating'), false)
         await plannedHotel.getByLabel('Room type', { exact: true }).selectOption('Deluxe')

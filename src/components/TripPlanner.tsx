@@ -17,6 +17,7 @@ import { hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration
 import NumberStepper from './NumberStepper'
 import { EnquiryForm } from './BookingModal'
 import { SubmissionSuccess } from './SubmissionFeedback'
+import { hotelCategoryLabel } from '../data/hotelRegistration'
 import { enquiryPath } from '../services/bookingService'
 import { activitiesForPlaces, formatSelectedActivities } from '../data/activities'
 import ActivityChoices from './ActivityChoices'
@@ -581,7 +582,7 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
                           aria-pressed={day.hotelId === hotel.id}
                           onClick={() => { if (day.hotelId !== hotel.id) updatePlan(index, { routeTo: day.routeTo, stayAt: day.stayAt, hotelId: hotel.id }) }}
                         >
-                          <span className="planner-hotel-category">{hotel.category}</span>
+                          <span className="planner-hotel-category">{hotelCategoryLabel(hotel.category)}</span>
                           <strong>{hotel.name}</strong>
                           <RotatingPhotos className="planner-hotel-photo" label={`${hotel.name} hotel photos`} photos={[...new Set([hotel.image, ...hotel.gallery])].map((image) => ({ image, alt: `${hotel.name}, hotel photo` }))} />
                         </button>

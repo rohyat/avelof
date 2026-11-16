@@ -10,13 +10,23 @@ export const hotelLocationCodes: Record<(typeof registrationLocations)[number], 
 }
 export const hotelIdPattern = /^AVELOF_HTL_[0-9]{5,10}[A-Z]{3}$/
 export const hotelLookupIdPattern = /^(?:AVELOF_HTL_[0-9]{5,10}[A-Z]{3}|AVELOF_HTL_[A-F0-9]{32})$/
-export const hotelCategories = ['Deluxe', 'Premium', 'Luxury'] as const
+export const hotelCategories = ['Deluxe', 'Premium', 'Premium Plus', 'Diamond', 'Luxury'] as const
 export const hotelPriceRanges = Array.from({ length: 9 }, (_, index) => {
   const minimum = 1500 + index * 1000
   const maximum = minimum + 1000
   return { value: `${minimum}-${maximum}`, minimum, maximum, label: `₹${minimum.toLocaleString('en-IN')}–₹${maximum.toLocaleString('en-IN')}` }
 })
-export const hotelCategoryLabels = { Deluxe: 'Deluxe - 2-star', Premium: 'Premium - 3-star', Luxury: 'Luxury - 4-5-star' }
+export const hotelCategoryLabels = {
+  Deluxe: 'Deluxe - 2-star',
+  Premium: 'Premium - 3-star',
+  'Premium Plus': 'Premium Plus - 3-star Plus',
+  Diamond: 'Diamond - 4-star',
+  Luxury: 'Luxury - 5-star',
+} satisfies Record<(typeof hotelCategories)[number], string>
+export function hotelCategoryLabel(category: string) {
+  const tier = hotelCategories.find((value) => value === category)
+  return tier ? hotelCategoryLabels[tier] : category
+}
 export const hotelRoomTypes = ['Standard', 'Deluxe', 'Premium', 'Family', 'Suite'] as const
 export const hotelRoomOccupancy = (roomType?: string) => roomType === 'Family' ? 4 : 2
 export const hotelRoomMealMultiplier = (roomType?: string) => roomType === 'Family' ? 2 : 1

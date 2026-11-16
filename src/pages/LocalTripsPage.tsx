@@ -209,7 +209,7 @@ export default function LocalTripsPage() {
                 {registered.loading ? <p role="status">Loading AVELOF hotels...</p> : registered.error ? <div role="alert"><p className="enquiry-error">{registered.error}</p><button className="button button-outline" type="button" onClick={registered.reload}>Retry loading hotels</button></div> : placeHotels.length === 0 ? <p>No AVELOF hotels are currently listed in {place?.name}. You can ask our team to help find a stay.</p> : null}
                 <fieldset className="local-hotel-picker"><legend>Preferred hotel in {place?.name}</legend><div className="planner-destination-grid">
                   {placeHotels.map((hotel) => <article className={`planner-hotel-card${hotelId === hotel.id ? ' is-selected' : ''}`} key={hotel.id}>
-                    <label className="local-hotel-choice"><input type="radio" name="localHotel" required checked={hotelId === hotel.id} onChange={() => setHotelId(hotel.id)} /><img src={hotel.image} alt={`${hotel.name}, hotel photo`} loading="lazy" /><strong>{hotel.name}</strong><span>{hotel.category} · {hotel.location}</span></label>
+                    <label className="local-hotel-choice"><input type="radio" name="localHotel" required checked={hotelId === hotel.id} onChange={() => setHotelId(hotel.id)} /><img src={hotel.image} alt={`${hotel.name}, hotel photo`} loading="lazy" /><strong>{hotel.name}</strong><span>{hotelCategoryLabel(hotel.category)} · {hotel.location}</span></label>
                     <HotelRates hotel={hotel} compact />
                   </article>)}
                   <article className={`planner-hotel-card${hotelId === 'help' ? ' is-selected' : ''}`}><label className="local-hotel-choice"><input type="radio" name="localHotel" required checked={hotelId === 'help'} onChange={() => setHotelId('help')} /><strong>Help me find a stay</strong><span>Ask AVELOF to suggest a hotel in {place?.name}. Availability and price are not confirmed.</span></label></article>
@@ -238,3 +238,4 @@ export default function LocalTripsPage() {
   </>
 }
 import SubmissionProgress, { SubmissionSuccess } from '../components/SubmissionFeedback'
+import { hotelCategoryLabel } from '../data/hotelRegistration'

@@ -9,7 +9,7 @@ import { indianPhoneNumber } from '../services/phoneNumbers'
 import { hotelNightlyPrice, hotelSelectionValue, includedHotelMeals, selectedHotelRoom, useRegisteredHotels } from '../services/hotelService'
 import HotelRates from './HotelRates'
 import HotelFeature from './HotelFeature'
-import { hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration'
+import { hotelCategoryLabel, hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration'
 import type { BookingKind, BookingPayload, PreparedRequest } from '../types'
 
 interface BookingModalProps {
@@ -130,7 +130,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       </select></label>)}
     {kind === 'hotel' && (lockedHotel
       ? <div className="full-field selected-hotel-field"><span>Selected hotel</span><strong>{lockedHotel.name}</strong><input type="hidden" name="preferredStay" value={hotelSelectionValue(lockedHotel)} /></div>
-      : <label className="full-field">Preferred stay<select name="preferredStay" value={preferredStay} disabled={!availableHotels.length} required onChange={(event) => { setPreferredStay(event.target.value); setHotelMeals({ breakfast: false, dinner: false }); setRooms(undefined) }}>{!preferredStay && <option value="">No approved hotels available</option>}{selectedItem && !selectedHotel && <option value={selectedItem}>{selectedItem}</option>}{availableHotels.map((hotel) => <option key={hotel.id} value={hotelSelectionValue(hotel)}>{hotel.name} - {hotel.location} - {hotel.category.replace(/ package$/i, '')}</option>)}</select></label>)}
+      : <label className="full-field">Preferred stay<select name="preferredStay" value={preferredStay} disabled={!availableHotels.length} required onChange={(event) => { setPreferredStay(event.target.value); setHotelMeals({ breakfast: false, dinner: false }); setRooms(undefined) }}>{!preferredStay && <option value="">No approved hotels available</option>}{selectedItem && !selectedHotel && <option value={selectedItem}>{selectedItem}</option>}{availableHotels.map((hotel) => <option key={hotel.id} value={hotelSelectionValue(hotel)}>{hotel.name} - {hotel.location} - {hotelCategoryLabel(hotel.category.replace(/ package$/i, ''))}</option>)}</select></label>)}
     {plannerDates ? <p className="privacy-note">Your dates, guests, places, vehicle and hotel choices are included in this enquiry. Use Back to change your plan.</p> : <fieldset className="guest-fields"><legend>{kind === 'car' ? 'Who will travel?' : 'Who will stay?'}</legend>
       <div className="form-grid">
         <label>Adults<input name="adults" type="number" min="1" max="100" value={adults} onChange={(event) => { setAdults(event.target.value); setRooms(undefined) }} required /></label>

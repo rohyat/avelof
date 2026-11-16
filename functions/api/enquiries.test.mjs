@@ -17,7 +17,7 @@ import { onRequest as onHotelStatusRequest } from './hotel-status.ts'
 import { onRequest as onHotelUpdateRequest } from './hotel-update.ts'
 import { onRequest as onHotelImageRequest } from './hotel-images/[id]/[index].ts'
 import { customerHotelRate, hotelAccessCode, registrationPhotoBytes, validHotelJpeg } from '../_lib/hotelRegistration.ts'
-import { hotelPhotoLimit, hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
+import { hotelCategories, hotelPhotoLimit, hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 import { adminCookie, correctAdminUsername, createAdminSession, customerAccessCode, hashText, isAdmin, phoneCandidates, verifyAdminPassword } from '../_lib/enquiryAccess.ts'
 import { matchingTotpCounter, totpCode, validTotpSecret } from '../_lib/adminTotp.ts'
@@ -607,6 +607,27 @@ test('room-type rates persist, require consistent minimum prices and remain edit
     assert.equal(savedEnquiry.roomType, 'Suite')
     assert.equal(savedEnquiry.nightlyRate, enquiry.fields.nightlyRate)
   } finally { DB.sqlite.close() }
+})
+
+test('all five hotel categories persist through registration, owner lookup and approved listings', async () => {
+  assert.deepEqual(hotelCategories, ['Deluxe', 'Premium', 'Premium Plus', 'Diamond', 'Luxury'])
+  for (const category of hotelCategories) {
+    const DB = database()
+    const bucket = hotelBucket()
+    try {
+      const input = { ...hotelPayload(), category }
+      const response = await hotelRequest(DB, bucket, 'POST', input)
+      assert.equal(response.status, 201)
+      const receipt = await response.json()
+      const stored = DB.sqlite.prepare('SELECT details_json FROM hotel_registrations WHERE id = ?').get(input.id)
+      assert.equal(JSON.parse(stored.details_json).category, category)
+      const lookup = await hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: receipt.accessCode }, { lookup: true })
+      assert.equal((await lookup.json()).hotel.category, category)
+      DB.sqlite.prepare("UPDATE hotel_registrations SET status = 'approved' WHERE id = ?").run(input.id)
+      const listing = await hotelRequest(DB, bucket, 'GET')
+      assert.equal((await listing.json()).hotels[0].category, category)
+    } finally { DB.sqlite.close() }
+  }
 })
 
 test('hotel registration persists photos, unique private contact and a stable receipt without publishing before approval', async () => {

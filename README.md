@@ -23,6 +23,12 @@ Hotel detail pages show the hotel ID, room count, ratings and review link above
 the photos. At widths up to 820px, Book Now appears after the hotel details,
 below pricing; wider layouts use only the existing sticky booking sidebar.
 
+Hotel registration tiers are Deluxe (2-star), Premium (3-star), Premium Plus
+(3-star Plus), Diamond (4-star) and Luxury (5-star). These are AVELOF categories,
+not official star certifications or guest review scores. Existing category
+values remain valid; existing Luxury records are not automatically reassigned
+to Diamond. Owners can edit and resubmit a listing when its tier needs changing.
+
 Planner, booking and local-trip dates use the shared `DateInput` control with a
 persistent Lucide calendar icon. The native date picker, validation and ISO
 form values are preserved; no third-party calendar service or library is used.
