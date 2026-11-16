@@ -7,13 +7,25 @@ import { featuredOfferHotelId } from '../src/data/offers.ts'
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
 const id = featuredOfferHotelId
 
-test('Deluxe and Premium headings offer white buttons to switch packages on desktop and mobile', async () => {
+test('Deluxe and Premium switch buttons align at the far right on desktop, tablet and mobile', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage()
   await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
   await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
   try {
-    for (const width of [320, 390, 1440]) {
+    async function assertAlignment() {
+      const bounds = await page.locator('.detail-title-row').evaluate((element) => {
+        const row = element.getBoundingClientRect()
+        const title = element.querySelector('h1').getBoundingClientRect()
+        const link = element.querySelector('a').getBoundingClientRect()
+        return { rightGap: row.right - link.right, centerGap: Math.abs((title.top + title.bottom - link.top - link.bottom) / 2), overlap: title.right > link.left, overflow: element.scrollWidth > element.clientWidth }
+      })
+      assert.ok(Math.abs(bounds.rightGap) <= 1, 'Switch button sits at the far right of the heading row')
+      assert.ok(bounds.centerGap <= 1, 'Switch button stays vertically aligned with the package heading')
+      assert.equal(bounds.overlap, false)
+      assert.equal(bounds.overflow, false)
+    }
+    for (const width of [320, 390, 600, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       await page.goto(`${origin}/tour-packages/deluxe`)
       const premium = page.getByRole('link', { name: 'View Premium package', exact: true })
@@ -21,12 +33,12 @@ test('Deluxe and Premium headings offer white buttons to switch packages on desk
       assert.equal(await premium.getAttribute('href'), '/tour-packages/premium')
       await page.mouse.move(0, 0)
       assert.equal(await premium.evaluate((element) => getComputedStyle(element).backgroundColor), 'rgb(255, 255, 255)')
-      assert.equal(await page.locator('.detail-title-row').evaluate((element) => element.scrollWidth > element.clientWidth), false)
+      await assertAlignment()
       await premium.click()
       await page.getByRole('heading', { name: 'Premium', exact: true }).waitFor()
       const deluxe = page.getByRole('link', { name: 'View Deluxe package', exact: true })
       assert.equal(await deluxe.getAttribute('href'), '/tour-packages/deluxe')
-      assert.equal(await page.locator('.detail-title-row').evaluate((element) => element.scrollWidth > element.clientWidth), false)
+      await assertAlignment()
       await deluxe.click()
       await page.getByRole('heading', { name: 'Deluxe', exact: true }).waitFor()
     }
