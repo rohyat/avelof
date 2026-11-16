@@ -7,6 +7,31 @@ import { featuredOfferHotelId } from '../src/data/offers.ts'
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
 const id = featuredOfferHotelId
 
+test('homepage trust points stay visible in one desktop row and three mobile/tablet rows', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage()
+  await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
+  await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
+  try {
+    await page.goto(origin)
+    const points = page.getByRole('list', { name: 'Our commitment to you' })
+    assert.deepEqual(await points.locator('li').allTextContents(), ['All-inclusive prices. No hidden charges.', '24/7 support, wherever you travel', 'Your safety is our priority'])
+    assert.equal(await points.locator('li > svg').count(), 3)
+    for (const width of [320, 390, 768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      const layout = await points.evaluate((element) => {
+        const hero = element.closest('.home-hero').getBoundingClientRect()
+        const boxes = [...element.children].map((child) => child.getBoundingClientRect())
+        return { rows: new Set(boxes.map((box) => Math.round(box.top))).size, contained: boxes.every((box) => box.left >= hero.left && box.right <= hero.right && box.top >= hero.top && box.bottom <= hero.bottom), overflow: document.documentElement.scrollWidth > innerWidth }
+      })
+      assert.equal(layout.rows, width > 1024 ? 1 : 3)
+      assert.equal(layout.contained, true)
+      assert.equal(layout.overflow, false)
+    }
+    assert.equal(await page.locator('.offer-heading-line + .offer-heading-subtitle').evaluate((element) => getComputedStyle(element).color), 'rgb(255, 224, 173)')
+  } finally { await browser.close() }
+})
+
 test('Deluxe and Premium switch buttons align at the far right on desktop, tablet and mobile', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage()

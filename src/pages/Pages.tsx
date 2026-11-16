@@ -87,7 +87,13 @@ export function HomePage() {
 
   return <>
     <section className="home-hero">
-      <div className="hero-content page-width"><Eyebrow>Your Kashmir, thoughtfully planned</Eyebrow><h1>Experience Kashmir<br /><em>Beyond Expectations.</em></h1><p>Where Kashmir&apos;s natural beauty meets warm hospitality, memorable stays and genuine local care.</p></div>
+      <div className="hero-content page-width"><Eyebrow>Your Kashmir, thoughtfully planned</Eyebrow><h1>Experience Kashmir<br /><em>Beyond Expectations.</em></h1><p>Where Kashmir&apos;s natural beauty meets warm hospitality, memorable stays and genuine local care.</p>
+        <ul className="hero-trust-points" aria-label="Our commitment to you">
+          <li><CircleCheck size={21} aria-hidden="true" /><span>All-inclusive prices. No hidden charges.</span></li>
+          <li><Phone size={21} aria-hidden="true" /><span>24/7 support, wherever you travel</span></li>
+          <li><ShieldCheck size={21} aria-hidden="true" /><span>Your safety is our priority</span></li>
+        </ul>
+      </div>
     </section>
     <section className="home-shortcuts">
       <nav className="home-shortcut-grid page-width" aria-label="Explore AVELOF">
