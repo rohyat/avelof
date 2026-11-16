@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ArrowRight, Backpack, CalendarDays, CloudSun, CreditCard, HeartHandshake, IdCard, MapPin, Pill, Route, Shirt, ShoppingBag, Smartphone, Snowflake, Sparkles, Sun, TicketCheck, Timer, Utensils } from 'lucide-react'
+import { ArrowRight, Backpack, CalendarDays, CloudSun, CreditCard, HeartHandshake, IdCard, Leaf, MapPin, Pill, Route, Shirt, ShoppingBag, Smartphone, Snowflake, Sparkles, Sun, TicketCheck, Timer, Utensils, Wine } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { travelGuideSections } from '../data/travelGuide'
 import MapLocationLink from '../components/MapLocationLink'
@@ -93,7 +93,7 @@ export function FoodAndShoppingPage() {
 }
 
 const guideIcons = { season: CalendarDays, packing: Backpack, essentials: IdCard, journey: Route }
-const guidePointIcons = { sun: Sun, snow: Snowflake, forecast: CloudSun, layers: Shirt, winter: Snowflake, medicine: Pill, identity: IdCard, phone: Smartphone, payment: CreditCard, time: Timer, tickets: TicketCheck, respect: HeartHandshake }
+const guidePointIcons = { sun: Sun, snow: Snowflake, forecast: CloudSun, layers: Shirt, winter: Snowflake, medicine: Pill, identity: IdCard, phone: Smartphone, payment: CreditCard, time: Timer, tickets: TicketCheck, respect: HeartHandshake, alcohol: Wine, environment: Leaf }
 
 export function TravelGuidePage() {
   return <DiscoveryLayout title="Travel Guide" eyebrow="A little preparation. A better journey." copy="Practical pointers for your Kashmir holiday, from choosing a season to packing for the mountains.">

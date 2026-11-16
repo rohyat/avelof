@@ -452,7 +452,9 @@ requests; backend registration tests run through `npm test`.
 
 Travel Guide provides general preparation advice from `src/data/travelGuide.ts`,
 not live weather or road updates. Guide headings have topic-specific icons, with
-bulleted tips and matching icons on the right. Activity headings and planner
+bulleted tips and matching icons on the right. Tips include respecting local
+customs and avoiding alcohol in public, with private consumption only where the
+hotel and local rules permit. Activity headings and planner
 choices share experience icons. The public activities page does not display a
 sources accordion; availability and operator-verification notices remain visible.
 

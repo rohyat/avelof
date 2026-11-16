@@ -32,7 +32,9 @@ export const travelGuideSections = [
     points: [
       { icon: 'time', text: 'Allow extra time for mountain roads, traffic and weather. Avoid packing too many destinations into one day.' },
       { icon: 'tickets', text: 'Confirm activity timings, access rules, operator credentials, prices and cancellation terms before paying.' },
-      { icon: 'respect', text: 'Respect local customs, ask before photographing people and take litter back with you.' },
+      { icon: 'respect', text: 'Please respect Kashmir’s local culture and customs, and ask before photographing people.' },
+      { icon: 'alcohol', text: 'Please avoid alcohol, especially in public places and on streets. If you choose to drink, do so privately only where your hotel permits it and local rules allow.' },
+      { icon: 'environment', text: 'Help keep Kashmir beautiful by taking your litter with you.' },
     ],
   },
 ] as const
