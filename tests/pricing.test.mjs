@@ -17,13 +17,17 @@ test('Deluxe and Premium switch buttons align at the far right on desktop, table
       const bounds = await page.locator('.detail-title-row').evaluate((element) => {
         const row = element.getBoundingClientRect()
         const title = element.querySelector('h1').getBoundingClientRect()
-        const link = element.querySelector('a').getBoundingClientRect()
-        return { rightGap: row.right - link.right, centerGap: Math.abs((title.top + title.bottom - link.top - link.bottom) / 2), overlap: title.right > link.left, overflow: element.scrollWidth > element.clientWidth }
+        const anchor = element.querySelector('a')
+        const link = anchor.getBoundingClientRect()
+        const text = document.createRange()
+        text.selectNode(anchor.firstChild)
+        return { rightGap: row.right - link.right, centerGap: Math.abs((title.top + title.bottom - link.top - link.bottom) / 2), overlap: title.right > link.left, overflow: element.scrollWidth > element.clientWidth, textLines: text.getClientRects().length }
       })
       assert.ok(Math.abs(bounds.rightGap) <= 1, 'Switch button sits at the far right of the heading row')
       assert.ok(bounds.centerGap <= 1, 'Switch button stays vertically aligned with the package heading')
       assert.equal(bounds.overlap, false)
       assert.equal(bounds.overflow, false)
+      assert.equal(bounds.textLines, 1, 'Switch button label stays on a single line')
     }
     for (const width of [320, 390, 600, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 })
@@ -139,7 +143,7 @@ test('winter offers show both discounts with bounded snowfall on desktop/mobile 
       const style = getComputedStyle(flake)
       const duration = parseFloat(style.animationDuration)
       const size = parseFloat(style.width)
-      return duration >= 4 && duration <= 7 && size >= 6 && size <= 12 && style.backgroundColor === 'rgba(0, 0, 0, 0)'
+      return duration >= 4 && duration <= 7 && size >= 6 && size <= 12 && style.backgroundColor === 'rgba(0, 0, 0, 0)' && style.color === 'rgb(255, 255, 255)' && Number(style.opacity) >= .85 && style.filter === 'blur(0px)'
     })), true)
     assert.equal(await snow.getAttribute('aria-hidden'), 'true')
     assert.equal(await snow.evaluate((element) => getComputedStyle(element).pointerEvents), 'none')

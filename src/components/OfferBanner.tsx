@@ -92,8 +92,8 @@ export default function OfferBanner() {
     <div className="offer-snow" aria-hidden="true">{Array.from({ length: 36 }, (_, index) => <span key={index} style={{
       left: `${(index * 37) % 100}%`,
       '--snow-size': `${6 + (index * 7 % 8) * .75}px`,
-      '--snow-opacity': .25 + (index * 3 % 6) * .1,
-      '--snow-blur': `${index % 3 === 0 ? .6 : 0}px`,
+      '--snow-opacity': .85 + (index % 4) * .05,
+      '--snow-blur': '0px',
       '--snow-drift': `${(index % 2 ? -1 : 1) * (12 + index * 7 % 32)}px`,
       '--snow-duration': `${4 + (index * 5 % 7) * .5}s`,
       '--snow-rotation': `${index * 47 % 360}deg`,

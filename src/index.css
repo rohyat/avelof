@@ -515,12 +515,12 @@ body.enquiry-open { overflow: hidden; }
 .detail-aside .button { width: 100%; }
 .package-detail-top .detail-heading { display: block; }
 .detail-title-row { display: flex; align-items: center; gap: 16px 24px; }
-.package-switch-link { margin-left: auto; flex: 0 0 auto; background: #fff; }
+.package-switch-link { margin-left: auto; flex: 0 0 auto; white-space: nowrap; background: #fff; }
 .package-switch-link:hover { background: var(--glacier); transform: none; }
 @media (max-width: 600px) {
   .package-detail-top .detail-title-row { gap: 10px; }
   .package-detail-top .detail-title-row h1 { font-size: clamp(28px, 8vw, 43px); }
-  .package-detail-top .package-switch-link { max-width: 130px; min-height: 44px; padding: 6px 9px; gap: 6px; font-size: 11px; }
+  .package-detail-top .package-switch-link { min-height: 44px; padding: 6px 9px; gap: 6px; font-size: 11px; }
   .package-switch-link svg { flex-shrink: 0; }
 }
 .package-detail-top .detail-heading p:not(.eyebrow) { max-width: 760px; font-size: 15px; }
