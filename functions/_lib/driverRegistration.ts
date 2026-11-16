@@ -14,12 +14,11 @@ export const driverColumns = 'id, driver_id, phone, private_json, details_json, 
 export const driverPhotoKeys = (row: Pick<DriverRow, 'photo_keys_json'>) => z.array(z.string().regex(/^drivers\/[a-f0-9-]{36}\/[a-f0-9-]{36}\/0\.jpg$/)).length(1).parse(JSON.parse(row.photo_keys_json))
 export function maskedDriverPhone(phone: string) {
   const digits = phone.replace(/\D/g, '')
-  return digits.length > 5 ? `${digits.slice(0, 3)}${'*'.repeat(digits.length - 5)}${digits.slice(-2)}` : '***'
+  return digits.length > 3 ? `${digits[0]}${'*'.repeat(digits.length - 3)}${digits.slice(-2)}` : '***'
 }
 export function maskedDriverLicence(licenceNumber: string) {
   const compact = licenceNumber.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
-  if (compact.length > 5) return `${compact.slice(0, 3)}${'*'.repeat(compact.length - 5)}${compact.slice(-2)}`
-  return compact.length >= 3 ? `${compact[0]}${'*'.repeat(compact.length - 2)}${compact.at(-1)}` : '***'
+  return compact.length > 4 ? `${compact.slice(0, 2)}${'*'.repeat(compact.length - 4)}${compact.slice(-2)}` : '***'
 }
 export function publicDriver(row: DriverRow) {
   const details = driverDetailsSchema.parse(JSON.parse(row.details_json))

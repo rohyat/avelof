@@ -35,7 +35,7 @@ test('admin separates review subjects and retains filters for moderation and del
   const partnerId = '00000000-0000-4000-8000-000000000099'
   const driver = {
     id: partnerId, driverId: 'AVELOF-DRV-10001', fullName: 'Test Driver', age: 30,
-    phone: '9876543210', maskedPhone: '987*****10', licenceNumber: 'JK01 123456789', vehicleNumber: 'JK01AB-1234',
+    phone: '9876543210', maskedPhone: '9*******10', licenceNumber: 'JK01 123456789', vehicleNumber: 'JK01AB-1234',
     vehicleId: 'innova', vehicleName: 'Toyota Innova', location: 'Srinagar', seats: 6,
     status: 'pending', version: 0, ownerNote: '', createdAt: '2026-11-13T10:00:00Z',
     photo: `/api/driver-images/${partnerId}/0`,

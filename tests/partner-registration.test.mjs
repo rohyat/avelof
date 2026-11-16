@@ -9,7 +9,7 @@ const id = '00000000-0000-4000-8000-000000000002'
 const driverId = 'AVELOF-DRV-10001'
 const accessCode = 'PUBL3210'
 const driver = {
-  id, driverId, fullName: 'Public Driver Name', maskedPhone: '987*****10', vehicleId: 'innova-crysta', age: 30,
+  id, driverId, fullName: 'Public Driver Name', maskedPhone: '9*******10', vehicleId: 'innova-crysta', age: 30,
   phone: '9876543210', licenceNumber: 'JK01 123456789', vehicleNumber: 'JK01AB-1234',
   vehicleName: 'Toyota Innova Crysta', location: 'Srinagar', seats: 6,
   status: 'pending', version: 0,
@@ -381,7 +381,7 @@ test('partner onboarding and approved listings work separately from customer nav
     await context.test('approved vehicle and optional hotel meals reach booking selectors without private driver data', async () => {
       const page = await browser.newPage()
       const { age, phone, licenceNumber, status, version, ownerNote, createdAt, ...publicDriverBase } = driver
-      const publicDriver = { ...publicDriverBase, maskedLicenceNumber: 'JK0********89' }
+      const publicDriver = { ...publicDriverBase, maskedLicenceNumber: 'JK*********89' }
       void age; void phone; void licenceNumber; void status; void version; void ownerNote; void createdAt
       const hotel = {
         id, hotelId: 'AVELOF_HTL_10001GLM', name: 'Meal Partner Hotel',
@@ -411,7 +411,7 @@ test('partner onboarding and approved listings work separately from customer nav
         assert.ok((await directoryCard.innerText()).includes(driver.maskedPhone))
         assert.ok((await directoryCard.innerText()).includes(driverId))
         assert.ok((await directoryCard.innerText()).includes(`Vehicle registration: ${driver.vehicleNumber}`))
-        assert.ok((await directoryCard.innerText()).includes('Driving licence: JK0********89'))
+        assert.ok((await directoryCard.innerText()).includes('Driving licence: JK*********89'))
         assert.equal((await directoryCard.innerText()).includes(driver.licenceNumber), false)
         assert.ok((await directoryCard.getByRole('link', { name: 'View reviews' }).innerText()).includes('View reviews'))
         assert.ok((await directoryCard.innerText()).includes('4.5 · 2 reviews'))

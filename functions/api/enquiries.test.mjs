@@ -12,7 +12,7 @@ import { onRequest as onPushRequest } from './push.ts'
 import { onRequest as onHotelRequest } from './hotels.ts'
 import { onRequest as onDriverRequest } from './drivers.ts'
 import { onRequest as onDriverImageRequest } from './driver-images/[id]/[index].ts'
-import { driverAccessCode, maskedDriverLicence } from '../_lib/driverRegistration.ts'
+import { driverAccessCode, maskedDriverLicence, maskedDriverPhone } from '../_lib/driverRegistration.ts'
 import { onRequest as onHotelStatusRequest } from './hotel-status.ts'
 import { onRequest as onHotelUpdateRequest } from './hotel-update.ts'
 import { onRequest as onPartnerPhotosRequest } from './partner-photos.ts'
@@ -201,7 +201,7 @@ test('driver registration is private, idempotent and unique by phone, with prote
       assert.equal(lookup.status, 200)
       const owner = (await lookup.json()).driver
       assert.equal(owner.fullName, input.fullName)
-      assert.equal(owner.maskedPhone, '987*****10')
+      assert.equal(owner.maskedPhone, '9*******10')
       assert.equal(owner.phone, '9876543210')
       assert.equal(owner.age, input.age)
       assert.equal(owner.licenceNumber, input.licenceNumber)
@@ -286,8 +286,14 @@ test('driver edit portrait replacement, failures and duplicate phones leave regi
   } finally { DB.sqlite.close() }
 })
 
-test('short driving licence numbers retain only masked edge characters', () => {
-  assert.equal(maskedDriverLicence('12345'), '1***5')
+test('driver public credentials expose only the requested edge characters', () => {
+  assert.equal(maskedDriverPhone('9876543210'), '9*******10')
+  assert.equal(maskedDriverPhone('98765 43210'), '9*******10')
+  assert.equal(maskedDriverPhone('12'), '***')
+  assert.equal(maskedDriverLicence('12345'), '12*45')
+  assert.equal(maskedDriverLicence('JK01 123456789'), 'JK*********89')
+  assert.equal(maskedDriverLicence('jk-01-123456789'), 'JK*********89')
+  for (const value of ['', '1', '12', '123', '1234']) assert.equal(maskedDriverLicence(value), '***')
 })
 test('driver migrations retain legacy access, linked reviews and recorded directory credential consent', () => {
   const sqlite = new DatabaseSync(':memory:')
@@ -402,8 +408,8 @@ test('driver approval needs no price, excludes private data and hides photos on 
     const driver = (await (await driverRequest(DB, bucket, 'GET')).json()).drivers[0]
     assert.equal(Object.hasOwn(driver, 'price'), false)
     assert.equal(driver.fullName, input.fullName)
-    assert.equal(driver.maskedPhone, '987*****10')
-    assert.equal(driver.maskedLicenceNumber, 'JK0********89')
+    assert.equal(driver.maskedPhone, '9*******10')
+    assert.equal(driver.maskedLicenceNumber, 'JK*********89')
     assert.equal(driver.vehicleNumber, input.vehicleNumber)
     assert.equal(driver.vehicleName, 'Toyota Innova Crysta')
     for (const key of ['age', 'phone', 'licenceNumber', 'private_json', 'ownerNote', 'payload_hash']) assert.equal(driver[key], undefined)
