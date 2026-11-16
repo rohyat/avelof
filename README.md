@@ -509,6 +509,11 @@ keeps full descriptions and offers a return link to the saved planner.
 
 ## Image Storage
 
+The homepage has a centred four-destination row below the header and above the
+Kashmir hero. Kashmir links to the destination guide; Ladakh, Shimla and Manali
+are disabled and marked Coming soon. The row stays compact on mobile and uses
+the current light/dark theme.
+
 Catalog images are local files in `public/images/` and are delivered directly by
 Cloudflare Pages. Customer-submitted hotel and driver photos are private JPEG
 BLOBs in D1 and are served only through approval-aware Functions endpoints. No

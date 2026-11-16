@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, ArrowUpRight, BedDouble, BookOpen, CalendarDays, CarFront, Check, CircleCheck, CircleMinus, ClipboardList, Compass, Mail, MapPin, MountainSnow, Package, Phone, PlaneLanding, PlaneTakeoff, Plus, Route, Sailboat, ShieldCheck, ShoppingBag, Sparkles, Star, Trees, UserRound, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, BedDouble, BookOpen, CalendarDays, CarFront, Check, CircleCheck, CircleMinus, ClipboardList, Compass, Mail, MapPin, MountainSnow, Package, Phone, PlaneLanding, PlaneTakeoff, Plus, Route, Sailboat, ShieldCheck, ShoppingBag, Sparkles, Star, TentTree, Trees, UserRound, Users } from 'lucide-react'
 import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import { business } from '../config'
 import { rentalCars } from '../data/catalog'
@@ -91,6 +91,14 @@ export function HomePage() {
   const tourPackages = useTourPackages()
 
   return <>
+    <nav className="home-destinations page-width" aria-label="Holiday destinations">
+      <div className="home-destination-grid">
+        <Link className="home-destination-card" to="/destinations"><span className="home-destination-icon"><Sailboat size={26} aria-hidden="true" /></span><span className="home-destination-name">Kashmir</span><span className="home-destination-status">Explore places</span></Link>
+        <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><MountainSnow size={26} aria-hidden="true" /></span><span className="home-destination-name">Ladakh</span><span className="home-destination-status">Coming soon</span></button>
+        <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><Trees size={26} aria-hidden="true" /></span><span className="home-destination-name">Shimla</span><span className="home-destination-status">Coming soon</span></button>
+        <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><TentTree size={26} aria-hidden="true" /></span><span className="home-destination-name">Manali</span><span className="home-destination-status">Coming soon</span></button>
+      </div>
+    </nav>
     <section className="home-hero">
       <div className="hero-content page-width"><Eyebrow>Your Kashmir, thoughtfully planned</Eyebrow><h1>Experience Kashmir<br /><em>Beyond Expectations.</em></h1><p>Where Kashmir&apos;s natural beauty meets warm hospitality, memorable stays and genuine local care.</p>
         <HeroTrustPoints />

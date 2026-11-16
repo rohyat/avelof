@@ -61,6 +61,24 @@ img { display: block; max-width: 100%; }
 .hotel-price-breakdown { display: grid; gap: 5px; margin-block: 10px; font-size: 12px; }
 
 .page-width { width: min(1200px, calc(100% - 72px)); margin-inline: auto; }
+.home-destinations { padding-block: 16px; }
+.home-destination-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; max-width: 680px; margin-inline: auto; }
+.home-destination-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-width: 0; min-height: 112px; padding: 12px 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--ivory); color: var(--ink); text-align: center; }
+.home-destination-card:not(:disabled):hover { border-color: var(--forest); background: var(--glacier); }
+.home-destination-card:disabled { color: var(--muted); background: var(--paper); cursor: not-allowed; }
+.home-destination-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--glacier); color: var(--forest); }
+.home-destination-card:disabled .home-destination-icon { color: var(--muted); }
+.home-destination-name { font-weight: 700; font-size: 15px; }
+.home-destination-status { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; }
+@media (max-width: 600px) {
+  .home-destinations { width: calc(100% - 24px); padding-block: 12px; }
+  .home-destination-grid { gap: 6px; }
+  .home-destination-card { min-height: 100px; padding: 10px 3px; }
+  .home-destination-icon { width: 36px; height: 36px; }
+  .home-destination-icon svg { width: 22px; height: 22px; }
+  .home-destination-name { font-size: 12px; }
+  .home-destination-status { font-size: 9px; }
+}
 .offer-banner { position: relative; isolation: isolate; overflow: hidden; display: grid; grid-template-columns: minmax(180px, 1fr) minmax(0, 720px); align-items: center; gap: 24px; padding: 8px max(22px, calc((100% - 1200px) / 2)); background: radial-gradient(ellipse at 30% 0, #376f8c, transparent 65%), linear-gradient(110deg, #102d46, #1d5068 65%, #123d50); color: #fff; }
 .offer-snow { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; container-type: size; }
 .offer-snow > span { position: absolute; top: -14px; width: var(--snow-size); height: var(--snow-size); color: #fff; filter: blur(var(--snow-blur)); opacity: var(--snow-opacity); animation: offer-snowfall var(--snow-duration) var(--snow-delay) linear infinite; }
