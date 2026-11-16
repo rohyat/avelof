@@ -277,7 +277,7 @@ test('partner onboarding and approved listings work separately from customer nav
         }
         if (request.method() === 'PATCH') {
           update = request.postDataJSON()
-          current = { ...driver, ...update, version: 1 }
+          current = { ...driver, ...update, version: current.version + 1 }
           return route.fulfill({ json: { driver: current } })
         }
         if (request.method() === 'POST') {
@@ -295,9 +295,17 @@ test('partner onboarding and approved listings work separately from customer nav
         assert.equal(await page.getByLabel('Daily rate (INR)', { exact: true }).count(), 0)
         await page.getByLabel('Driver listing status').selectOption('approved')
         await page.getByLabel('Note to driver').fill('Reviewed and approved.')
-        await page.getByRole('button', { name: 'Save driver status' }).click()
-        await page.getByRole('status').filter({ hasText: 'Driver vehicle registration and status saved.' }).waitFor()
-        assert.deepEqual(update, { id, version: 0, status: 'approved', ownerNote: 'Reviewed and approved.', vehicleNumber: driver.vehicleNumber })
+        for (const [version, [input, expected]] of [['PB01B-3302', 'PB01B-3302'], ['dl 01 ab 1234', 'DL01AB-1234'], ['dl 01 abc 1234', 'DL01ABC-1234']].entries()) {
+          await page.getByLabel('Vehicle registration number', { exact: true }).fill(input)
+          await page.getByLabel('Vehicle registration number', { exact: true }).blur()
+          assert.equal(await page.getByLabel('Vehicle registration number', { exact: true }).evaluate((element) => element.checkValidity()), true)
+          const refreshed = page.waitForResponse((response) => response.url().includes('/api/drivers') && response.request().method() === 'GET')
+          await page.getByRole('button', { name: 'Save driver status' }).click()
+          await refreshed
+          await page.getByRole('button', { name: 'Save driver status' }).waitFor()
+          await page.getByRole('status').filter({ hasText: 'Driver vehicle registration and status saved.' }).waitFor()
+          assert.deepEqual(update, { id, version, status: 'approved', ownerNote: 'Reviewed and approved.', vehicleNumber: expected })
+        }
         await page.goto(`${origin}/driver-status`)
         await page.getByLabel('Driver ID or phone number').fill(driver.phone)
         await page.getByLabel('Status access code').fill(accessCode)
@@ -309,7 +317,7 @@ test('partner onboarding and approved listings work separately from customer nav
         page.once('dialog', (dialog) => dialog.accept())
         await page.getByRole('button', { name: 'Delete driver registration' }).click()
         await page.getByRole('status').filter({ hasText: 'Driver registration permanently deleted.' }).waitFor()
-        assert.deepEqual(deletion, { id, version: 1 })
+        assert.deepEqual(deletion, { id, version: 3 })
       } finally { await page.close() }
     })
     await context.test('drivers can privately edit details, keep or replace portraits and resubmit for approval', async () => {

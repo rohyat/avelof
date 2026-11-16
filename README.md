@@ -12,10 +12,10 @@ npm run dev
 Create a production build with `npm run build`. Run the configured linter with `npm run lint`.
 
 Driver vehicle numbers temporarily allow non-JK state prefixes as well as JK.
-The basic format remains two letters, two district digits, one or two series
-letters and four final digits (for example `DL01AB1234`). Spaces and hyphens are
+The basic format is two letters, two district digits, one to three series
+letters and four final digits (for example `PB01B3302` or `DL01ABC1234`). Spaces and hyphens are
 normalised, with the final value stored as `DL01AB-1234`. This applies to both
-new registrations and edits; malformed or incomplete numbers remain invalid.
+new registrations, partner edits and admin approval; malformed or incomplete numbers remain invalid.
 
 Public registrations (hotels, drivers, restaurants and shops), enquiries
 (including the custom planner and local trips), and reviews display a centred

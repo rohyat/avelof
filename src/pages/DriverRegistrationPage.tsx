@@ -11,7 +11,7 @@ import SubmissionProgress from '../components/SubmissionFeedback'
 import RegistrationForm from '../components/RegistrationForm'
 import PartnerRegistrationLayout from '../components/PartnerRegistrationLayout'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
-import { driverDistricts, driverVehicleOptions, normalizeDriverVehicleNumber } from '../data/driverRegistration'
+import { driverDistricts, driverVehicleNumberPattern, driverVehicleOptions, normalizeDriverVehicleNumber } from '../data/driverRegistration'
 import { hotelStatusLabels } from '../data/hotelRegistration'
 import { driverEditDetailsSchema, driverReceiptSchema, driverStatusResultSchema, driverSubmissionSchema } from '../services/driverSchema'
 import type { AdminDriver, OwnerDriver } from '../services/driverSchema'
@@ -74,7 +74,7 @@ function DriverForm({ editing, onCancel }: { editing?: { driver: OwnerDriver; ac
         </section>
         <section className="hotel-form-fields registration-section" aria-labelledby="driver-vehicle-title">
         <div className="registration-section-heading"><span>02</span><div><h2 id="driver-vehicle-title">Your vehicle</h2><p>Share your vehicle details and where you are based. No rate required.</p></div></div>
-        <label>Vehicle registration number<input name="vehicleNumber" defaultValue={editing?.driver.vehicleNumber} maxLength={30} required placeholder="JK 13 J 7748" aria-describedby="vehicle-number-help" onBlur={(event) => { event.currentTarget.value = normalizeDriverVehicleNumber(event.currentTarget.value) }} /><small id="vehicle-number-help">Spaces and dashes are optional. JK 13 J 7748 is saved as JK13J-7748.</small></label>
+        <label>Vehicle registration number<input name="vehicleNumber" defaultValue={editing?.driver.vehicleNumber} maxLength={30} required placeholder="PB01B-3302" aria-describedby="vehicle-number-help" onBlur={(event) => { event.currentTarget.value = normalizeDriverVehicleNumber(event.currentTarget.value) }} /><small id="vehicle-number-help">Two letters, two digits, one to three letters, then four digits. Spaces and dashes are optional; PB 01 B 3302 is saved as PB01B-3302.</small></label>
         <label>Vehicle<select name="vehicleId" required defaultValue={editing?.driver.vehicleId}>{driverVehicleOptions.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.label}</option>)}</select></label>
         <label>District<select name="location" required defaultValue={editing?.driver.location}>{driverDistricts.map((district) => <option key={district}>{district}</option>)}</select></label>
         <NumberStepper label="Passenger seats (excluding driver)" name="seats" min={1} max={60} defaultValue={editing?.driver.seats} />
@@ -122,7 +122,7 @@ function DriverRecord({ driver, disabled, save, remove }: { driver: AdminDriver;
   async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const fields = new FormData(event.currentTarget); await save(driver, status, String(fields.get('ownerNote')), String(fields.get('vehicleNumber'))) }
   return <article className="admin-review-record"><h2>{driver.fullName} · {driver.vehicleName}</h2><p className="hotel-identifier">{driver.driverId} · {hotelStatusLabels[driver.status]}</p><p>Private: age {driver.age}, phone {driver.phone}, licence {driver.licenceNumber}, vehicle registration {driver.vehicleNumber}</p><p>Public listing: {driver.fullName} · {driver.maskedPhone} · {driver.location} · {driver.seats} passenger seats</p><div className="hotel-photo-grid"><a href={driver.photo} target="_blank" rel="noreferrer"><img src={driver.photo} alt={`Portrait of ${driver.fullName}`} /></a></div>
     <form onSubmit={submit} className="review-submission-form"><fieldset className="hotel-form-fields" disabled={disabled}>
-      <label>Vehicle registration number<input name="vehicleNumber" required defaultValue={driver.vehicleNumber} pattern="JK[0-9]{2}[A-Za-z]{1,2}-[0-9]{4}" placeholder="JK13B-1444 or JK01AB-1485" title="Use JK13B-1444 or JK01AB-1485 format." onBlur={(event) => { event.currentTarget.value = normalizeDriverVehicleNumber(event.currentTarget.value) }} /></label>
+      <label>Vehicle registration number<input name="vehicleNumber" required defaultValue={driver.vehicleNumber} pattern={driverVehicleNumberPattern.source} placeholder="PB01B-3302" title="Use two letters, two digits, one to three letters, a hyphen and four digits, for example PB01B-3302 or DL01ABC-1234." onBlur={(event) => { event.currentTarget.value = normalizeDriverVehicleNumber(event.currentTarget.value) }} /></label>
       <label>Driver listing status<select value={status} onChange={(event) => setStatus(hotelStatusSchema.parse(event.target.value))}><option value="pending">Awaiting approval</option><option value="approved">Approve and publish</option><option value="rejected">Reject / hide</option></select></label>
       <label className="review-text-field">Note to driver<textarea name="ownerNote" maxLength={1000} defaultValue={driver.ownerNote} /></label><button className="button button-dark">Save driver status</button>
     </fieldset></form>

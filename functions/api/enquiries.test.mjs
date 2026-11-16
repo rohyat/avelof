@@ -423,12 +423,33 @@ test('D1 numeric BLOB arrays are restored to exact JPEG response bytes', () => {
 test('driver numbers accept spaces and omitted separators and persist a dash before the last four digits', async () => {
   const DB = database(), bucket = hotelBucket()
   try {
-    for (const [index, vehicleNumber] of ['JK13J7748', 'JK 13 J 7748', 'jk13j-7748', 'DL01AB1234', 'pb 10 ab 5678'].entries()) {
+    for (const [index, vehicleNumber] of ['JK13J7748', 'JK 13 J 7748', 'jk13j-7748', 'DL01AB1234', 'pb 10 ab 5678', 'PB01B-3302', 'dl 01 abc 1234'].entries()) {
       const input = { ...driverPayload(), vehicleNumber, phone: `987654321${index}` }
       const response = await driverRequest(DB, bucket, 'POST', input, { headers: { 'CF-Connecting-IP': `192.0.2.${index + 60}` } })
       assert.equal(response.status, 201)
       const stored = DB.sqlite.prepare('SELECT private_json FROM driver_registrations WHERE id = ?').get(input.id)
-      assert.equal(JSON.parse(stored.private_json).vehicleNumber, ['JK13J-7748', 'JK13J-7748', 'JK13J-7748', 'DL01AB-1234', 'PB10AB-5678'][index])
+      assert.equal(JSON.parse(stored.private_json).vehicleNumber, ['JK13J-7748', 'JK13J-7748', 'JK13J-7748', 'DL01AB-1234', 'PB10AB-5678', 'PB01B-3302', 'DL01ABC-1234'][index])
+    }
+  } finally { DB.sqlite.close() }
+})
+
+test('driver approval accepts one to three series letters and rejects malformed registration numbers', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    const input = driverPayload()
+    await driverRequest(DB, bucket, 'POST', input)
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    let version = 0
+    for (const vehicleNumber of ['PB01-3302', 'PB01ABCD-3302', 'PB1B-3302', 'P01B-3302', 'PB01B-302', 'PB01B-33302', 'PBO1B-3302']) {
+      const response = await driverRequest(DB, bucket, 'PATCH', { id: input.id, version, status: 'approved', ownerNote: '', vehicleNumber }, { headers: { Cookie } })
+      assert.equal(response.status, 400, vehicleNumber)
+    }
+    for (const [vehicleNumber, expected] of [['PB01B-3302', 'PB01B-3302'], ['pb 01 ab 3302', 'PB01AB-3302'], ['pb01abc3302', 'PB01ABC-3302']]) {
+      const response = await driverRequest(DB, bucket, 'PATCH', { id: input.id, version, status: 'approved', ownerNote: '', vehicleNumber }, { headers: { Cookie } })
+      assert.equal(response.status, 200, vehicleNumber)
+      assert.equal((await response.json()).driver.vehicleNumber, expected)
+      version++
     }
   } finally { DB.sqlite.close() }
 })
