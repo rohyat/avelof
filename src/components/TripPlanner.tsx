@@ -550,7 +550,7 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
         <TripPlannerSteps step={step} onStepChange={changeStep} disabled={submitting || Boolean(receipt)} />
         {!receipt && step > 0 && <div className="planner-navigation">
           <button className="button button-outline planner-back" type="button" disabled={submitting} onClick={() => changeStep(step - 1)}><ArrowLeft size={16} /> {step === 5 ? 'Back to hotels' : 'Back'}</button>
-          <p><Sparkles size={16} aria-hidden="true" /><span>Choose at your own pace. At the end, download a PDF with your selected trip details.</span></p>
+          <p><Sparkles size={16} aria-hidden="true" /><span>Choose at your own pace. AVELOF will prepare a PDF of your selections to download at the end. You can revise your choices anytime before submitting.</span></p>
         </div>}
         {step !== 1 && (step === 0 ? placeNotice : selectionError) && <p className="planner-place-notice" role="alert">{step === 0 ? placeNotice : selectionError}</p>}
         {step === 0 && <div className="trip-dates">

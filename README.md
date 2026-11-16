@@ -461,6 +461,10 @@ sources accordion; availability and operator-verification notices remain visible
 The custom trip planner offers a branded PDF download at the final review step,
 before contact details are submitted. Deluxe and Premium package pages provide
 ready-to-download itinerary PDFs generated from the current package catalog.
+The planner's outlined PDF reminder stays beside Back on all screen sizes.
+Premium includes a Sonamarg day trip on day two, returns from Pahalgam to
+Srinagar on day five, and departs from Srinagar on day six. Its five nights
+are split across Srinagar (three), Gulmarg (one), and Pahalgam (one).
 PDFs include the AVELOF brand promises, a day-by-day plan, all ten supplied
 Kashmir photos, inclusions and exclusions, linked contact details on each page,
 and a final thank-you page. Photos are also used in relevant package and

@@ -73,6 +73,24 @@ test('Deluxe and Premium PDFs use their current package itinerary and union-cab 
   }
 })
 
+test('Premium includes a Sonamarg day trip and the final night in Srinagar', () => {
+  const premium = tourPackages.find((item) => item.id === 'premium')
+  assert.ok(premium)
+  assert.ok(premium.location.includes('Sonamarg'))
+  assert.deepEqual(premium.itinerary.map((day) => day.title), [
+    'Arrive in Srinagar', 'Sonamarg day trip', 'Srinagar to Gulmarg',
+    'Gulmarg to Pahalgam', 'Pahalgam to Srinagar', 'Departure',
+  ])
+  assert.deepEqual(premium.stays.map(({ location, nights }) => ({ location, nights })), [
+    { location: 'Srinagar', nights: 3 }, { location: 'Gulmarg', nights: 1 }, { location: 'Pahalgam', nights: 1 },
+  ])
+  assert.match(premium.itinerary[1].detail, /return to Srinagar.*Jamal Resorts/)
+  assert.match(premium.itinerary[4].detail, /Srinagar by evening.*Jamal Resorts/)
+  assert.match(premium.itinerary[5].detail, /from your Srinagar hotel/)
+  assert.ok(premium.gallery.includes('/images/destinations/sonamarg-user.jpg'))
+  assert.deepEqual(tourPackagePdfData(premium).days, premium.itinerary.map((day) => ({ label: day.day, title: day.title, detail: day.detail })))
+})
+
 test('planner and ready-made packages download branded PDFs at the intended steps', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const context = await browser.newContext({ acceptDownloads: true })
@@ -91,6 +109,7 @@ test('planner and ready-made packages download branded PDFs at the intended step
       assert.equal(displayedPhotos.length, 3)
       assert.ok(displayedPhotos.every((photo) => photo.loaded), `${packageName} package photos load`)
       assert.deepEqual(displayedPhotos.map((photo) => photo.alt), tourPackages.find((item) => item.name === packageName).galleryAlts)
+      assert.deepEqual(await page.locator('.package-itinerary h3').allTextContents(), tourPackages.find((item) => item.name === packageName).itinerary.map((day) => day.title))
       assert.ok(await page.getByText('Illustrative travel and stay photos. The listed hotels and their availability are confirmed separately.', { exact: true }).isVisible())
       for (const width of [320, 390, 768, 1024, 1440]) {
         await page.setViewportSize({ width, height: 900 })
@@ -109,6 +128,11 @@ test('planner and ready-made packages download branded PDFs at the intended step
       assert.ok(packagePdf.subarray(0, 5).toString().startsWith('%PDF-'))
       assert.ok(packagePdf.toString('latin1').includes(`${packageName} Kashmir Tour Package`))
       assert.ok(packagePdf.toString('latin1').includes('Union-cab charges and usage depend on the package'))
+      if (packageName === 'Premium') {
+        assert.ok(packagePdf.toString('latin1').includes('Sonamarg day trip'))
+        assert.ok(packagePdf.toString('latin1').includes('Pahalgam to Srinagar'))
+        assert.ok(packagePdf.toString('latin1').includes('from your Srinagar hotel'))
+      }
       assert.ok((packagePdf.toString('latin1').match(/\/Subtype\s*\/Image/g) ?? []).length >= kashmirPhotosForPdf.length)
     }
 
@@ -124,7 +148,8 @@ test('planner and ready-made packages download branded PDFs at the intended step
     await planner.getByRole('button', { name: 'Next: places', exact: true }).click()
     const navigationHelp = planner.locator('.planner-navigation > p')
     assert.ok((await navigationHelp.innerText()).includes('Choose at your own pace'))
-    assert.ok((await navigationHelp.innerText()).includes('download a PDF'))
+    assert.ok((await navigationHelp.innerText()).includes('AVELOF will prepare a PDF'))
+    assert.ok((await navigationHelp.innerText()).includes('revise your choices anytime'))
     assert.equal(await planner.getByRole('button', { name: 'Back', exact: true }).isVisible(), true)
     for (const next of ['Next: vehicle', 'Next: activities', 'Next: hotels']) {
       if (next === 'Next: activities') {
@@ -136,7 +161,7 @@ test('planner and ready-made packages download branded PDFs at the intended step
     await planner.getByRole('button', { name: 'Continue with this plan', exact: true }).click()
     const tripDownload = planner.getByRole('button', { name: 'Download your trip PDF', exact: true })
     await tripDownload.waitFor()
-    for (const width of [320, 390, 768, 1440]) {
+    for (const width of [320, 390, 640, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       const bounds = await planner.locator('.planner-pdf-prompt').evaluate((element) => {
@@ -148,18 +173,17 @@ test('planner and ready-made packages download branded PDFs at the intended step
         const row = element.getBoundingClientRect()
         const back = element.querySelector('.planner-back').getBoundingClientRect()
         const message = element.querySelector('p').getBoundingClientRect()
-        return { rowRight: row.right, backRight: back.right, messageLeft: message.left, messageRight: message.right, direction: getComputedStyle(element).flexDirection }
+        return { rowRight: row.right, backRight: back.right, backTop: back.top, backHeight: back.height, messageTop: message.top, messageHeight: message.height, messageLeft: message.left, messageRight: message.right, direction: getComputedStyle(element).flexDirection, border: getComputedStyle(element.querySelector('p')).borderTopWidth }
       })
       assert.ok(bounds.buttonRight <= bounds.promptRight)
       if (width <= 640) assert.equal(bounds.direction, 'column')
       assert.ok(await planner.locator('.planner-pdf-assurance').isVisible())
       assert.ok(navigationBounds.messageRight <= navigationBounds.rowRight)
-      if (width > 640) {
-        assert.ok(navigationBounds.messageLeft >= navigationBounds.backRight)
-        assert.equal(navigationBounds.direction, 'row')
-      } else {
-        assert.equal(navigationBounds.direction, 'column')
-      }
+      assert.ok(navigationBounds.messageLeft >= navigationBounds.backRight)
+      assert.equal(navigationBounds.direction, 'row')
+      assert.ok(Math.abs(navigationBounds.messageTop - navigationBounds.backTop) < 1)
+      assert.ok(Math.abs(navigationBounds.messageHeight - navigationBounds.backHeight) < 1)
+      assert.equal(navigationBounds.border, '1px')
     }
     const tripDownloadEvent = page.waitForEvent('download')
     await tripDownload.click()
