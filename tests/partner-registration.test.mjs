@@ -386,7 +386,7 @@ test('partner onboarding and approved listings work separately from customer nav
       const hotel = {
         id, hotelId: 'AVELOF_HTL_10001GLM', name: 'Meal Partner Hotel',
         location: 'Gulmarg', category: 'Premium', description: 'A comfortable mountain hotel with optional breakfast and dinner.',
-        price: 4000, breakfastPrice: 500, dinnerPrice: 700, mealPlan: 'Room only', taxDetails: 'Taxes included',
+        price: 4000, breakfastPrice: 500, dinnerPrice: 700, mealPlan: 'Room only', taxDetails: 'Taxes included', gstPercent: 0,
         heating: 'Centralised heating', amenities: ['Wi-Fi'], highlights: ['Mountain views'], roomTypes: ['Double room'],
         totalRooms: 10, checkIn: '14:00', checkOut: '11:00', photos: [`/api/hotel-images/${id}/0`],
       }
@@ -496,7 +496,7 @@ test('partner onboarding and approved listings work separately from customer nav
         await page.getByRole('heading', { name: 'Thank you for submitting your details.' }).waitFor()
         assert.equal(enquiry.fields.breakfast, 'Included')
         assert.equal(enquiry.fields.dinner, 'Included')
-        assert.equal(enquiry.fields.nightlyRate, 'INR 5,200 per room per night for 2 people; breakfast included, dinner included; Taxes included')
+        assert.equal(enquiry.fields.nightlyRate, 'INR 5,200 per room per night for 2 people; breakfast included, dinner included; Includes GST (0%)')
         await page.goto(`${origin}/car-rentals/${id}`)
         await page.getByRole('heading', { name: driver.vehicleName, exact: true }).waitFor()
         assert.equal(await page.locator('.detail-aside').getByText('Price on enquiry', { exact: true }).count(), 1)

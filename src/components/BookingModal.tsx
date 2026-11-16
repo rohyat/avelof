@@ -6,11 +6,13 @@ import SubmissionProgress from './SubmissionFeedback'
 import { rentalCars, tourPackages } from '../data/catalog'
 import { createWhatsAppUrl, enquiryPath, formatEnquiryDetails, prepareRequest, saveEnquiry } from '../services/bookingService'
 import { indianPhoneNumber } from '../services/phoneNumbers'
-import { hotelNightlyPrice, hotelSelectionValue, includedHotelMeals, selectedHotelRoom, useRegisteredHotels } from '../services/hotelService'
+import { hotelNightlyPrice, hotelRateSummary, hotelTaxStatus, hotelSelectionValue, includedHotelMeals, selectedHotelRoom, useRegisteredHotels } from '../services/hotelService'
 import HotelRates from './HotelRates'
 import HotelFeature from './HotelFeature'
-import { hotelCategoryLabel, hotelLocationLabel, hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration'
+import { hotelCategoryLabel, hotelLocationLabel, hotelRoomOccupancy, hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration'
 import type { BookingKind, BookingPayload, PreparedRequest } from '../types'
+import { PricingNotice } from './PricingProvider'
+import { usePricing, useTourPackages } from '../services/pricingContext'
 
 interface BookingModalProps {
   kind: BookingKind
@@ -34,6 +36,8 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   onSubmittingChange?: (submitting: boolean) => void
 }) {
   const registered = useRegisteredHotels(kind === 'hotel')
+  const pricing = usePricing()
+  const pricedPackages = useTourPackages()
   const availableHotels = registered.hotels
   const [preferredCar, setPreferredCar] = useState(catalogCarSelection(additionalFields.carRental ?? (kind === 'car' ? selectedItem : undefined)))
   const [checkInDate, setCheckInDate] = useState(kind === 'package' ? additionalFields.arrivalDate ?? '' : '')
@@ -54,11 +58,13 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   const selectedHotel = availableHotels.find((hotel) => hotelSelectionValue(hotel) === preferredStay)
   const lockedHotel = kind === 'hotel' && selectedItem ? selectedHotel : undefined
   const customPackage = kind === 'package' && (packagePreference === 'Custom package' || selectedItem === 'Custom package' || Boolean(additionalFields.placesToVisit))
+  const selectedPackage = pricedPackages.find((item) => item.name === packagePreference && !item.underDevelopment)
   const room = selectedHotel ? selectedHotelRoom(selectedHotel, roomSelection.hotelId === selectedHotel.id ? roomSelection.roomType : undefined) : undefined
   const people = Number(adults) + Number(childCount)
   const roomQuantity = Number(rooms ?? minimumHotelRooms(people, room?.roomType))
   const validRoomQuantity = Number.isInteger(roomQuantity) && roomQuantity >= minimumHotelRooms(people, room?.roomType) && roomQuantity <= 100
   const selectedNightlyRate = selectedHotel ? hotelNightlyPrice(selectedHotel, hotelMeals.breakfast, hotelMeals.dinner, room?.roomType) : 0
+  const gstPending = selectedHotel?.gstPercent == null
   const includedMeals = selectedHotel?.registeredHotelId && selectedHotel.breakfastPrice === undefined ? includedHotelMeals(selectedHotel) : hotelMeals
   const millisecondsPerDay = 24 * 60 * 60 * 1000
   const nights = checkInDate && checkOutDate ? (Date.parse(checkOutDate) - Date.parse(checkInDate)) / millisecondsPerDay : 0
@@ -69,6 +75,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (inFlight.current || submitDisabled || ((kind === 'hotel' || kind === 'package') && !stayDuration) || (kind === 'car' && !rentalDays)) return
+    if (kind === 'package' && !customPackage && (pricing.loading || pricing.error || !pricing.settings)) { setSubmitError('Load current package prices before submitting.'); return }
     if (kind === 'hotel' && !selectedHotel) { setSubmitError('Wait for the selected hotel to load, or choose an available hotel.'); return }
     if (kind === 'hotel' && (!validRoomQuantity || !Number.isInteger(people) || people < 1 || people > 100)) { setSubmitError('Choose enough rooms for everyone, including children, and valid guest counts up to 100 people.'); return }
     if (kind !== 'hotel' && preferredCar !== 'No car needed' && !rentalCars.some((car) => car.name === preferredCar)) { setSubmitError('Choose an available vehicle.'); return }
@@ -82,13 +89,19 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       return
     }
     fields.phoneNumber = phone
+    if (kind === 'package' && !customPackage) {
+      if (!selectedPackage) { setSubmitError('Choose an available package.'); return }
+      fields.packageRate = `INR ${selectedPackage.price.toLocaleString('en-IN')} per person`
+    }
     if (kind === 'hotel') {
       fields.roomCount = String(roomQuantity)
-      fields.hotelNightlyTotal = `INR ${(selectedNightlyRate * roomQuantity).toLocaleString('en-IN')} for ${roomQuantity} rooms per night`
-      fields.hotelStayEstimate = `INR ${(selectedNightlyRate * roomQuantity * nights).toLocaleString('en-IN')} for ${roomQuantity} rooms over ${nights} nights; subject to availability and final confirmation`
+      fields.hotelNightlyTotal = `${gstPending ? 'Subtotal before GST: ' : ''}INR ${(Math.round(selectedNightlyRate * roomQuantity * 100) / 100).toLocaleString('en-IN')} for ${roomQuantity} rooms per night; ${selectedHotel ? hotelTaxStatus(selectedHotel) : ''}`
+      fields.hotelStayEstimate = `${gstPending ? 'Subtotal before GST: ' : ''}INR ${(Math.round(selectedNightlyRate * roomQuantity * nights * 100) / 100).toLocaleString('en-IN')} for ${roomQuantity} rooms over ${nights} nights; ${gstPending ? 'final price pending GST confirmation' : 'including GST'}; subject to availability and final confirmation`
+      if (selectedHotel) fields.hotelPriceBreakdown = hotelRateSummary(selectedHotel, hotelMeals.breakfast, hotelMeals.dinner, room?.roomType)
+      fields.mealCoverage = includedMeals.breakfast || includedMeals.dinner ? `Selected meals cover ${hotelRoomOccupancy(room?.roomType)} people per room per day; ${roomQuantity} rooms cover ${hotelRoomOccupancy(room?.roomType) * roomQuantity} people.` : 'No meals selected.'
     }
     if (kind === 'hotel' && room) fields.roomType = room.roomType
-    const payload: BookingPayload = { kind, fields: { ...additionalFields, ...fields, ...(plannerDates ? { customDetails: formatEnquiryDetails(additionalFields) } : {}), ...(kind === 'package' ? { arrivalDate: checkInDate, departureDate: checkOutDate, tripDays: String(nights + 1), tripNights: String(nights) } : {}), ...(kind === 'car' ? { rentalDays: String(rentalDays) } : {}), ...(kind === 'hotel' ? { stayDuration, breakfast: includedMeals.breakfast ? 'Included' : 'Not included', dinner: includedMeals.dinner ? 'Included' : 'Not included', nightlyRate: selectedHotel?.registeredHotelId ? `INR ${selectedNightlyRate.toLocaleString('en-IN')} ${hotelRoomRateBasis(room?.roomType)}; breakfast ${includedMeals.breakfast ? 'included' : 'excluded'}, dinner ${includedMeals.dinner ? 'included' : 'excluded'}; ${selectedHotel.taxDetails}` : `₹${selectedNightlyRate.toLocaleString('en-IN')} ${hotelRoomRateBasis(room?.roomType)}` } : {}) } }
+    const payload: BookingPayload = { kind, fields: { ...additionalFields, ...fields, ...(plannerDates ? { customDetails: formatEnquiryDetails(additionalFields) } : {}), ...(kind === 'package' ? { arrivalDate: checkInDate, departureDate: checkOutDate, tripDays: String(nights + 1), tripNights: String(nights) } : {}), ...(kind === 'car' ? { rentalDays: String(rentalDays) } : {}), ...(kind === 'hotel' ? { stayDuration, breakfast: includedMeals.breakfast ? 'Included' : 'Not included', dinner: includedMeals.dinner ? 'Included' : 'Not included', nightlyRate: `INR ${selectedNightlyRate.toLocaleString('en-IN')} ${hotelRoomRateBasis(room?.roomType)}; breakfast ${includedMeals.breakfast ? 'included' : 'excluded'}, dinner ${includedMeals.dinner ? 'included' : 'excluded'}; ${selectedHotel ? hotelTaxStatus(selectedHotel) : ''}` } : {}) } }
     const fingerprint = JSON.stringify(payload)
     if (pendingRequest.current?.fingerprint !== fingerprint) pendingRequest.current = { fingerprint, request: prepareRequest(payload) }
     const request = pendingRequest.current.request
@@ -128,6 +141,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       : <label className="full-field">Package preference<select name="packagePreference" value={packagePreference} onChange={(event) => setPackagePreference(event.target.value)} required>
         {tourPackages.filter((item) => !item.underDevelopment).map((item) => <option key={item.id} value={item.name}>{item.name} - {item.duration}</option>)}
       </select></label>)}
+    {kind === 'package' && !customPackage && <div className="full-field"><PricingNotice />{selectedPackage && <p className="privacy-note">Package rate: INR {selectedPackage.price.toLocaleString('en-IN')} per person.</p>}</div>}
     {kind === 'hotel' && (lockedHotel
       ? <div className="full-field selected-hotel-field"><span>Selected hotel</span><strong>{lockedHotel.name}</strong>{lockedHotel.exactLocation && <span>{hotelLocationLabel(lockedHotel)}</span>}<input type="hidden" name="preferredStay" value={hotelSelectionValue(lockedHotel)} /></div>
       : <label className="full-field">Preferred stay<select name="preferredStay" value={preferredStay} disabled={!availableHotels.length} required onChange={(event) => { setPreferredStay(event.target.value); setHotelMeals({ breakfast: false, dinner: false }); setRooms(undefined) }}>{!preferredStay && <option value="">No approved hotels available</option>}{selectedItem && !selectedHotel && <option value={selectedItem}>{selectedItem}</option>}{availableHotels.map((hotel) => <option key={hotel.id} value={hotelSelectionValue(hotel)}>{hotel.name} - {hotelLocationLabel(hotel)} - {hotelCategoryLabel(hotel.category.replace(/ package$/i, ''))}</option>)}</select></label>)}
@@ -148,7 +162,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       {registered.loading && <p role="status">Loading registered hotels...</p>}
       {registered.error && <p className="enquiry-error" role="alert">{registered.error} <button type="button" className="text-link" onClick={registered.reload}>Retry loading hotels</button></p>}
       {!selectedHotel && !registered.loading && !registered.error && <p className="enquiry-error" role="alert">This selected hotel is no longer available. Choose another hotel.</p>}
-      {selectedHotel && <><div className="selected-hotel-features"><h3>Amenities</h3><div className="hotel-feature-chips">{selectedHotel.facilities.map((facility) => <HotelFeature key={facility} label={facility} />)}</div><h3>Highlights</h3><div className="hotel-feature-chips">{selectedHotel.highlights.map((highlight) => <HotelFeature key={highlight} label={highlight} />)}</div></div><HotelRates key={selectedHotel.id} hotel={selectedHotel} showRooms people={people} rooms={rooms} onRoomsChange={setRooms} roomType={room?.roomType} onChange={(breakfast, dinner, _price, roomType) => { setHotelMeals({ breakfast, dinner }); if (room?.roomType !== roomType) setRooms(undefined); setRoomSelection({ hotelId: selectedHotel.id, roomType: roomType ?? '' }) }} />{validRoomQuantity && nights > 0 && <p className="privacy-note hotel-stay-estimate">Stay estimate: INR {(selectedNightlyRate * roomQuantity * nights).toLocaleString('en-IN')} for {roomQuantity} rooms over {nights} nights. Subject to availability and final confirmation.</p>}</>}
+      {selectedHotel && <><div className="selected-hotel-features"><h3>Amenities</h3><div className="hotel-feature-chips">{selectedHotel.facilities.map((facility) => <HotelFeature key={facility} label={facility} />)}</div><h3>Highlights</h3><div className="hotel-feature-chips">{selectedHotel.highlights.map((highlight) => <HotelFeature key={highlight} label={highlight} />)}</div></div><HotelRates key={selectedHotel.id} hotel={selectedHotel} showRooms people={people} rooms={rooms} onRoomsChange={setRooms} roomType={room?.roomType} onChange={(breakfast, dinner, _price, roomType) => { setHotelMeals({ breakfast, dinner }); if (room?.roomType !== roomType) setRooms(undefined); setRoomSelection({ hotelId: selectedHotel.id, roomType: roomType ?? '' }) }} />{validRoomQuantity && nights > 0 && <p className="privacy-note hotel-stay-estimate">{gstPending ? 'Stay subtotal before GST' : 'Stay estimate including GST'}: INR {(Math.round(selectedNightlyRate * roomQuantity * nights * 100) / 100).toLocaleString('en-IN')} for {roomQuantity} rooms over {nights} nights. {gstPending && 'Final price pending GST confirmation. '}Subject to availability and final confirmation.</p>}</>}
     </> : !plannerDates && <label className="full-field">{kind === 'car' ? 'Preferred vehicle' : 'Car rental'}<select name="carRental" value={preferredCar} onChange={(event) => setPreferredCar(event.target.value)}>
       {rentalCars.map((car) => <option key={car.id} value={car.name}>{car.name} - {car.seats} seats</option>)}
       <option>No car needed</option>

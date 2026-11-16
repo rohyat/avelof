@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { discountedPrice } from '../../src/services/pricingSchema.ts'
 import { hotelDetailsSchema } from '../../src/services/hotelSchema.ts'
 import { hotelLocationCodes, hotelPhotoCount, hotelPhotoDimension, hotelPhotoLimit } from '../../src/data/hotelRegistration.ts'
 import { partnerStatusAccessCode } from '../../src/services/partnerAccessCode.ts'
@@ -37,13 +38,18 @@ function hotelDetails(row: HotelRow) {
     averageRating: row.average_rating ?? null, reviewCount: row.review_count ?? 0,
   }
 }
-export const customerHotelRate = (price: number) => Math.ceil(Math.round(price * 100) * 109 / 10000)
-export function publicHotel(row: HotelRow) {
+export const customerHotelRate = (price: number) => Math.ceil(Math.round(price * 100) * 145 / 10000)
+export function publicHotel(row: HotelRow, discountPercent = 0) {
   const hotel = hotelDetails(row)
+  const originalPrice = customerHotelRate(hotel.price)
   return {
     ...hotel,
-    price: customerHotelRate(hotel.price),
-    ...(hotel.roomRates ? { roomRates: hotel.roomRates.map((room) => ({ ...room, price: customerHotelRate(room.price) })) } : {}),
+    originalPrice, discountPercent,
+    price: discountedPrice(originalPrice, discountPercent),
+    ...(hotel.roomRates ? { roomRates: hotel.roomRates.map((room) => {
+      const originalPrice = customerHotelRate(room.price)
+      return { ...room, originalPrice, price: discountedPrice(originalPrice, discountPercent) }
+    }) } : {}),
   }
 }
 export function adminHotel(row: HotelRow) {

@@ -43,9 +43,10 @@ export const hotelRoomRateBasis = (roomType?: string) => `per room per night for
 export const minimumHotelRooms = (people: number, roomType?: string) => Math.max(1, Math.ceil(people / hotelRoomOccupancy(roomType)))
 export const hotelHighlightOptions = ['Mountain views', 'Near the market', 'Near local attractions', 'Garden or outdoor space', 'On-site restaurant', 'Room service', 'Family-friendly stay', 'Centralised heating'] as const
 export const hotelAmenities = ['Wi-Fi', 'Parking', 'Restaurant', 'Room service', 'Hot water', 'Power backup', 'Lift', 'Wheelchair access', 'Air conditioning'] as const
-export const heatingOptions = ['Centralised heating', 'Room heaters', 'No heating'] as const
+export const heatingOptions = ['Centralised heating', 'Hot & cold AC', 'Room heaters', 'No heating'] as const
 export const hotelMealPlans = ['Room only', 'Breakfast included', 'Breakfast and dinner included', 'All meals included'] as const
-export const hotelTaxOptions = ['Taxes included', 'Taxes extra'] as const
+export const hotelTaxLabel = 'Rates exclude GST'
+export const hotelTaxOptions = [hotelTaxLabel, 'All taxes included', 'Taxes included', 'Taxes extra'] as const
 export const hotelStatusLabels = { pending: 'Awaiting approval', approved: 'Approved', rejected: 'Rejected' }
 export const hotelPhotoCount = 5
 export const hotelPhotoDimension = 1920

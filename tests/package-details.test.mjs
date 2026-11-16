@@ -8,6 +8,7 @@ const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8791'
 test('package detail cards preserve itinerary, experiences, inclusions, pricing and booking actions', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage()
+  await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 0, version: 0 } }))
   try {
     for (const item of tourPackages.filter((item) => !item.underDevelopment)) {
       await page.goto(`${origin}/tour-packages/${item.id}`)

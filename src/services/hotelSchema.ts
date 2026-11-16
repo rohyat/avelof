@@ -1,13 +1,15 @@
 import { z } from 'zod'
-import { heatingOptions, hotelAmenities, hotelCategories, hotelIdPattern, hotelMealPlans, hotelPhotoCount, hotelRoomTypes, hotelTaxOptions, registrationLocations } from '../data/hotelRegistration.ts'
+import { heatingOptions, hotelAmenities, hotelCategories, hotelIdPattern, hotelMealPlans, hotelPhotoCount, hotelRoomTypes, hotelTaxLabel, hotelTaxOptions, registrationLocations } from '../data/hotelRegistration.ts'
 import { indianPhoneNumber } from './phoneNumbers.ts'
 import { partnerStatusAccessCodePattern } from './partnerAccessCode.ts'
+import { discountPercentSchema } from './pricingSchema.ts'
 import { coordinateFields, coordinatePairError, coordinatesPaired } from './locationSchema.ts'
 
 const text = (max: number) => z.string().trim().min(1).max(max)
 export const hotelStatusSchema = z.enum(['pending', 'approved', 'rejected'])
 export const hotelPriceSchema = z.number().min(1).max(1000000).refine((price) => Math.abs(price * 100 - Math.round(price * 100)) < 0.00001, 'Use at most two decimal places.')
 export const mealPriceSchema = z.number().min(0).max(1000000).refine((price) => Math.abs(price * 100 - Math.round(price * 100)) < 0.00001, 'Use at most two decimal places.')
+export const hotelGstPercentSchema = z.number().min(0).max(28).refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 0.00001, 'Use at most two decimal places.')
 export const hotelRoomRateSchema = z.object({
   roomType: z.enum(hotelRoomTypes), count: z.number().int().min(1).max(10000), price: hotelPriceSchema,
 }).strict()
@@ -25,7 +27,8 @@ const hotelDetailsObject = z.object({
   name: text(120), location: z.enum(registrationLocations), category: z.enum(hotelCategories),
   exactLocation: text(120).optional(),
   description: text(1600).min(20), price: hotelPriceSchema,
-  mealPlan: z.enum(hotelMealPlans), taxDetails: z.enum(hotelTaxOptions),
+  mealPlan: z.enum(hotelMealPlans), taxDetails: z.enum(hotelTaxOptions).transform(() => hotelTaxLabel),
+  gstPercent: hotelGstPercentSchema.nullable().default(null),
   breakfastPrice: mealPriceSchema.optional(), dinnerPrice: mealPriceSchema.optional(),
   heating: z.enum(heatingOptions),
   amenities: z.array(z.enum(hotelAmenities)).max(hotelAmenities.length).refine((items) => new Set(items).size === items.length),
@@ -38,13 +41,13 @@ const hotelDetailsObject = z.object({
   ...coordinateFields,
 }).strict()
 export const hotelDetailsSchema = hotelDetailsObject.refine(coordinatesPaired, coordinatePairError)
-export const hotelSubmissionSchema = hotelDetailsObject.extend({
+export const hotelSubmissionSchema = hotelDetailsObject.omit({ gstPercent: true }).extend({
   id: z.uuidv4().toLowerCase(), contactName: text(80),
   phone: text(30).transform(indianPhoneNumber).refine(Boolean, 'Enter a valid 10-digit Indian phone number.'),
   publicationConsent: z.literal(true), website: z.string().max(200).default(''),
 }).strict().refine(coordinatesPaired, coordinatePairError)
-const customerPriceSchema = z.number().min(1).max(1090000).refine((price) => Math.abs(price * 100 - Math.round(price * 100)) < 0.00001, 'Use at most two decimal places.')
-const customerRoomRateSchema = hotelRoomRateSchema.extend({ price: customerPriceSchema })
+const customerPriceSchema = z.number().min(0).max(1450000).refine((price) => Math.abs(price * 100 - Math.round(price * 100)) < 0.00001, 'Use at most two decimal places.')
+const customerRoomRateSchema = hotelRoomRateSchema.extend({ price: customerPriceSchema, originalPrice: customerPriceSchema.optional() })
 const customerRoomRatesSchema = z.array(customerRoomRateSchema).min(1).max(hotelRoomTypes.length)
   .refine((rates) => new Set(rates.map(({ roomType }) => roomType)).size === rates.length, 'Room types must be unique.')
 const hotelListingFields = {
@@ -52,7 +55,7 @@ const hotelListingFields = {
   photos: z.array(z.string().regex(/^\/api\/hotel-images\/[a-f0-9-]{36}\/[0-4]$/)).min(1).max(hotelPhotoCount),
   averageRating: z.number().min(1).max(5).nullable().default(null), reviewCount: z.number().int().min(0).default(0),
 }
-const publicHotelObject = hotelDetailsObject.extend({ ...hotelListingFields, price: customerPriceSchema, roomRates: customerRoomRatesSchema.optional() })
+const publicHotelObject = hotelDetailsObject.extend({ ...hotelListingFields, price: customerPriceSchema, originalPrice: customerPriceSchema.optional(), discountPercent: discountPercentSchema.optional(), roomRates: customerRoomRatesSchema.optional() })
 export const publicHotelSchema = publicHotelObject.refine(coordinatesPaired, coordinatePairError)
 const privateHotelObject = hotelDetailsObject.extend(hotelListingFields)
 export const adminHotelSchema = privateHotelObject.extend({
@@ -72,6 +75,7 @@ export const hotelModerationObject = z.object({
   status: hotelStatusSchema, price: hotelPriceSchema, ownerNote: z.string().trim().max(1000),
   breakfastPrice: mealPriceSchema.optional(), dinnerPrice: mealPriceSchema.optional(),
   roomRates: hotelRoomRatesSchema.optional(),
+  gstPercent: hotelGstPercentSchema.nullable().optional(),
   ...coordinateFields,
 }).strict()
 export const hotelModerationSchema = hotelModerationObject.refine(coordinatesPaired, coordinatePairError)

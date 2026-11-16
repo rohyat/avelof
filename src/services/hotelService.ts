@@ -63,8 +63,8 @@ export async function updateHotel(details: HotelSubmission, version: number, acc
 export async function loadAdminHotels(page: number, status: HotelStatus | 'all', signal?: AbortSignal) {
   return adminList.parse(await requestHotel(`/api/hotels?${new URLSearchParams({ scope: 'admin', page: String(page), status })}`, 'GET', undefined, signal))
 }
-export async function moderateHotel(id: string, version: number, status: HotelStatus, price: number, ownerNote: string, breakfastPrice?: number, dinnerPrice?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null) {
-  return z.object({ hotel: adminHotelSchema }).parse(await requestHotel('/api/hotels', 'PATCH', { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice, roomRates, ...(coordinates === undefined ? {} : locationFields(coordinates ?? undefined)) })).hotel
+export async function moderateHotel(id: string, version: number, status: HotelStatus, price: number, ownerNote: string, breakfastPrice?: number, dinnerPrice?: number, roomRates?: HotelRoomRate[], coordinates?: MapCoordinates | null, gstPercent?: number | null) {
+  return z.object({ hotel: adminHotelSchema }).parse(await requestHotel('/api/hotels', 'PATCH', { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice, roomRates, gstPercent, ...(coordinates === undefined ? {} : locationFields(coordinates ?? undefined)) })).hotel
 }
 export async function deleteHotel(id: string, version: number) {
   return z.object({ deleted: z.literal(true), id: z.uuidv4() }).parse(await requestHotel('/api/hotels', 'DELETE', { id, version }))
@@ -88,7 +88,8 @@ export function toCatalogHotel(hotel: PublicHotel): Hotel {
     latitude: hotel.latitude, longitude: hotel.longitude,
     image: hotel.photos[0], gallery: hotel.photos,
     description: hotel.description, rateBasis: hotelRoomRateBasis(selectedHotelRoom(hotel)?.roomType),
-    mealPlan: hotel.mealPlan, taxDetails: hotel.taxDetails, totalRooms: hotel.totalRooms,
+    mealPlan: hotel.mealPlan, taxDetails: hotel.taxDetails, gstPercent: hotel.gstPercent, totalRooms: hotel.totalRooms,
+    originalPrice: hotel.originalPrice, discountPercent: hotel.discountPercent,
     ...(hotel.breakfastPrice !== undefined && hotel.dinnerPrice !== undefined ? { roomOnlyPrice: hotel.price, breakfastPrice: hotel.breakfastPrice, dinnerPrice: hotel.dinnerPrice } : {}),
     roomTypes: hotel.roomTypes, roomRates: hotel.roomRates, facilities: [hotel.heating, ...hotel.amenities],
     checkIn: hotel.checkIn, checkOut: hotel.checkOut, highlights: hotel.highlights,
@@ -102,6 +103,12 @@ export function useRegisteredHotels(enabled: boolean, id?: string) {
   const key = enabled ? id ?? 'all' : ''
   const [state, setState] = useState<{ key: string; hotels: Hotel[]; loading: boolean; error: string }>({ key: '', hotels: [], loading: enabled, error: '' })
   const [revision, setRevision] = useState(0)
+  useEffect(() => {
+    const refresh = () => { if (enabled) { setState({ key, hotels: [], loading: true, error: '' }); setRevision((value) => value + 1) } }
+    window.addEventListener('avelof-pricing-updated', refresh)
+    window.addEventListener('focus', refresh)
+    return () => { window.removeEventListener('avelof-pricing-updated', refresh); window.removeEventListener('focus', refresh) }
+  }, [enabled, key])
   useEffect(() => {
     if (!enabled) return
     const controller = new AbortController()
@@ -130,9 +137,20 @@ export function selectedHotelRoom(hotel: Pick<Hotel, 'roomRates'>, roomType?: st
     ?? hotel.roomRates?.reduce((lowest, room) => room.price < lowest.price ? room : lowest)
 }
 export const hotelNightlyPrice = (hotel: Hotel, breakfast: boolean, dinner: boolean, roomType?: string) => {
+  return hotelPriceBreakdown(hotel, breakfast, dinner, roomType).total
+}
+export function hotelPriceBreakdown(hotel: Hotel, breakfast: boolean, dinner: boolean, roomType?: string) {
   const base = selectedHotelRoom(hotel, roomType)?.price ?? hotel.roomOnlyPrice ?? hotel.price
   const meals = hotelMealPrices(hotel, roomType)
-  return Math.round((base + (breakfast ? meals.breakfast : 0) + (dinner ? meals.dinner : 0)) * 100) / 100
+  const mealTotal = Math.round(((breakfast ? meals.breakfast : 0) + (dinner ? meals.dinner : 0)) * 100) / 100
+  const subtotal = Math.round((base + mealTotal) * 100) / 100
+  const gst = hotel.gstPercent == null ? null : Math.round(Math.round(subtotal * 100) * Math.round(hotel.gstPercent * 100) / 10000) / 100
+  return { room: base, meals: mealTotal, subtotal, gst, total: Math.round((subtotal + (gst ?? 0)) * 100) / 100 }
+}
+export const hotelTaxStatus = (hotel: Hotel) => hotel.gstPercent == null ? 'Final price pending GST confirmation' : `Includes GST (${hotel.gstPercent}%)`
+export function hotelRateSummary(hotel: Hotel, breakfast: boolean, dinner: boolean, roomType?: string) {
+  const rate = hotelPriceBreakdown(hotel, breakfast, dinner, roomType)
+  return `Room before GST: INR ${rate.room.toLocaleString('en-IN')}; meals before GST: INR ${rate.meals.toLocaleString('en-IN')}; ${rate.gst === null ? 'final price pending GST confirmation' : `GST (${hotel.gstPercent}%): INR ${rate.gst.toLocaleString('en-IN')}; total including GST: INR ${rate.total.toLocaleString('en-IN')}`} ${hotelRoomRateBasis(selectedHotelRoom(hotel, roomType)?.roomType)}`
 }
 export function hotelMealPrices(hotel: Hotel, roomType?: string) {
   const multiplier = hotelRoomMealMultiplier(selectedHotelRoom(hotel, roomType)?.roomType)

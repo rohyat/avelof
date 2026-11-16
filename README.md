@@ -11,6 +11,49 @@ npm run dev
 
 Create a production build with `npm run build`. Run the configured linter with `npm run lint`.
 
+Hotel registration and editing support Centralised heating, Hot & cold AC,
+Room heaters and No heating. The selected option is retained in private records
+and displayed with the approved hotel details.
+
+Hotel-entered and admin-reviewed room and meal rates exclude GST. Registration,
+editing and private records show Rates exclude GST. Historical tax labels are
+accepted when reading existing records and normalised to this policy without
+changing the entered amounts. The previous all-inclusive-tax policy is superseded.
+Admin hotel moderation stores a confirmed hotel-specific GST percentage (0-28%,
+up to two decimal places) in the existing private details JSON. Blank means
+unconfirmed, not 0%; zero must be explicitly confirmed. No new migration is needed
+for this field. Owners cannot set an admin-confirmed GST rate; owner edits clear
+it for review. Existing hotels have no assumed GST rate.
+
+Confirm the appropriate tax treatment with the hotel/accountant, including who
+invoices the guest and whether the same rate applies to every listed room and
+selected meal. No automatic statutory-slab or tax-compliance claim is made.
+Reconfirm the rate when tariffs, discounts or tax treatment change.
+Hotel regular customer room rates are the submitted/admin-reviewed rates plus 45%,
+rounded up to a whole rupee. Private partner/admin rates are not changed. Deluxe
+and Premium package regular prices are INR 22,000 and INR 36,000 per person.
+The owner dashboard has one Hotel & package discount setting (0-100%, up to two
+decimal places), initially 0%. It is saved in D1 via authenticated, same-origin
+`PATCH /api/pricing` with optimistic version checks. `GET /api/pricing` exposes
+only the public percentage and version, with no-store caching. Apply migration
+`0025_pricing_settings.sql` before deployment. Missing storage fails explicitly;
+the application does not silently assume a discount on lookup errors.
+
+The saved percentage applies to hotel room rates and package prices on home/cards,
+details, offer tiles, enquiries and planner estimates. Discounted rates round to
+paise. Crossed-out regular rates and discount labels appear only when the saved
+discount lowers the price. Optional hotel meal add-ons are not discounted.
+Calculation: tax-exclusive room rate + 45% markup (rounded up to a rupee), then
+the saved discount, then selected tax-exclusive meals, then the hotel's confirmed
+GST on that subtotal (rounded to paise). Cards, details, enquiries and planner
+estimates show GST separately and include it in totals when confirmed.
+Without a confirmed rate they show a clearly labelled pre-GST subtotal and
+Final price pending GST confirmation; enquiries remain available.
+Breakfast/dinner labels and selected-meal messages state the coverage: 2 people
+per room per day, or 4 in a Family room (twice the meal add-on).
+Cabs, their rates and existing 30% offer
+remain unchanged. The previous hotel calculated-comparison display has been removed.
+
 Driver vehicle numbers temporarily allow non-JK state prefixes as well as JK.
 Public driver phone numbers show only the first digit and final two digits
 (`9*******10`). Driving licences show only the first two and final two characters
@@ -763,9 +806,9 @@ publishing, hiding, returning to pending or deleting a review.
 New hotel registrations collect a room count and a room-only INR rate for each
 offered type (Standard, Deluxe, Premium, Family and Suite). Submitted and
 admin-reviewed room rates remain unchanged in private records. The public hotel
-API adds 9% to each room rate and rounds up to the next whole rupee, including
+API adds 45% to each room rate and rounds up to the next whole rupee, including
 legacy rates. This applies to existing and new hotels, listings, enquiries and
-planner estimates. Breakfast and dinner add-ons are not increased.
+planner estimates, then applies the saved hotel/package discount. Breakfast and dinner add-ons are not increased or discounted.
 A zero count excludes
 that type. Family room-only rates cover four people; other room rates cover two.
 Breakfast and dinner are entered as shared base add-ons for two people. For a

@@ -5,7 +5,7 @@ import { catalogPhotos as photos, providedDestinationPhotos as suppliedPhotos } 
 const packageCatalog: TourPackage[] = [
   {
     id: 'deluxe', kind: 'package', name: 'Deluxe', location: 'Srinagar · Gulmarg · Pahalgam',
-    image: photos.lake, gallery: [photos.lake, photos.valley, photos.meadow], category: 'Deluxe', price: 15399.30, originalPrice: 21999,
+    image: photos.lake, gallery: [photos.lake, photos.valley, photos.meadow], category: 'Deluxe', price: 22000,
     duration: '4 nights · 5 days', description: 'A five-day Kashmir escape with stays in Srinagar and Pahalgam, plus a Gulmarg day trip.',
     itinerary: [
       { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Meet your local driver, check in at The Mallard and enjoy a relaxed first evening.' },
@@ -26,7 +26,7 @@ const packageCatalog: TourPackage[] = [
   },
   {
     id: 'premium', kind: 'package', name: 'Premium', location: 'Srinagar · Gulmarg · Pahalgam',
-    image: photos.mountain, gallery: [photos.mountain, photos.snow, photos.lake], category: 'Premium', price: 25899.30, originalPrice: 36999,
+    image: photos.mountain, gallery: [photos.mountain, photos.snow, photos.lake], category: 'Premium', price: 36000,
     duration: '5 nights · 6 days', description: "A six-day Kashmir stay with Jamal Resorts, Hotel Signature and Twin Towers by D'foy.",
     itinerary: [
       { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Check in at Jamal Resorts and settle into the city.' },

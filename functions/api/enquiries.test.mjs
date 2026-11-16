@@ -19,6 +19,9 @@ import { onRequest as onPartnerPhotosRequest } from './partner-photos.ts'
 import { onRequest as onHotelImageRequest } from './hotel-images/[id]/[index].ts'
 import { customerHotelRate, hotelAccessCode, registrationPhotoBytes, validHotelJpeg } from '../_lib/hotelRegistration.ts'
 import { hotelCategories, hotelPhotoLimit, hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
+import { onRequest as onPricingRequest } from './pricing.ts'
+import { discountedPrice } from '../../src/services/pricingSchema.ts'
+import { rentalCars, tourPackages } from '../../src/data/catalog.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 import { adminCookie, correctAdminUsername, createAdminSession, customerAccessCode, hashText, isAdmin, phoneCandidates, verifyAdminPassword } from '../_lib/enquiryAccess.ts'
 import { matchingTotpCounter, totpCode, validTotpSecret } from '../_lib/adminTotp.ts'
@@ -537,7 +540,7 @@ test('hotel room-only and meal add-on rates survive approval, including free mea
     assert.equal((await hotelRequest(DB, bucket, 'PATCH', { ...edit, dinnerPrice: undefined }, { headers: { Cookie } })).status, 400)
     assert.equal((await hotelRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })).status, 200)
     const published = (await (await hotelRequest(DB, bucket, 'GET')).json()).hotels[0]
-    assert.equal(published.price, 4142)
+    assert.equal(published.price, 5510)
     assert.equal(published.breakfastPrice, 0)
     assert.equal(published.dinnerPrice, 700)
     assert.equal(published.mealPlan, 'Room only')
@@ -644,8 +647,8 @@ test('coordinate schemas reject non-finite numbers and migration preserves old r
   } finally { DB.sqlite.close() }
 })
 
-test('customer hotel room rates add nine percent and round up without floating-point errors', () => {
-  for (const [base, expected] of [[1, 2], [100, 109], [100.01, 110], [2000, 2180], [2600.50, 2835], [1000000, 1090000]]) {
+test('customer hotel room rates add forty-five percent and round up without floating-point errors', () => {
+  for (const [base, expected] of [[1, 2], [100, 145], [100.01, 146], [2000, 2900], [2600.50, 3771], [1000000, 1450000]]) {
     assert.equal(customerHotelRate(base), expected)
   }
 })
@@ -675,8 +678,8 @@ test('room-type rates persist, require consistent minimum prices and remain edit
     }
     assert.equal((await hotelRequest(DB, bucket, 'PATCH', edit, { headers: { Cookie } })).status, 200)
     const published = (await (await hotelRequest(DB, bucket, 'GET')).json()).hotels[0]
-    assert.deepEqual(published.roomRates, [{ ...reviewed[0], price: 2835 }, { ...reviewed[1], price: 6649 }])
-    assert.equal(published.price, 2835)
+    assert.deepEqual(published.roomRates, [{ ...reviewed[0], price: 3771, originalPrice: 3771 }, { ...reviewed[1], price: 8845, originalPrice: 8845 }])
+    assert.equal(published.price, 3771)
     assert.equal(published.breakfastPrice, 0)
     assert.equal(published.dinnerPrice, 700)
     const admin = (await (await hotelRequest(DB, bucket, 'GET', undefined, { query: '?scope=admin', headers: { Cookie } })).json()).hotels[0]
@@ -690,6 +693,133 @@ test('room-type rates persist, require consistent minimum prices and remain edit
     const savedEnquiry = JSON.parse(DB.sqlite.prepare('SELECT fields_json FROM enquiries WHERE reference = ?').get(enquiry.reference).fields_json)
     assert.equal(savedEnquiry.roomType, 'Suite')
     assert.equal(savedEnquiry.nightlyRate, enquiry.fields.nightlyRate)
+  } finally { DB.sqlite.close() }
+})
+
+test('hotel heating options persist through private editing and approved listings', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    const input = { ...hotelPayload(), heating: 'Hot & cold AC' }
+    const registered = await hotelRequest(DB, bucket, 'POST', input)
+    assert.equal(registered.status, 201)
+    const receipt = await registered.json()
+    const lookup = () => hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: receipt.accessCode }, { lookup: true })
+    assert.equal((await (await lookup()).json()).hotel.heating, 'Hot & cold AC')
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    assert.equal((await hotelRequest(DB, bucket, 'PATCH', { id: input.id, version: 0, status: 'approved', ownerNote: '', price: input.price }, { headers: { Cookie } })).status, 200)
+    assert.equal((await (await hotelRequest(DB, bucket, 'GET')).json()).hotels[0].heating, 'Hot & cold AC')
+    assert.equal((await hotelRequest(DB, bucket, 'POST', { ...input, heating: 'Room heaters' }, { handler: onHotelUpdateRequest, auth: { accessCode: receipt.accessCode, version: 1 }, photos: [] })).status, 200)
+    assert.equal((await (await lookup()).json()).hotel.heating, 'Room heaters')
+    for (const heating of ['Centralised heating', 'Room heaters', 'No heating']) assert.equal(hotelSubmissionSchema.safeParse({ ...input, heating }).success, true)
+  } finally { DB.sqlite.close() }
+})
+
+test('pricing settings persist a versioned hotel/package discount without changing private rates or cabs', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    const secret = 'test-secret-with-more-than-thirty-two-characters'
+    const env = { DB, ENQUIRY_ACCESS_SECRET: secret, ENQUIRY_ADMIN_CODE_HASH: await hashText('123456789012345678901234567890123456789012345678') }
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const cookie = login.headers.get('Set-Cookie').split(';')[0]
+    const request = (method = 'GET', data, headers = {}) => onPricingRequest({ env, request: new Request('https://avelof.test/api/pricing', { method, headers: { Origin: 'https://avelof.test', ...(data ? { 'Content-Type': 'application/json' } : {}), ...headers }, ...(data ? { body: JSON.stringify(data) } : {}) }) })
+    assert.deepEqual(await (await request()).json(), { discountPercent: 0, version: 0 })
+    assert.equal((await request('PATCH', { discountPercent: 20, version: 0 })).status, 401)
+    assert.equal((await request('PATCH', { discountPercent: 20, version: 0 }, { Cookie: cookie, Origin: 'https://elsewhere.test' })).status, 403)
+    for (const discountPercent of [-1, 101, 1.234, '20', null]) {
+      assert.equal((await request('PATCH', { discountPercent, version: 0 }, { Cookie: cookie })).status, 400)
+    }
+    const input = { ...hotelPayload(), price: 2000, roomRates: [{ roomType: 'Standard', count: 2, price: 2000 }, { roomType: 'Family', count: 1, price: 4000 }], totalRooms: 3, roomTypes: ['Standard (2 rooms)', 'Family (1 room)'], mealPlan: 'Room only', breakfastPrice: 200, dinnerPrice: 300 }
+    assert.equal((await hotelRequest(DB, bucket, 'POST', input)).status, 201)
+    DB.sqlite.prepare("UPDATE hotel_registrations SET status = 'approved' WHERE id = ?").run(input.id)
+    let response = await request('PATCH', { discountPercent: 20, version: 0 }, { Cookie: cookie })
+    assert.equal(response.status, 200)
+    assert.ok(response.headers.get('Cache-Control').includes('no-store'))
+    assert.deepEqual(await response.json(), { discountPercent: 20, version: 1 })
+    assert.equal((await request('PATCH', { discountPercent: 30, version: 0 }, { Cookie: cookie })).status, 409)
+    assert.deepEqual(await (await request()).json(), { discountPercent: 20, version: 1 })
+    const hotel = (await (await hotelRequest(DB, bucket, 'GET')).json()).hotels[0]
+    assert.equal(hotel.price, 2320)
+    assert.equal(hotel.originalPrice, 2900)
+    assert.equal(hotel.discountPercent, 20)
+    assert.deepEqual(hotel.roomRates.map(({ price, originalPrice }) => [price, originalPrice]), [[2320, 2900], [4640, 5800]])
+    assert.equal(hotel.breakfastPrice, 200)
+    assert.equal(hotel.dinnerPrice, 300)
+    const privateRow = DB.sqlite.prepare('SELECT price, details_json FROM hotel_registrations WHERE id = ?').get(input.id)
+    assert.equal(privateRow.price, 2000)
+    assert.equal(JSON.parse(privateRow.details_json).roomRates[1].price, 4000)
+    for (const [percent, expected] of [[0, 2900], [12.5, 2537.5], [100, 0]]) {
+      const current = await (await request()).json()
+      response = await request('PATCH', { discountPercent: percent, version: current.version }, { Cookie: cookie })
+      assert.equal(response.status, 200)
+      assert.equal((await (await hotelRequest(DB, bucket, 'GET')).json()).hotels[0].price, expected)
+    }
+    assert.equal(tourPackages.find(({ id }) => id === 'deluxe').price, 22000)
+    assert.equal(tourPackages.find(({ id }) => id === 'premium').price, 36000)
+    assert.equal(discountedPrice(22000, 20), 17600)
+    assert.equal(discountedPrice(36000, 20), 28800)
+    assert.equal(discountedPrice(3771, 12.5), 3299.63)
+    assert.deepEqual(rentalCars.map(({ price }) => price), [2000, 2500, 3500, 3500, 3800, 4000, 5000, 6500])
+    DB.sqlite.exec('DROP TABLE pricing_settings')
+    assert.equal((await request()).status, 503)
+    assert.equal((await hotelRequest(DB, bucket, 'GET')).status, 503)
+  } finally { DB.sqlite.close() }
+})
+
+test('hotel tax-exclusive policy normalises legacy labels without assuming a GST rate', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    for (const taxDetails of ['Taxes included', 'Taxes extra', 'All taxes included']) {
+      const parsed = hotelSubmissionSchema.parse({ ...hotelPayload(), taxDetails })
+      assert.equal(parsed.taxDetails, 'Rates exclude GST')
+    }
+    const input = hotelPayload()
+    const registered = await hotelRequest(DB, bucket, 'POST', input)
+    const receipt = await registered.json()
+    const row = DB.sqlite.prepare('SELECT details_json FROM hotel_registrations WHERE id = ?').get(input.id)
+    DB.sqlite.prepare('UPDATE hotel_registrations SET details_json = ? WHERE id = ?').run(JSON.stringify({ ...JSON.parse(row.details_json), taxDetails: 'Taxes extra' }), input.id)
+    const owner = await hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: receipt.accessCode }, { lookup: true })
+    assert.equal((await owner.json()).hotel.taxDetails, 'Rates exclude GST')
+    DB.sqlite.prepare("UPDATE hotel_registrations SET status = 'approved' WHERE id = ?").run(input.id)
+    const hotel = (await (await hotelRequest(DB, bucket, 'GET')).json()).hotels[0]
+    assert.equal(hotel.taxDetails, 'Rates exclude GST')
+    assert.equal(hotel.gstPercent, null)
+    assert.equal(hotel.price, customerHotelRate(input.price))
+  } finally { DB.sqlite.close() }
+})
+
+test('only admin confirms hotel GST; percentages persist, can be cleared, and owner edits require reconfirmation', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    const input = { ...hotelPayload(), mealPlan: 'Room only', breakfastPrice: 200, dinnerPrice: 300 }
+    assert.equal(hotelSubmissionSchema.safeParse({ ...input, gstPercent: 0 }).success, false)
+    const receipt = await (await hotelRequest(DB, bucket, 'POST', input)).json()
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    let version = 0
+    const moderate = (gstPercent, headers = { Cookie }) => hotelRequest(DB, bucket, 'PATCH', {
+      id: input.id, version, status: 'approved', price: input.price, ownerNote: '', gstPercent,
+    }, { headers })
+    assert.equal((await moderate(5, {})).status, 401)
+    for (const invalid of [-1, 29, 1.234, '5']) assert.equal((await moderate(invalid)).status, 400)
+    for (const gstPercent of [5, 18, 0, 5.25, null, 5]) {
+      const saved = await moderate(gstPercent)
+      assert.equal(saved.status, 200)
+      assert.equal((await saved.json()).hotel.gstPercent, gstPercent)
+      version++
+      const publicResult = (await (await hotelRequest(DB, bucket, 'GET')).json()).hotels[0]
+      assert.equal(publicResult.gstPercent, gstPercent)
+      assert.equal(publicResult.price, customerHotelRate(input.price), 'Public room rate remains explicitly tax-exclusive')
+      assert.equal(publicResult.breakfastPrice, 200, 'Meal amount stays tax-exclusive, without markup')
+      const details = JSON.parse(DB.sqlite.prepare('SELECT details_json FROM hotel_registrations WHERE id = ?').get(input.id).details_json)
+      assert.equal(details.gstPercent, gstPercent)
+    }
+    const update = (data) => hotelRequest(DB, bucket, 'POST', data, { handler: onHotelUpdateRequest, photos: [], auth: { version, accessCode: receipt.accessCode } })
+    assert.equal((await update({ ...input, gstPercent: 0 })).status, 400)
+    assert.equal((await update(input)).status, 200)
+    const owner = (await (await hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: receipt.accessCode }, { lookup: true })).json()).hotel
+    assert.equal(owner.gstPercent, null, 'Owner changes clear the prior confirmed rate')
+    assert.equal(owner.status, 'pending')
   } finally { DB.sqlite.close() }
 })
 
@@ -795,7 +925,7 @@ test('hotel moderation publishes edited prices only with owner auth and hides ph
     const feed = (await (await hotelRequest(DB, bucket, 'GET')).json()).hotels
     assert.equal(feed.length, 1)
     assert.equal(feed[0].photos.length, 5)
-    assert.equal(feed[0].price, 4252)
+    assert.equal(feed[0].price, 5656)
     assert.equal(feed[0].hotelId, receipt.hotelId)
     for (const key of ['phone', 'contactName', 'ownerNote', 'payload_hash', 'photo_keys_json', 'accessCode', 'version']) assert.equal(feed[0][key], undefined)
     const image = await photoRequest()
@@ -1194,7 +1324,7 @@ test('hotel enquiries preserve room quantities and reject insufficient capacity 
   const DB = database()
   try {
     const body = payload('hotel')
-    Object.assign(body.fields, { adults: '6', children: '2', roomType: 'Standard', roomCount: '4', hotelNightlyTotal: 'INR 12,000 for 4 rooms per night', hotelStayEstimate: 'INR 24,000 for 2 nights' })
+    Object.assign(body.fields, { adults: '6', children: '2', roomType: 'Standard', roomCount: '4', hotelNightlyTotal: 'INR 12,000 for 4 rooms per night', hotelStayEstimate: 'INR 24,000 for 2 nights', hotelPriceBreakdown: 'Room before GST: INR 2,320; meals before GST: INR 200; GST (5%): INR 126; total including GST: INR 2,646 per room per night', mealCoverage: 'Selected meals cover 2 people per room per day; 4 rooms cover 8 people.' })
     assert.equal((await send(DB, body)).status, 201)
     assert.deepEqual(JSON.parse(DB.sqlite.prepare('SELECT fields_json FROM enquiries WHERE reference = ?').get(body.reference).fields_json), body.fields)
     for (const roomCount of ['0', '3', '4.5', '101', '']) {
