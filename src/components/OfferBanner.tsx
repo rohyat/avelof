@@ -13,7 +13,7 @@ const offers = [
     description: `Kashmir escape · ${item.duration}`,
     image: item.image,
     price: item.price,
-    originalPrice: undefined,
+    originalPrice: item.originalPrice,
     priceLabel: 'per person',
     referenceLabel: 'Original price',
     href: `/tour-packages/${item.id}`,
@@ -60,7 +60,7 @@ export default function OfferBanner() {
   }
 
   return <section className="offer-banner" aria-label="Travel offers">
-    <div className="offer-banner-heading"><div className="offer-heading-line"><span className="offer-diya" role="img" aria-label="Diwali diya lamp">🪔</span><strong>Kashmir travel offers</strong></div><span className="offer-heading-subtitle">Packages · Cab offer: 30% off</span></div>
+    <div className="offer-banner-heading"><div className="offer-heading-line"><span className="offer-diya" role="img" aria-label="Diwali diya lamp">🪔</span><strong>Kashmir travel offers</strong></div><span className="offer-heading-subtitle">Hotels & packages: 30% off</span></div>
     <div className="offer-carousel" role="region" aria-roledescription="carousel" aria-label="Packages and cabs offers"
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onPointerDownCapture={() => setFocused(false)}

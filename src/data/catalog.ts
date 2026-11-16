@@ -1,5 +1,6 @@
 import type { Destination, RentalCar, TourPackage, OwnerProvidedGuestReview } from '../types'
 import { vehiclePhotos } from './vehiclePhotos.ts'
+import { discountedHotelPackagePrice } from '../services/pricing.ts'
 import { catalogPhotos as photos, providedDestinationPhotos as suppliedPhotos } from './previewPhotos.ts'
 
 const packageCatalog: TourPackage[] = [
@@ -72,7 +73,9 @@ const packageCatalog: TourPackage[] = [
   },
 ]
 
-export const tourPackages: TourPackage[] = packageCatalog
+export const tourPackages: TourPackage[] = packageCatalog.map((item) => item.underDevelopment ? item : {
+  ...item, originalPrice: item.price, price: discountedHotelPackagePrice(item.price),
+})
 
 export const rentalCars: RentalCar[] = [
   { id: 'swift-dzire', name: 'Comfort Sedan', category: 'Sedan', seats: 4, price: 2000 },

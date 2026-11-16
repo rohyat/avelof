@@ -356,6 +356,8 @@ body.enquiry-open { overflow: hidden; }
 .price { margin: 0; color: var(--forest); font-size: 16px; font-weight: 700; }
 .original-price { display: block; margin-bottom: 4px; color: var(--muted); font-size: 12px; font-weight: 400; line-height: 1.4; }
 .discount-label { display: inline-block; margin-left: 8px; color: var(--forest-deep); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.regular-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; font-size: 12px; font-weight: 400; line-height: 1.5; }
+.regular-price s { color: var(--muted); }
 .offer-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 5px; font-size: 11px; line-height: 1.5; }
 .offer-price .discount-label { margin-left: 0; }
 .planner-vehicle-choice .offer-price, .planner-vehicle-choice .offer-price > span { font-size: 10px; }

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { discountedHotelPackagePrice } from '../../src/services/pricing.ts'
 import { hotelDetailsSchema } from '../../src/services/hotelSchema.ts'
 import { hotelLocationCodes, hotelPhotoCount, hotelPhotoDimension, hotelPhotoLimit } from '../../src/data/hotelRegistration.ts'
 import { partnerStatusAccessCode } from '../../src/services/partnerAccessCode.ts'
@@ -42,8 +43,9 @@ export function publicHotel(row: HotelRow) {
   const hotel = hotelDetails(row)
   return {
     ...hotel,
-    price: customerHotelRate(hotel.price),
-    ...(hotel.roomRates ? { roomRates: hotel.roomRates.map((room) => ({ ...room, price: customerHotelRate(room.price) })) } : {}),
+    originalPrice: customerHotelRate(hotel.price),
+    price: discountedHotelPackagePrice(customerHotelRate(hotel.price)),
+    ...(hotel.roomRates ? { roomRates: hotel.roomRates.map((room) => ({ ...room, originalPrice: customerHotelRate(room.price), price: discountedHotelPackagePrice(customerHotelRate(room.price)) })) } : {}),
   }
 }
 export function adminHotel(row: HotelRow) {

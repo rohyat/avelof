@@ -33,6 +33,7 @@ interface CatalogBase {
 
 export interface TourPackage extends CatalogBase {
   kind: 'package'
+  originalPrice?: number
   underDevelopment?: boolean
   duration: string
   itinerary: { day: string; title: string; detail: string }[]
@@ -65,6 +66,7 @@ export interface RentalCar extends CatalogBase {
 }
 
 export interface Hotel extends CatalogBase {
+  originalPrice?: number
   exactLocation?: string
   latitude?: number | null
   longitude?: number | null
@@ -81,7 +83,7 @@ export interface Hotel extends CatalogBase {
   mealPlan?: string
   packageId?: string
   roomTypes: string[]
-  roomRates?: { roomType: string; count: number; price: number }[]
+  roomRates?: { roomType: string; count: number; price: number; originalPrice?: number }[]
   facilities: string[]
   checkIn: string
   checkOut: string

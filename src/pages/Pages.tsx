@@ -8,6 +8,7 @@ import { providedDestinationPhotos } from '../data/previewPhotos'
 import TripPlanner from '../components/TripPlanner'
 import OfferPrice from '../components/OfferPrice'
 import HotelRates from '../components/HotelRates'
+import RegularPrice from '../components/RegularPrice'
 import HotelFeature from '../components/HotelFeature'
 import VehiclePhotoCaption from '../components/VehiclePhotoCaption'
 import ReviewStars from '../components/ReviewStars'
@@ -67,7 +68,7 @@ function CatalogCard({ item: initialItem, kind }: { item: CatalogItem; kind: Cat
         {item.kind === 'hotel' && <MapLocationLink location={item} />}
         {item.kind === 'hotel' && item.exactLocation && <p className="hotel-exact-location"><MapPin size={14} aria-hidden="true" /> {hotelLocationLabel(item)}</p>}
         <div className={`catalog-bottom${kind === 'package' ? ' package-card-bottom' : ''}`}>
-          {item.kind === 'hotel' ? <HotelRates hotel={item} compact /> : item.kind === 'car' && item.priceOnEnquiry ? <p className="price">Price on enquiry</p> : <p className="price">{item.kind === 'car' && !item.registeredDriverId && <OfferPrice price={item.price} />}{item.kind === 'car' && item.registeredDriverId ? `INR ${item.price.toLocaleString('en-IN')}` : money(item.price)}<small>{kind === 'package' ? ' / person' : ' / day from'}</small></p>}
+          {item.kind === 'hotel' ? <HotelRates hotel={item} compact /> : item.kind === 'car' && item.priceOnEnquiry ? <p className="price">Price on enquiry</p> : <p className="price">{item.kind === 'car' && !item.registeredDriverId && <OfferPrice price={item.price} />}{item.kind === 'package' && <RegularPrice price={item.price} originalPrice={item.originalPrice} />}{money(item.price)}<small>{kind === 'package' ? ' / person' : ' / day from'}</small></p>}
           {kind === 'package' ? <div className="package-card-actions">
             {underDevelopment ? <button className="button button-mini package-explore" disabled>Explore Now <ArrowUpRight size={14} /></button> : <Link className="button button-mini package-explore" to={detailUrl}>Explore Now <ArrowUpRight size={14} /></Link>}
             <button className="button button-mini" disabled={underDevelopment} onClick={() => openBooking(kind, item.name)}>Book Now <ArrowRight size={14} /></button>
@@ -223,7 +224,7 @@ export function DetailPage() {
       {item.kind === 'hotel' && <div className="hotel-end-booking"><button className="button button-dark" onClick={() => openBooking(kind, item.name)}>Book Now <ArrowRight size={16} aria-hidden="true" /></button></div>}
       {item.kind === 'package' && <div className="package-end-booking"><button className="button button-dark" onClick={() => openBooking(kind, item.name)}>Book Now <ArrowRight size={16} aria-hidden="true" /></button></div>}
       <section className="detail-related"><Eyebrow>Keep exploring</Eyebrow><h2>More ways to see Kashmir</h2><div className="related-links"><Link to="/tour-packages">Journeys <ArrowRight size={15} /></Link><Link to="/car-rentals">Local transport <ArrowRight size={15} /></Link><Link to="/hotels">Stays <ArrowRight size={15} /></Link></div></section>
-    </div><aside className="detail-aside"><Eyebrow>{item.kind === 'hotel' ? 'Room rate' : item.kind === 'car' && item.priceOnEnquiry ? 'Rental fare' : 'From'}</Eyebrow>{item.kind === 'hotel' ? <HotelRates hotel={item} compact /> : item.kind === 'car' && item.priceOnEnquiry ? <strong className="quote-only-price">Price on enquiry</strong> : <>{item.kind === 'car' && !item.registeredDriverId && <OfferPrice price={item.price} />}<strong>{money(item.price)}</strong><span>{kind === 'package' ? 'per person' : 'per day, estimated'}</span></>}<p>Final price depends on dates, availability and the details of your trip. We’ll confirm everything with you directly.</p><button className="button button-dark" onClick={() => openBooking(kind, item.name)}>Book Now <ArrowRight size={16} /></button></aside></div>
+    </div><aside className="detail-aside"><Eyebrow>{item.kind === 'hotel' ? 'Room rate' : item.kind === 'car' && item.priceOnEnquiry ? 'Rental fare' : 'From'}</Eyebrow>{item.kind === 'hotel' ? <HotelRates hotel={item} compact /> : item.kind === 'car' && item.priceOnEnquiry ? <strong className="quote-only-price">Price on enquiry</strong> : <>{item.kind === 'car' && !item.registeredDriverId && <OfferPrice price={item.price} />}{item.kind === 'package' && <RegularPrice price={item.price} originalPrice={item.originalPrice} />}<strong>{money(item.price)}</strong><span>{kind === 'package' ? 'per person' : 'per day, estimated'}</span></>}<p>Final price depends on dates, availability and the details of your trip. We’ll confirm everything with you directly.</p><button className="button button-dark" onClick={() => openBooking(kind, item.name)}>Book Now <ArrowRight size={16} /></button></aside></div>
   </>
 }
 
