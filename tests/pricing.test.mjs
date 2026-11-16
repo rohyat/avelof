@@ -7,9 +7,9 @@ import { featuredOfferHotelId } from '../src/data/offers.ts'
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
 const id = featuredOfferHotelId
 
-test('homepage trust messages rotate every two seconds in place with pause and reduced-motion support', async () => {
+test('homepage trust messages keep rotating during hover and touch, with reduced-motion support', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
-  const page = await browser.newPage()
+  const page = await browser.newPage({ hasTouch: true })
   await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
   await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
   try {
@@ -62,11 +62,15 @@ test('homepage trust messages rotate every two seconds in place with pause and r
     }))
     assert.ok(directions[0] > 0 && directions[1] < 0, 'Payment message slides from the opposite direction')
     assert.equal(await page.locator('.hero-trust button').count(), 0)
-    await points.focus()
-    assert.equal(await points.locator('li').first().evaluate((element) => getComputedStyle(element).animationPlayState), 'paused')
-    await points.blur()
-    await page.mouse.move(0, 0)
-    assert.equal(await points.locator('li').first().evaluate((element) => getComputedStyle(element).animationPlayState), 'running')
+    assert.equal(await points.getAttribute('tabindex'), null)
+    await points.evaluate((element) => [...element.children].forEach((item) => { const animation = item.getAnimations()[0]; animation.currentTime = 500; animation.play() }))
+    await points.hover()
+    await page.waitForTimeout(2100)
+    assert.equal(await points.locator('li').nth(1).evaluate((element) => getComputedStyle(element).visibility), 'visible', 'Hover does not stop rotation')
+    const box = await points.boundingBox()
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2)
+    await page.waitForTimeout(2000)
+    assert.equal(await points.locator('li').nth(2).evaluate((element) => getComputedStyle(element).visibility), 'visible', 'Touch does not stop rotation')
     await page.emulateMedia({ reducedMotion: 'reduce' })
     assert.equal(await points.locator('li:visible').count(), 4)
     assert.equal(await page.getByRole('button', { name: 'Pause rotating messages', exact: true }).count(), 0)

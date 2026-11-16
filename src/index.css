@@ -155,8 +155,6 @@ h1 em, h2 em { color: inherit; font-weight: 500; }
 .hero-trust-points li:nth-child(2) { animation-delay: -6s; }
 .hero-trust-points li:nth-child(3) { animation-delay: -4s; }
 .hero-trust-points li:nth-child(4) { --trust-slide: -10px; animation-delay: -2s; }
-.hero-trust-points:hover li, .hero-trust-points:focus li { animation-play-state: paused; }
-.hero-trust-points:focus-visible { outline: 2px solid #ffe0ad; outline-offset: 4px; }
 @keyframes hero-trust-cycle {
   0% { visibility: visible; opacity: 0; transform: translateX(var(--trust-slide)); }
   3%, 22% { visibility: visible; opacity: 1; transform: translateX(0); }
