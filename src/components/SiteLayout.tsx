@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { Menu, Moon, Sun, X } from 'lucide-react'
 import { business } from '../config'
 import { rentalCars, tourPackages } from '../data/catalog'
 import BookingModal from './BookingModal'
@@ -52,6 +52,10 @@ function saveScrollPosition(key: string, x: number, y: number) {
 }
 
 export default function SiteLayout() {
+  const [darkMode, setDarkMode] = useState(() => {
+    try { return localStorage.getItem('avelof:theme') === 'dark' }
+    catch (error) { console.warn('Could not read the saved theme preference.', error); return false }
+  })
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLElement>(null)
   const menuToggleRef = useRef<HTMLButtonElement>(null)
@@ -59,6 +63,20 @@ export default function SiteLayout() {
   const location = useLocation()
   const navigationType = useNavigationType()
   const previousLocation = useRef({ pathname: location.pathname, hash: location.hash })
+
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = darkMode ? 'dark' : 'light'
+    try { localStorage.setItem('avelof:theme', darkMode ? 'dark' : 'light') }
+    catch (error) { console.warn('Could not save the theme preference.', error) }
+  }, [darkMode])
+
+  useEffect(() => {
+    const syncTheme = (event: StorageEvent) => {
+      if (event.key === 'avelof:theme' || event.key === null) setDarkMode(event.newValue === 'dark')
+    }
+    window.addEventListener('storage', syncTheme)
+    return () => window.removeEventListener('storage', syncTheme)
+  }, [])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -158,7 +176,9 @@ export default function SiteLayout() {
     <>
       <OfferBanner />
       <header className="site-header">
-        <Link className="brand" to="/" aria-label="AVELOF home" onClick={closeMenu}><img className="brand-logo" src="/app-icon-512.png?v=chinar-1" alt="" width={44} height={44} /><span>AVELOF<small>BEYOND EXPECTATIONS</small></span></Link>
+        <div className="header-brand-group"><Link className="brand" to="/" aria-label="AVELOF home" onClick={closeMenu}><img className="brand-logo" src="/app-icon-512.png?v=chinar-1" alt="" width={44} height={44} /><span>AVELOF<small>BEYOND EXPECTATIONS</small></span></Link>
+          <button type="button" className="theme-toggle" aria-pressed={darkMode} onClick={() => setDarkMode(!darkMode)}>{darkMode ? <Sun size={14} aria-hidden="true" /> : <Moon size={14} aria-hidden="true" />}<span>Dark mode</span></button>
+        </div>
         <button ref={menuToggleRef} className="icon-button menu-toggle" aria-expanded={menuOpen} aria-controls="main-navigation" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => { const next = !menuOpen; setMenuOpen(next); if (next) window.dispatchEvent(new Event('avelof:pause-review-carousel')) }}>{menuOpen ? <X /> : <Menu />}</button>
         <nav ref={menuRef} id="main-navigation" className={menuOpen ? 'main-nav is-open' : 'main-nav'} aria-label="Main navigation">
           {navItems.map(([label, href]) => <NavLink key={href} to={href} onClick={closeMenu}>{label}</NavLink>)}

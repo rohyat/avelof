@@ -100,6 +100,9 @@ img { display: block; max-width: 100%; }
 @media (max-width: 800px) { .offer-banner { grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 8px 14px; } .offer-banner-heading strong { font-size: 20px; } }
 @media (max-width: 480px) { .offer-banner { gap: 2px; padding-block: 4px; } .offer-tile { grid-template-columns: 72px minmax(0, 1fr); gap: 2px 8px; padding: 4px; } .offer-image-frame { width: 72px; height: 76px; grid-row: 1 / span 2; } .offer-explore { grid-column: 2; justify-self: start; min-height: 28px; padding: 4px 8px; font-size: 11px; } .offer-controls button { height: 24px; } }
 .site-header { position: sticky; z-index: 20; top: 0; height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 34px; padding: 0 max(36px, calc((100% - 1200px) / 2)); background: rgba(255,255,255,.97); border-bottom: 1px solid var(--line); backdrop-filter: blur(14px); }
+.header-brand-group { display: grid; justify-items: start; gap: 2px; flex: 0 0 auto; }
+.theme-toggle { display: inline-flex; align-items: center; gap: 5px; min-height: 24px; padding: 2px 6px; border: 0; border-radius: 4px; background: transparent; color: var(--forest); font-size: 11px; font-weight: 600; }
+.theme-toggle:hover { background: var(--glacier); }
 .brand { display: inline-flex; align-items: center; gap: 11px; color: var(--forest); font-weight: 700; font-size: 19px; line-height: 1; letter-spacing: 1.6px; flex: 0 0 auto; }
 .brand-logo { flex: 0 0 auto; width: 44px; height: 44px; object-fit: contain; border-radius: 7px; background: #fff; }
 .brand small { display: block; margin-top: 6px; color: #42665d; font-size: 9px; font-weight: 700; line-height: 1.2; letter-spacing: 0; }
