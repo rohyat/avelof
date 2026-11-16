@@ -16,13 +16,13 @@ test('homepage trust messages rotate every two seconds in place with pause and r
     await page.goto(origin)
     const points = page.getByRole('list', { name: 'Our commitment to you' })
     const copy = await points.locator('li').allTextContents()
-    assert.deepEqual(copy, ['All-inclusive prices, with no hidden charges', '24/7 customer support, always with you', 'Your safety and care, our priority'])
-    assert.ok(copy.every((text) => text.split(/\s+/).length === 6))
+    assert.deepEqual(copy, ['All-inclusive prices, with no hidden charges', '24/7 customer support, always with you', 'Your safety and care, our priority', 'Tour packages: 25% advance, 75% after the trip.'])
+    assert.ok(copy.slice(0, 3).every((text) => text.split(/\s+/).length === 6))
     assert.equal(await points.locator('li').evaluateAll((items) => items.every((item) => {
       const style = getComputedStyle(item)
       return style.backgroundColor === 'rgba(0, 0, 0, 0)' && style.borderTopWidth === '0px' && style.padding === '0px'
     })), true)
-    assert.equal(await points.locator('li > svg').count(), 3)
+    assert.equal(await points.locator('li > svg').count(), 4)
     for (const width of [320, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       const layout = await points.evaluate((element) => {
@@ -39,18 +39,20 @@ test('homepage trust messages rotate every two seconds in place with pause and r
       const animations = items.map((item) => item.getAnimations()[0])
       await Promise.all(animations.map((animation) => animation.ready))
       animations.forEach((animation) => animation.pause())
-      return [100, 2100, 4100, 6100].map((time) => {
+      return [100, 2100, 4100, 6100, 8100].map((time) => {
         animations.forEach((animation) => { animation.currentTime = time })
         return items.map((item, index) => getComputedStyle(item).visibility === 'visible' ? index : -1).filter((index) => index >= 0)
       })
     })
-    assert.deepEqual(sequence, [[0], [1], [2], [0]])
-    await page.getByRole('button', { name: 'Pause rotating messages', exact: true }).click()
+    assert.deepEqual(sequence, [[0], [1], [2], [3], [0]])
+    assert.equal(await page.locator('.hero-trust button').count(), 0)
+    await points.focus()
     assert.equal(await points.locator('li').first().evaluate((element) => getComputedStyle(element).animationPlayState), 'paused')
-    await page.getByRole('button', { name: 'Resume rotating messages', exact: true }).click()
+    await points.blur()
+    await page.mouse.move(0, 0)
     assert.equal(await points.locator('li').first().evaluate((element) => getComputedStyle(element).animationPlayState), 'running')
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    assert.equal(await points.locator('li:visible').count(), 3)
+    assert.equal(await points.locator('li:visible').count(), 4)
     assert.equal(await page.getByRole('button', { name: 'Pause rotating messages', exact: true }).count(), 0)
     assert.equal(await page.locator('.offer-heading-line + .offer-heading-subtitle').evaluate((element) => getComputedStyle(element).color), 'rgb(255, 224, 173)')
   } finally { await browser.close() }

@@ -151,13 +151,13 @@ h1 em, h2 em { color: inherit; font-weight: 500; }
 .hero-content > p { max-width: 490px; margin: 0; color: rgba(255,255,255,.9); font-size: 14px; line-height: 1.8; text-shadow: 0 1px 9px rgba(0,0,0,.25); }
 .hero-trust { display: flex; align-items: center; gap: 8px; max-width: 490px; margin-top: 26px; }
 .hero-trust-points { display: grid; flex: 1; min-width: 0; margin: 0; padding: 0; list-style: none; }
-.hero-trust-points li { grid-area: 1 / 1; display: flex; align-items: center; gap: 9px; color: #fff; font-size: 13px; font-weight: 600; line-height: 1.5; text-shadow: 0 1px 9px rgba(0,0,0,.4); visibility: hidden; animation: hero-trust-cycle 6s linear infinite; }
-.hero-trust-points li:nth-child(2) { animation-delay: -4s; }
-.hero-trust-points li:nth-child(3) { animation-delay: -2s; }
-.hero-trust.is-paused li { animation-play-state: paused; }
-.hero-trust-toggle { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: #fff; cursor: pointer; }
-.hero-trust-toggle:focus-visible { outline: 2px solid #ffe0ad; outline-offset: 2px; }
-@keyframes hero-trust-cycle { 0%, 33.333% { visibility: visible; opacity: 1; } 33.334%, 100% { visibility: hidden; opacity: 0; } }
+.hero-trust-points li { grid-area: 1 / 1; display: flex; align-items: center; gap: 9px; color: #fff; font-size: 13px; font-weight: 600; line-height: 1.5; text-shadow: 0 1px 9px rgba(0,0,0,.4); visibility: hidden; animation: hero-trust-cycle 8s linear infinite; }
+.hero-trust-points li:nth-child(2) { animation-delay: -6s; }
+.hero-trust-points li:nth-child(3) { animation-delay: -4s; }
+.hero-trust-points li:nth-child(4) { animation-delay: -2s; }
+.hero-trust-points:hover li, .hero-trust-points:focus li { animation-play-state: paused; }
+.hero-trust-points:focus-visible { outline: 2px solid #ffe0ad; outline-offset: 4px; }
+@keyframes hero-trust-cycle { 0%, 24.999% { visibility: visible; opacity: 1; } 25%, 100% { visibility: hidden; opacity: 0; } }
 .hero-trust-points svg { flex-shrink: 0; color: #ffe0ad; }
 @media (max-width: 1024px) {
   .hero-trust { margin-top: 18px; }
@@ -166,7 +166,6 @@ h1 em, h2 em { color: inherit; font-weight: 500; }
 @media (prefers-reduced-motion: reduce) {
   .hero-trust-points { gap: 10px; }
   .hero-trust-points li { grid-area: auto; visibility: visible; animation: none; }
-  .hero-trust-toggle { display: none; }
 }
 .home-shortcuts { padding-block: 25px; border-bottom: 1px solid #e1e9e4; background: linear-gradient(180deg, #f7f9f6 0%, #eaf1ec 100%); }
 .home-shortcut-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
