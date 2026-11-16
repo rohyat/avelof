@@ -15,7 +15,13 @@ test('homepage trust points stay visible in one desktop row and three mobile/tab
   try {
     await page.goto(origin)
     const points = page.getByRole('list', { name: 'Our commitment to you' })
-    assert.deepEqual(await points.locator('li').allTextContents(), ['All-inclusive prices. No hidden charges.', '24/7 support, wherever you travel', 'Your safety is our priority'])
+    const copy = await points.locator('li').allTextContents()
+    assert.deepEqual(copy, ['All-inclusive prices, with no hidden charges', '24/7 customer support, always with you', 'Your safety and care, our priority'])
+    assert.ok(copy.every((text) => text.split(/\s+/).length === 6))
+    assert.equal(await points.locator('li').evaluateAll((items) => items.every((item) => {
+      const style = getComputedStyle(item)
+      return style.backgroundColor === 'rgba(0, 0, 0, 0)' && style.borderTopWidth === '0px' && style.padding === '0px'
+    })), true)
     assert.equal(await points.locator('li > svg').count(), 3)
     for (const width of [320, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 })
