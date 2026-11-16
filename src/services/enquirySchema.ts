@@ -18,6 +18,7 @@ export const enquirySchema = z.object({
     numberOfPeople: guestCount.refine((value) => Number(value) >= 1).optional(),
     packagePreference: shortText.optional(),
     packageRate: shortText.optional(),
+    priceInclusions: shortText.optional(),
     travelGroup: z.enum(['Couple', 'Family', 'Friends', 'Solo traveller', 'Group']).optional(),
     carRental: shortText.optional(),
     arrivalDate: dateText.optional(),

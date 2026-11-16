@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { rentalCars, tourPackages } from '../data/catalog'
 import { diwaliReferencePrice } from '../data/offers'
 import DiscountLabel from './DiscountLabel'
-import { hotelPackageDiscountPercent } from '../services/pricing'
+import { hotelPackageDiscountPercent, hotelPackagePriceInclusions } from '../services/pricing'
 
 const startingCab = rentalCars.reduce((lowest, car) => car.price < lowest.price ? car : lowest)
 const offers = [
@@ -61,7 +61,7 @@ export default function OfferBanner() {
   }
 
   return <section className="offer-banner" aria-label="Travel offers">
-    <div className="offer-banner-heading"><div className="offer-heading-line"><span className="offer-diya" role="img" aria-label="Diwali diya lamp">🪔</span><strong>Kashmir travel offers</strong></div><span className="offer-heading-subtitle">Hotels & packages: {hotelPackageDiscountPercent}% off</span></div>
+    <div className="offer-banner-heading"><div className="offer-heading-line"><span className="offer-diya" role="img" aria-label="Diwali diya lamp">🪔</span><strong>Kashmir travel offers</strong></div><span className="offer-heading-subtitle">Hotels & packages: {hotelPackageDiscountPercent}% off · {hotelPackagePriceInclusions}</span></div>
     <div className="offer-carousel" role="region" aria-roledescription="carousel" aria-label="Packages and cabs offers"
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onPointerDownCapture={() => setFocused(false)}

@@ -17,13 +17,15 @@ and displayed with the approved hotel details.
 
 Hotel customer room rates are the submitted/admin-reviewed rates plus 45%,
 rounded up to a whole rupee: INR 2,000 becomes INR 2,900. Private partner/admin
-rates are not changed. A fixed 25% discount applies to that regular room rate:
-INR 2,900 becomes INR 2,175, rounded to paise. The regular rate is crossed out
-above the discounted rate with a 25% off label. Customer-facing rates use the
-rupee symbol. There is no GST calculation, tax-status message or GST control.
+rates are not changed. A fixed 23% discount applies to that regular room rate:
+INR 2,900 becomes INR 2,233, rounded to paise. The regular rate is crossed out
+above the discounted rate with a 23% off label. Customer-facing rates use the
+rupee symbol. Hotel/package listing cards, the front-page offer heading and
+standard hotel/package enquiry forms say All taxes and charges included.
+The same statement is saved in enquiry details; no separate GST is added.
 Selected meals are added separately without markup or discount.
 Deluxe and Premium regular package prices are INR 22,000 and INR 36,000 per person,
-discounted to INR 16,500 and INR 27,000. Home/cards, details, banners, enquiries and
+discounted to INR 16,940 and INR 27,720. Home/cards, details, banners, enquiries and
 planner estimates use discounted prices. The discount is fixed in shared pricing
 logic, not an admin setting. The retired pricing API, historical migration/table and old
 tax metadata are preserved for database compatibility but are no longer used
@@ -31,6 +33,15 @@ to calculate prices; no production data deletion or new migration is required.
 Breakfast/dinner labels and selected-meal messages state the coverage: 2 people
 per room per day, or 4 in a Family room (twice the meal add-on).
 Cabs, their rates and existing 30% offer remain unchanged.
+
+Hotel enquiry estimates update immediately from selected nights, rooms and
+meal add-ons. Standard package enquiries scale the discounted per-person price
+by selected nights divided by the package's standard nights (sum of its stays).
+For example, Deluxe is INR 16,940 for 4 nights, INR 8,470 for 2 nights and
+INR 25,410 for 6 nights. The form labels the selected duration and saves that
+adjusted rate, not the full-duration base rate. Changing packages recalculates
+the estimate. Custom planner estimates remain based on actual selected stays
+and vehicles rather than prorating a standard package.
 
 Driver vehicle numbers temporarily allow non-JK state prefixes as well as JK.
 Public driver phone numbers show only the first digit and final two digits

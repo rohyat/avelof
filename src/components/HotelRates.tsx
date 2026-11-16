@@ -4,8 +4,9 @@ import { hotelMealPrices, hotelNightlyPrice, selectedHotelRoom } from '../servic
 import { hotelRoomOccupancy, hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration'
 import NumberStepper from './NumberStepper'
 import RegularPrice from './RegularPrice'
+import { hotelPackagePriceInclusions } from '../services/pricing'
 
-export default function HotelRates({ hotel, meals, roomType, showRooms = false, compact = false, onChange, people, rooms, onRoomsChange }: { hotel: Hotel; meals?: { breakfast: boolean; dinner: boolean }; roomType?: string; showRooms?: boolean; compact?: boolean; onChange?: (breakfast: boolean, dinner: boolean, price: number, roomType?: string) => void; people?: number; rooms?: string; onRoomsChange?: (value: string) => void }) {
+export default function HotelRates({ hotel, meals, roomType, showRooms = false, compact = false, showInclusions = false, onChange, people, rooms, onRoomsChange }: { hotel: Hotel; meals?: { breakfast: boolean; dinner: boolean }; roomType?: string; showRooms?: boolean; compact?: boolean; showInclusions?: boolean; onChange?: (breakfast: boolean, dinner: boolean, price: number, roomType?: string) => void; people?: number; rooms?: string; onRoomsChange?: (value: string) => void }) {
   const [localBreakfast, setBreakfast] = useState(false)
   const [localDinner, setDinner] = useState(false)
   const [localRoom, setRoom] = useState('')
@@ -34,6 +35,7 @@ export default function HotelRates({ hotel, meals, roomType, showRooms = false, 
     <strong>₹{price.toLocaleString('en-IN')}</strong>
     <span className="hotel-rate-basis">{rateBasis}</span>
     <span className="hotel-meal-summary">{hotel.breakfastPrice === undefined ? hotel.mealPlan : 'Room only · Meals optional'}</span>
+    {showInclusions && <small className="price-inclusions">{hotelPackagePriceInclusions}</small>}
   </div>
 
   if (hotel.registeredHotelId && hotel.breakfastPrice === undefined && !hotel.roomRates) return <div className="hotel-rates">

@@ -9,6 +9,8 @@ import { indianPhoneNumber } from '../services/phoneNumbers'
 import { hotelNightlyPrice, hotelSelectionValue, includedHotelMeals, selectedHotelRoom, useRegisteredHotels } from '../services/hotelService'
 import HotelRates from './HotelRates'
 import HotelFeature from './HotelFeature'
+import RegularPrice from './RegularPrice'
+import { hotelPackagePriceInclusions, packagePriceForNights } from '../services/pricing'
 import { hotelCategoryLabel, hotelLocationLabel, hotelRoomOccupancy, hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration'
 import type { BookingKind, BookingPayload, PreparedRequest } from '../types'
 
@@ -66,6 +68,8 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   const stayDuration = nights > 0 ? `${nights + 1} days, ${nights} ${nights === 1 ? 'night' : 'nights'}` : ''
   const rentalDays = checkInDate && checkOutDate && nights >= 0 ? nights + 1 : 0
   const earliestCheckout = checkInDate ? new Date(Date.parse(checkInDate) + millisecondsPerDay).toISOString().slice(0, 10) : undefined
+  const packageNights = selectedPackage?.stays.reduce((total, stay) => total + stay.nights, 0) ?? 0
+  const selectedPackagePrice = selectedPackage && nights > 0 && !customPackage ? packagePriceForNights(selectedPackage.price, packageNights, nights) : undefined
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -84,9 +88,10 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     }
     fields.phoneNumber = phone
     if (kind === 'package' && !customPackage) {
-      if (!selectedPackage) { setSubmitError('Choose an available package.'); return }
-      fields.packageRate = `₹${selectedPackage.price.toLocaleString('en-IN')} per person`
+      if (!selectedPackage || selectedPackagePrice === undefined) { setSubmitError('Choose an available package and valid travel dates.'); return }
+      fields.packageRate = `₹${selectedPackagePrice.toLocaleString('en-IN')} per person for ${nights} ${nights === 1 ? 'night' : 'nights'}; based on ₹${selectedPackage.price.toLocaleString('en-IN')} for ${packageNights} nights`
     }
+    if (kind === 'hotel' || kind === 'package' && !customPackage) fields.priceInclusions = hotelPackagePriceInclusions
     if (kind === 'hotel') {
       fields.roomCount = String(roomQuantity)
       fields.hotelNightlyTotal = `₹${(Math.round(selectedNightlyRate * roomQuantity * 100) / 100).toLocaleString('en-IN')} for ${roomQuantity} rooms per night`
@@ -134,7 +139,12 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       : <label className="full-field">Package preference<select name="packagePreference" value={packagePreference} onChange={(event) => setPackagePreference(event.target.value)} required>
         {tourPackages.filter((item) => !item.underDevelopment).map((item) => <option key={item.id} value={item.name}>{item.name} - {item.duration}</option>)}
       </select></label>)}
-    {kind === 'package' && !customPackage && selectedPackage && <p className="privacy-note full-field">Package rate: ₹{selectedPackage.price.toLocaleString('en-IN')} per person.</p>}
+    {kind === 'package' && !customPackage && selectedPackage && <div className="privacy-note full-field package-price-summary">
+      <RegularPrice price={selectedPackage.price} originalPrice={selectedPackage.originalPrice} />
+      <p>Package rate: ₹{selectedPackage.price.toLocaleString('en-IN')} per person for {packageNights} nights.</p>
+      {selectedPackagePrice !== undefined && <p className="package-stay-estimate" role="status"><strong>Selected dates: ₹{selectedPackagePrice.toLocaleString('en-IN')} per person for {nights} {nights === 1 ? 'night' : 'nights'}.</strong> Price scales proportionally from the {packageNights}-night package. Itinerary changes are subject to availability and final confirmation.</p>}
+      <p>{hotelPackagePriceInclusions}.</p>
+    </div>}
     {kind === 'hotel' && (lockedHotel
       ? <div className="full-field selected-hotel-field"><span>Selected hotel</span><strong>{lockedHotel.name}</strong>{lockedHotel.exactLocation && <span>{hotelLocationLabel(lockedHotel)}</span>}<input type="hidden" name="preferredStay" value={hotelSelectionValue(lockedHotel)} /></div>
       : <label className="full-field">Preferred stay<select name="preferredStay" value={preferredStay} disabled={!availableHotels.length} required onChange={(event) => { setPreferredStay(event.target.value); setHotelMeals({ breakfast: false, dinner: false }); setRooms(undefined) }}>{!preferredStay && <option value="">No approved hotels available</option>}{selectedItem && !selectedHotel && <option value={selectedItem}>{selectedItem}</option>}{availableHotels.map((hotel) => <option key={hotel.id} value={hotelSelectionValue(hotel)}>{hotel.name} - {hotelLocationLabel(hotel)} - {hotelCategoryLabel(hotel.category.replace(/ package$/i, ''))}</option>)}</select></label>)}
@@ -161,6 +171,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       <option>No car needed</option>
     </select></label>}
     {customPackage && !plannerDates && <label className="full-field">Custom trip details<textarea name="customDetails" rows={4} maxLength={20000} defaultValue={formatEnquiryDetails(additionalFields)} /></label>}
+    {kind === 'hotel' && selectedHotel && <p className="privacy-note price-inclusions">{hotelPackagePriceInclusions}.</p>}
     {submitError && <p className="enquiry-error" role="alert">{submitError}</p>}
     <button className="button button-dark enquiry-submit" type="submit" disabled={submitDisabled || submitting || (kind === 'hotel' && !selectedHotel)}>{submitting ? 'Saving enquiry...' : 'Submit enquiry'} <ArrowRight size={17} /></button>
     <p className="privacy-note" aria-live="polite">{submitting ? 'Saving your enquiry. Please wait.' : 'By submitting, you agree that AVELOF may store these details, show your selected service and dates with masked contact details in booking lookup, and contact you about your enquiry. This is not a confirmed booking.'}</p>

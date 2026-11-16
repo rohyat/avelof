@@ -95,7 +95,8 @@ test('hotel registration, private lookup and moderation integrate with public st
         assert.ok((await card.locator('.hotel-rates strong').innerText()).includes('2,900'))
         assert.equal(await card.locator('s, .discount-label').count(), 0)
         assert.equal(await card.locator('.hotel-price-comparison').count(), 0)
-        assert.ok(!/GST|tax/i.test(await card.innerText()))
+        assert.ok(!/GST/i.test(await card.innerText()))
+        assert.ok((await card.innerText()).includes('All taxes and charges included'))
         for (const width of [320, 390, 1440]) {
           await page.setViewportSize({ width, height: 900 })
           assert.equal(await card.locator('.hotel-rates').evaluate((element) => element.scrollWidth > element.clientWidth), false)

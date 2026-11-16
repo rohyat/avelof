@@ -9,6 +9,7 @@ import TripPlanner from '../components/TripPlanner'
 import OfferPrice from '../components/OfferPrice'
 import HotelRates from '../components/HotelRates'
 import RegularPrice from '../components/RegularPrice'
+import { hotelPackagePriceInclusions } from '../services/pricing'
 import HotelFeature from '../components/HotelFeature'
 import VehiclePhotoCaption from '../components/VehiclePhotoCaption'
 import ReviewStars from '../components/ReviewStars'
@@ -68,7 +69,7 @@ function CatalogCard({ item: initialItem, kind }: { item: CatalogItem; kind: Cat
         {item.kind === 'hotel' && <MapLocationLink location={item} />}
         {item.kind === 'hotel' && item.exactLocation && <p className="hotel-exact-location"><MapPin size={14} aria-hidden="true" /> {hotelLocationLabel(item)}</p>}
         <div className={`catalog-bottom${kind === 'package' ? ' package-card-bottom' : ''}`}>
-          {item.kind === 'hotel' ? <HotelRates hotel={item} compact /> : item.kind === 'car' && item.priceOnEnquiry ? <p className="price">Price on enquiry</p> : <p className="price">{item.kind === 'car' && !item.registeredDriverId && <OfferPrice price={item.price} />}{item.kind === 'package' && <RegularPrice price={item.price} originalPrice={item.originalPrice} />}{money(item.price)}<small>{kind === 'package' ? ' / person' : ' / day from'}</small></p>}
+          {item.kind === 'hotel' ? <HotelRates hotel={item} compact showInclusions /> : item.kind === 'car' && item.priceOnEnquiry ? <p className="price">Price on enquiry</p> : <p className="price">{item.kind === 'car' && !item.registeredDriverId && <OfferPrice price={item.price} />}{item.kind === 'package' && <RegularPrice price={item.price} originalPrice={item.originalPrice} />}{money(item.price)}<small>{kind === 'package' ? ' / person' : ' / day from'}</small>{item.kind === 'package' && !underDevelopment && <small className="price-inclusions">{hotelPackagePriceInclusions}</small>}</p>}
           {kind === 'package' ? <div className="package-card-actions">
             {underDevelopment ? <button className="button button-mini package-explore" disabled>Explore Now <ArrowUpRight size={14} /></button> : <Link className="button button-mini package-explore" to={detailUrl}>Explore Now <ArrowUpRight size={14} /></Link>}
             <button className="button button-mini" disabled={underDevelopment} onClick={() => openBooking(kind, item.name)}>Book Now <ArrowRight size={14} /></button>
