@@ -3,6 +3,7 @@ import { hotelDetailsSchema, hotelModerationSchema, hotelSubmissionSchema, valid
 import { hotelLookupIdPattern, hotelPhotoCount, hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
 import { accessConfigured, allowAccessAttempt, hashText, isAdmin, privateReply, sameOrigin } from '../_lib/enquiryAccess.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
+import { loadPricingSettings } from '../_lib/pricing.ts'
 import { adminHotel, assignHotelId, deleteRegistrationPhotos, hotelAccessCode, hotelColumns, legacyHotelId, limitedBody, publicHotel, resolveHotelId, saveRegistrationPhoto, validHotelJpeg } from '../_lib/hotelRegistration.ts'
 import type { HotelEnv, HotelRow } from '../_lib/hotelRegistration.ts'
 
@@ -36,7 +37,8 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       const total = await DB.prepare(`SELECT count(*) AS total FROM hotel_registrations ${where}`).bind(...values).first<{ total: number }>()
       const listingColumns = admin ? hotelColumns : `${hotelColumns}, (SELECT avg(rating) FROM reviews WHERE reviews.hotel_id = hotel_registrations.hotel_id AND reviews.status = 'published') AS average_rating, (SELECT count(*) FROM reviews WHERE reviews.hotel_id = hotel_registrations.hotel_id AND reviews.status = 'published') AS review_count`
       const rows = await DB.prepare(`SELECT ${listingColumns} FROM hotel_registrations ${where} ORDER BY created_at DESC, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<HotelRow>()
-      return privateReply({ hotels: rows.results.map((row) => admin ? adminHotel(row) : publicHotel(row)), total: total?.total ?? 0, page, pageSize: 25 })
+      const discountPercent = admin ? 0 : (await loadPricingSettings(DB)).discountPercent
+      return privateReply({ hotels: rows.results.map((row) => admin ? adminHotel(row) : publicHotel(row, discountPercent)), total: total?.total ?? 0, page, pageSize: 25 })
     }
     if (request.method === 'PATCH' || request.method === 'DELETE') {
       if (!await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)

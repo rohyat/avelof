@@ -1,13 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight } from 'lucide-react'
+import type { CSSProperties } from 'react'
+import { ArrowRight, Snowflake } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { rentalCars, tourPackages } from '../data/catalog'
+import { rentalCars } from '../data/catalog'
 import { diwaliReferencePrice } from '../data/offers'
 import DiscountLabel from './DiscountLabel'
-import { hotelPackageDiscountPercent, hotelPackagePriceInclusions } from '../services/pricing'
+import { hotelPackagePriceInclusions } from '../services/pricing'
+import { usePricing, useTourPackages } from '../services/pricingContext'
+import { PricingNotice } from './PricingProvider'
 
 const startingCab = rentalCars.reduce((lowest, car) => car.price < lowest.price ? car : lowest)
-const offers = [
+export default function OfferBanner() {
+  const tourPackages = useTourPackages()
+  const pricing = usePricing()
+  const offers = [
   ...tourPackages.filter((item) => !item.underDevelopment).map((item) => ({
     id: item.id,
     title: `${item.name} package`,
@@ -26,7 +32,6 @@ const offers = [
   },
 ]
 
-export default function OfferBanner() {
   const railRef = useRef<HTMLDivElement>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const activeOfferIndex = Math.min(activeIndex, offers.length - 1)
@@ -51,7 +56,7 @@ export default function OfferBanner() {
       rail.scrollTo({ left: index * rail.clientWidth, behavior: 'smooth' })
     }, 2500)
     return () => window.clearInterval(timer)
-  }, [stopped])
+  }, [stopped, offers.length])
 
   function showOffer(index: number) {
     const rail = railRef.current
@@ -60,8 +65,15 @@ export default function OfferBanner() {
     rail.scrollTo({ left: next * rail.clientWidth, behavior: reducedMotion ? 'instant' : 'smooth' })
   }
 
+  if (pricing.loading || pricing.error || !pricing.settings) return <section className="offer-banner" aria-label="Travel offers"><PricingNotice /></section>
   return <section className="offer-banner" aria-label="Travel offers">
-    <div className="offer-banner-heading"><div className="offer-heading-line"><span className="offer-diya" role="img" aria-label="Diwali diya lamp">🪔</span><strong>Kashmir travel offers</strong></div><span className="offer-heading-subtitle">Hotels & packages: {hotelPackageDiscountPercent}% off · {hotelPackagePriceInclusions}</span></div>
+    <div className="offer-snow" aria-hidden="true">{Array.from({ length: 28 }, (_, index) => <span key={index} style={{
+      left: `${(index * 37) % 100}%`,
+      '--snow-size': `${3 + index % 4}px`,
+      '--snow-duration': `${6 + index % 5}s`,
+      '--snow-delay': `${-index * 1.3}s`,
+    } as CSSProperties} />)}</div>
+    <div className="offer-banner-heading"><div className="offer-heading-line"><Snowflake className="offer-winter-icon" size={28} aria-hidden="true" /><strong>Winter offers are live</strong></div><span className="offer-heading-subtitle">Flat {pricing.settings.discountPercent}% off on packages &amp; hotels · 30% off on cabs</span><span className="offer-heading-subtitle">{hotelPackagePriceInclusions}</span></div>
     <div className="offer-carousel" role="region" aria-roledescription="carousel" aria-label="Packages and cabs offers"
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onPointerDownCapture={() => setFocused(false)}
@@ -72,7 +84,7 @@ export default function OfferBanner() {
         {offers.map((offer, index) => <article key={offer.id} className={`offer-tile${offer.id === 'cabs' ? ' offer-tile-cabs' : ''}`} role="group" aria-roledescription="slide" aria-label={`${index + 1} of ${offers.length}: ${offer.title}`}>
           <div className="offer-image-frame"><img src={offer.image} alt="" /></div>
           <div className="offer-tile-copy"><strong>{offer.title}</strong><span>{offer.description}</span>
-            {offer.originalPrice !== undefined && <span className="offer-reference-price">{offer.referenceLabel} <s>₹{offer.originalPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</s><DiscountLabel price={offer.price} originalPrice={offer.originalPrice} /></span>}
+            {offer.originalPrice !== undefined && offer.originalPrice > offer.price && <span className="offer-reference-price">{offer.referenceLabel} <s>₹{offer.originalPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</s><DiscountLabel price={offer.price} originalPrice={offer.originalPrice} /></span>}
             <span className="offer-payable"><b>₹{offer.price.toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(offer.price) ? 0 : 2, maximumFractionDigits: 2 })}</b> {offer.priceLabel}</span>
           </div>
           <Link className="offer-explore" to={offer.href} tabIndex={activeOfferIndex === index ? 0 : -1} aria-label={`Explore ${offer.title}`}>Explore Now <ArrowRight size={14} /></Link>

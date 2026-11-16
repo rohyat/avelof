@@ -66,6 +66,7 @@ export interface RentalCar extends CatalogBase {
 }
 
 export interface Hotel extends CatalogBase {
+  discountPercent?: number
   hotColdAc?: boolean
   originalPrice?: number
   exactLocation?: string

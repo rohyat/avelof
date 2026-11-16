@@ -1,9 +1,145 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
+import { discountedHotelPackagePrice, discountedHotelRoomPrice } from '../src/services/pricing.ts'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
 const id = '00000000-0000-4000-8000-000000000001'
+
+test('winter offers show both discounts with bounded snowfall on desktop/mobile and respect reduced motion', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage()
+  await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
+  await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
+  try {
+    await page.goto(origin)
+    const banner = page.getByRole('region', { name: 'Travel offers', exact: true })
+    await banner.getByText('Winter offers are live', { exact: true }).waitFor()
+    assert.ok((await banner.innerText()).includes('Flat 23% off on packages & hotels · 30% off on cabs'))
+    const snow = banner.locator('.offer-snow')
+    assert.equal(await snow.getAttribute('aria-hidden'), 'true')
+    assert.equal(await snow.evaluate((element) => getComputedStyle(element).pointerEvents), 'none')
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      assert.equal(await banner.evaluate((element) => element.scrollWidth > element.clientWidth), false)
+      const flake = snow.locator('span').first()
+      assert.equal(await flake.evaluate((element) => getComputedStyle(element).animationName), 'offer-snowfall')
+      const positions = await flake.evaluate(async (element) => {
+        const [animation] = element.getAnimations()
+        await animation.ready
+        animation.pause()
+        animation.currentTime = 100
+        const before = getComputedStyle(element).transform
+        animation.currentTime = 1000
+        const after = getComputedStyle(element).transform
+        animation.play()
+        return { before, after }
+      })
+      assert.notEqual(positions.after, positions.before)
+    }
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    assert.equal(await snow.isVisible(), false)
+    await banner.getByRole('button', { name: 'Show Cabs offer', exact: true }).click()
+    await page.waitForFunction(() => document.querySelector('.offer-dot[title=Cabs]')?.getAttribute('aria-current') === 'true')
+    assert.ok((await banner.locator('.offer-tile-cabs').innerText()).includes('30% off'))
+  } finally { await browser.close() }
+})
+
+test('admin discount saves across reloads, propagates to packages/hotels and handles failed or conflicting saves', async () => {
+    const browser = await chromium.launch({ channel: 'msedge', headless: true })
+    const page = await browser.newPage({ viewport: { width: 390, height: 900 } })
+    let settings = { discountPercent: 23, version: 1 }, failSave = false, failLoad = false, enquiry
+    await page.route('**/api/pricing', (route) => {
+      if (route.request().method() === 'GET') return route.fulfill(failLoad ? { status: 503, json: { error: 'Pricing is unavailable.' } } : { json: settings })
+      if (failSave) return route.fulfill({ status: 503, json: { error: 'Could not confirm pricing settings. Reload before retrying.' } })
+      const data = route.request().postDataJSON()
+      if (data.version !== settings.version) return route.fulfill({ status: 409, json: { error: 'Pricing changed. Reload the current discount before saving again.' } })
+      settings = { discountPercent: data.discountPercent, version: settings.version + 1 }
+      return route.fulfill({ json: settings })
+    })
+    await page.route('**/api/enquiry-access*', (route) => route.fulfill({ json: { enquiries: [], total: 0, page: 1, pageSize: 25 } }))
+    await page.route('**/api/push*', (route) => route.fulfill({ status: 503, json: { error: 'Push is not configured.' } }))
+    await page.route('**/api/hotels*', (route) => route.fulfill({ json: {
+      hotels: [{
+        id, hotelId: 'AVELOF_HTL_10001GLM', name: 'Dynamic Discount Hotel', location: 'Gulmarg', category: 'Premium',
+        description: 'Comfortable hotel rooms in the mountain valley.', price: discountedHotelRoomPrice(3000, settings.discountPercent),
+        originalPrice: 3000, discountPercent: settings.discountPercent,
+        roomRates: [{ roomType: 'Standard', count: 6, price: discountedHotelRoomPrice(3000, settings.discountPercent), originalPrice: 3000 }],
+        roomTypes: ['Standard (6 rooms)'], totalRooms: 6, mealPlan: 'Room only', heating: 'Centralised heating', hotColdAc: true,
+        amenities: ['Wi-Fi'], highlights: ['Mountain views'], breakfastPrice: 200, dinnerPrice: 300,
+        checkIn: '14:00', checkOut: '11:00', photos: [`/api/hotel-images/${id}/0`],
+      }], total: 1, page: 1, pageSize: 25,
+    } }))
+    await page.route('**/api/enquiries', (route) => {
+      enquiry = route.request().postDataJSON()
+      return route.fulfill({ status: 201, json: { saved: true, requestReference: enquiry.reference, reference: 'AVELOF_DLX_10001' } })
+    })
+    const discount = page.getByRole('spinbutton', { name: 'Hotel and package discount (%)' })
+    const save = page.getByRole('button', { name: 'Save hotel and package discount', exact: true })
+    try {
+      await page.goto(`${origin}/admin/panel`)
+      assert.equal(await discount.inputValue(), '23')
+      failSave = true
+      await discount.fill('20')
+      await save.click()
+      await page.getByRole('alert').filter({ hasText: 'Could not confirm pricing settings.' }).waitFor()
+      assert.equal(settings.discountPercent, 23)
+      failSave = false
+      await save.click()
+      await page.getByRole('status').filter({ hasText: 'Saved 20% discount' }).waitFor()
+      await page.reload()
+      assert.equal(await discount.inputValue(), '20')
+      await page.goto(`${origin}/tour-packages`)
+      const deluxe = page.locator('.catalog-card').filter({ has: page.getByRole('heading', { name: 'Deluxe', exact: true }) })
+      assert.ok((await deluxe.locator('.price').innerText()).includes('17,600'))
+      assert.equal(await deluxe.locator('.discount-label').innerText(), '20% off')
+      assert.ok((await page.locator('.offer-heading-subtitle').first().innerText()).includes('Flat 20% off on packages & hotels'))
+      assert.equal(await page.locator('.offer-tile').filter({ hasText: 'Premium package' }).locator('.discount-label').innerText(), '20% off')
+      await page.goto(`${origin}/tour-packages/deluxe`)
+      assert.ok((await page.locator('.detail-aside').innerText()).includes('17,600'))
+      await page.locator('.package-end-booking').getByRole('button', { name: 'Book Now', exact: true }).click()
+      const form = page.locator('.enquiry-form')
+      await form.getByLabel('Name', { exact: true }).fill('Discount Test Guest')
+      await form.getByLabel('Phone number').fill('9876543210')
+      await form.locator('[name=arrivalDate]').fill('2027-01-10')
+      await form.locator('[name=departureDate]').fill('2027-01-12')
+      assert.ok((await form.locator('.package-stay-estimate').innerText()).includes('₹8,800'))
+      await form.locator('[type=submit]').click()
+      await page.getByRole('heading', { name: 'Thank you for submitting your details.' }).waitFor()
+      assert.ok(enquiry.fields.packageRate.includes('₹8,800'))
+      await page.goto(`${origin}/hotels`)
+      assert.equal(await page.locator('.hotel-rates strong').innerText(), '₹2,400')
+      assert.equal(await page.locator('.hotel-rates .discount-label').innerText(), '20% off')
+      await page.goto(`${origin}/admin/panel`)
+      await discount.waitFor()
+      settings = { discountPercent: 10, version: settings.version + 1 }
+      await discount.fill('15')
+      await save.click()
+      await page.getByRole('alert').filter({ hasText: 'Pricing changed.' }).waitFor()
+      await page.getByRole('button', { name: 'Reload current discount', exact: true }).click()
+      await page.waitForFunction(() => document.querySelector('[name=discountPercent]')?.value === '10')
+      for (const percent of [0, 100, 12.5]) {
+        await discount.fill(String(percent))
+        await save.click()
+        await page.getByRole('status').filter({ hasText: `Saved ${percent}% discount` }).waitFor()
+        await page.goto(`${origin}/tour-packages`)
+        assert.ok((await deluxe.locator('.price').innerText()).includes(discountedHotelPackagePrice(22000, percent).toLocaleString('en-IN')))
+        assert.equal(await deluxe.locator('.discount-label').count(), percent === 0 ? 0 : 1)
+        assert.equal(await page.locator('.offer-tile').filter({ hasText: 'Deluxe package' }).locator('s').count(), percent === 0 ? 0 : 1)
+        await page.goto(`${origin}/admin/panel`)
+        await discount.waitFor()
+      }
+      failLoad = true
+      await page.goto(`${origin}/tour-packages/deluxe`)
+      await page.getByRole('alert').filter({ hasText: 'Pricing is unavailable.' }).first().waitFor()
+      assert.equal(await page.locator('.detail-aside').count(), 0)
+      failLoad = false
+      await page.getByRole('button', { name: 'Retry loading prices' }).first().click()
+      await page.locator('.detail-aside').waitFor()
+      await page.goto(`${origin}/car-rentals`)
+      assert.ok((await page.locator('.offer-tile-cabs').innerText()).includes('30% off'))
+    } finally { await browser.close() }
+  })
 
 test('23% inclusive hotel/package prices update with dates and persist totals while preserving cab offers', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
@@ -12,7 +148,7 @@ test('23% inclusive hotel/package prices update with dates and persist totals wh
   let acAvailable = true
   await page.route('**/api/pricing', (route) => {
     pricingRequests++
-    return route.fulfill({ status: 503, json: { error: 'Retired pricing endpoint' } })
+    return route.fulfill({ json: { discountPercent: 23, version: 1 } })
   })
   await page.route('**/api/hotels*', (route) => route.fulfill({ json: {
     hotels: [{
@@ -159,12 +295,12 @@ test('23% inclusive hotel/package prices update with dates and persist totals wh
     assert.ok((await page.locator('.offer-tile-cabs').innerText()).includes('30% off'))
     await page.goto(`${origin}/admin/panel`)
     await page.getByRole('heading', { name: 'Enquiry dashboard', exact: true }).waitFor()
-    assert.equal(await page.locator('[name=discountPercent]').count(), 0)
+    assert.equal(await page.locator('[name=discountPercent]').inputValue(), '23')
     await page.goto(`${origin}/admin/panel/hotels`)
     assert.equal(await page.locator('[name=gstPercent]').count(), 0)
     await page.goto(`${origin}/register-hotel`)
     assert.equal(await page.locator('[name=taxDetails], [name=gstPercent]').count(), 0)
-    assert.equal(pricingRequests, 0)
+    assert.ok(pricingRequests > 0)
     acAvailable = false
     await page.goto(`${origin}/hotels`)
     const unavailable = page.locator('.hotel-card .hotel-ac-status')

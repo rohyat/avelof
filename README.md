@@ -23,28 +23,39 @@ after the room/meal information. Older records derive Yes only from the legacy
 Hot & cold AC heating choice; all other existing records derive No. An explicit
 saved choice takes precedence. No migration or destructive record rewrite is needed.
 
-Hotel customer room rates are the submitted/admin-reviewed rates plus 45%,
-rounded up to a whole rupee: INR 2,000 becomes INR 2,900. Private partner/admin
-rates are not changed. A fixed 23% discount applies to that regular room rate:
-INR 2,900 becomes INR 2,233. Discounted hotel room rates round to the nearest
+Hotel customer room rates are the submitted/admin-reviewed rates plus 50%,
+rounded up to a whole rupee: INR 2,000 becomes INR 3,000. Private partner/admin
+rates are not changed. The saved hotel/package discount (initially 23%) applies to that regular room rate:
+INR 3,000 becomes INR 2,310. Discounted hotel room rates round to the nearest
 whole rupee, with .50 rounding up (INR 1,786.40 becomes INR 1,786). Listings,
 enquiries and planner totals use this same rounded nightly rate before multiplying
 by rooms and nights. Meal add-ons and package calculations are unchanged.
 The regular rate is crossed out
-above the discounted rate with a 23% off label. Customer-facing rates use the
+above the discounted rate with the current discount label (no crossed-out rate at 0%). Customer-facing rates use the
 rupee symbol. Hotel/package listing cards, the front-page offer heading and
 standard hotel/package enquiry forms say All taxes and charges included.
 The same statement is saved in enquiry details; no separate GST is added.
 Selected meals are added separately without markup or discount.
 Deluxe and Premium regular package prices are INR 22,000 and INR 36,000 per person,
 discounted to INR 16,940 and INR 27,720. Home/cards, details, banners, enquiries and
-planner estimates use discounted prices. The discount is fixed in shared pricing
-logic, not an admin setting. The retired pricing API, historical migration/table and old
-tax metadata are preserved for database compatibility but are no longer used
-to calculate prices; no production data deletion or new migration is required.
+planner estimates use discounted prices. In `/admin/panel`, signed-in admins can
+change **Hotel & package discount** from 0 to 100%, with up to two decimal places.
+The value is saved in D1 through `/api/pricing` and survives reloads/deployments.
+Public GET exposes only the percentage/version; PATCH requires same-origin admin
+authentication and an optimistic version check. Failed or conflicting saves show
+an error rather than confirmation. Packages wait for valid settings; hotel listing
+reads fail explicitly if pricing storage is unavailable. Admin saves refresh hotel
+rates and package views, and returning visitors refresh on window focus.
+Apply migration `0026_restore_pricing_discount.sql` before deploying this restored
+control: it initializes the previously retired settings row to 23% once, replacing
+its stale historical value. Later edits persist without being reset on deployment.
+Legacy tax metadata remains readable but is not used to calculate prices.
 Breakfast/dinner labels and selected-meal messages state the coverage: 2 people
 per room per day, or 4 in a Family room (twice the meal add-on).
 Cabs, their rates and existing 30% offer remain unchanged.
+The winter offer banner shows the saved hotel/package percentage alongside the
+30% cab offer. Decorative falling snow stays within the banner on desktop/mobile,
+does not intercept clicks, and is hidden when reduced motion is requested.
 
 Hotel enquiry estimates update immediately from selected nights, rooms and
 meal add-ons. Standard package enquiries scale the discounted per-person price
@@ -807,7 +818,7 @@ publishing, hiding, returning to pending or deleting a review.
 New hotel registrations collect a room count and a room-only INR rate for each
 offered type (Standard, Deluxe, Premium, Family and Suite). Submitted and
 admin-reviewed room rates remain unchanged in private records. The public hotel
-API adds 45% to each room rate and rounds up to the next whole rupee, including
+API adds 50% to each room rate and rounds up to the next whole rupee, including
 legacy rates. This applies to existing and new hotels, listings, enquiries and
 planner estimates, then applies the saved hotel/package discount. Breakfast and dinner add-ons are not increased or discounted.
 A zero count excludes

@@ -84,7 +84,7 @@ export function toCatalogHotel(hotel: PublicHotel): Hotel {
   return {
     kind: 'hotel', id: hotel.id, registeredHotelId: hotel.hotelId,
     hotelAverageRating: hotel.averageRating, hotelReviewCount: hotel.reviewCount,
-    name: hotel.name, location: hotel.location, exactLocation: hotel.exactLocation, category: hotel.category, price: hotel.price, originalPrice: hotel.originalPrice,
+    name: hotel.name, location: hotel.location, exactLocation: hotel.exactLocation, category: hotel.category, price: hotel.price, originalPrice: hotel.originalPrice, discountPercent: hotel.discountPercent,
     latitude: hotel.latitude, longitude: hotel.longitude,
     image: hotel.photos[0], gallery: hotel.photos,
     description: hotel.description, rateBasis: hotelRoomRateBasis(selectedHotelRoom(hotel)?.roomType),
@@ -106,7 +106,8 @@ export function useRegisteredHotels(enabled: boolean, id?: string) {
   useEffect(() => {
     const refresh = () => { if (enabled) { setState({ key, hotels: [], loading: true, error: '' }); setRevision((value) => value + 1) } }
     window.addEventListener('focus', refresh)
-    return () => window.removeEventListener('focus', refresh)
+    window.addEventListener('avelof-pricing-updated', refresh)
+    return () => { window.removeEventListener('focus', refresh); window.removeEventListener('avelof-pricing-updated', refresh) }
   }, [enabled, key])
   useEffect(() => {
     if (!enabled) return

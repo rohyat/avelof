@@ -39,14 +39,15 @@ function hotelDetails(row: HotelRow) {
     averageRating: row.average_rating ?? null, reviewCount: row.review_count ?? 0,
   }
 }
-export const customerHotelRate = (price: number) => Math.ceil(Math.round(price * 100) * 145 / 10000)
-export function publicHotel(row: HotelRow) {
+export const customerHotelRate = (price: number) => Math.ceil(Math.round(price * 100) * 150 / 10000)
+export function publicHotel(row: HotelRow, discountPercent: number) {
   const hotel = hotelDetails(row)
   return {
     ...hotel,
     originalPrice: customerHotelRate(hotel.price),
-    price: discountedHotelRoomPrice(customerHotelRate(hotel.price)),
-    ...(hotel.roomRates ? { roomRates: hotel.roomRates.map((room) => ({ ...room, originalPrice: customerHotelRate(room.price), price: discountedHotelRoomPrice(customerHotelRate(room.price)) })) } : {}),
+    discountPercent,
+    price: discountedHotelRoomPrice(customerHotelRate(hotel.price), discountPercent),
+    ...(hotel.roomRates ? { roomRates: hotel.roomRates.map((room) => ({ ...room, originalPrice: customerHotelRate(room.price), price: discountedHotelRoomPrice(customerHotelRate(room.price), discountPercent) })) } : {}),
   }
 }
 export function adminHotel(row: HotelRow) {

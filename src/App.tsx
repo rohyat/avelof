@@ -12,10 +12,11 @@ import DriverReviewsPage from './pages/DriverReviewsPage'
 import { ActivitiesPage, FoodAndShoppingPage, TravelGuidePage } from './pages/DiscoveryPages'
 import BusinessRegistrationPage, { AdminBusinessesPage, BusinessStatusPage } from './pages/BusinessRegistrationPage'
 import LocalTripsPage from './pages/LocalTripsPage'
+import PricingProvider from './components/PricingProvider'
 
 export default function App() {
   return (
-    <Routes>
+    <PricingProvider><Routes>
       <Route element={<SiteLayout />}>
         <Route index element={<HomePage />} />
         <Route path="tour-packages" element={<CollectionPage />} />
@@ -52,6 +53,6 @@ export default function App() {
         <Route path="contact" element={<Navigate to="/about#contact" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
-    </Routes>
+    </Routes></PricingProvider>
   )
 }

@@ -11,6 +11,8 @@ import HotelRates from './HotelRates'
 import HotelFeature from './HotelFeature'
 import RegularPrice from './RegularPrice'
 import { hotelPackagePriceInclusions, packagePriceForNights } from '../services/pricing'
+import { usePricing, useTourPackages } from '../services/pricingContext'
+import { PricingNotice } from './PricingProvider'
 import { hotelCategoryLabel, hotelLocationLabel, hotelRoomOccupancy, hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration'
 import type { BookingKind, BookingPayload, PreparedRequest } from '../types'
 
@@ -36,6 +38,8 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   onSubmittingChange?: (submitting: boolean) => void
 }) {
   const registered = useRegisteredHotels(kind === 'hotel')
+  const pricing = usePricing()
+  const pricedPackages = useTourPackages()
   const availableHotels = registered.hotels
   const [preferredCar, setPreferredCar] = useState(catalogCarSelection(additionalFields.carRental ?? (kind === 'car' ? selectedItem : undefined)))
   const [checkInDate, setCheckInDate] = useState(kind === 'package' ? additionalFields.arrivalDate ?? '' : '')
@@ -56,7 +60,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   const selectedHotel = availableHotels.find((hotel) => hotelSelectionValue(hotel) === preferredStay)
   const lockedHotel = kind === 'hotel' && selectedItem ? selectedHotel : undefined
   const customPackage = kind === 'package' && (packagePreference === 'Custom package' || selectedItem === 'Custom package' || Boolean(additionalFields.placesToVisit))
-  const selectedPackage = tourPackages.find((item) => item.name === packagePreference && !item.underDevelopment)
+  const selectedPackage = pricedPackages.find((item) => item.name === packagePreference && !item.underDevelopment)
   const room = selectedHotel ? selectedHotelRoom(selectedHotel, roomSelection.hotelId === selectedHotel.id ? roomSelection.roomType : undefined) : undefined
   const people = Number(adults) + Number(childCount)
   const roomQuantity = Number(rooms ?? minimumHotelRooms(people, room?.roomType))
@@ -88,6 +92,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     }
     fields.phoneNumber = phone
     if (kind === 'package' && !customPackage) {
+      if (pricing.loading || pricing.error) { setSubmitError('Wait for current package prices to load, or retry loading prices.'); return }
       if (!selectedPackage || selectedPackagePrice === undefined) { setSubmitError('Choose an available package and valid travel dates.'); return }
       fields.packageRate = `₹${selectedPackagePrice.toLocaleString('en-IN')} per person for ${nights} ${nights === 1 ? 'night' : 'nights'}; based on ₹${selectedPackage.price.toLocaleString('en-IN')} for ${packageNights} nights`
     }
@@ -139,6 +144,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       : <label className="full-field">Package preference<select name="packagePreference" value={packagePreference} onChange={(event) => setPackagePreference(event.target.value)} required>
         {tourPackages.filter((item) => !item.underDevelopment).map((item) => <option key={item.id} value={item.name}>{item.name} - {item.duration}</option>)}
       </select></label>)}
+    {kind === 'package' && !customPackage && <PricingNotice />}
     {kind === 'package' && !customPackage && selectedPackage && <div className="privacy-note full-field package-price-summary">
       <RegularPrice price={selectedPackage.price} originalPrice={selectedPackage.originalPrice} />
       <p>Package rate: ₹{selectedPackage.price.toLocaleString('en-IN')} per person for {packageNights} nights.</p>

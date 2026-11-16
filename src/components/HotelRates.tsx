@@ -5,7 +5,7 @@ import { hotelMealPrices, hotelNightlyPrice, selectedHotelRoom } from '../servic
 import { hotelRoomOccupancy, hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration'
 import NumberStepper from './NumberStepper'
 import RegularPrice from './RegularPrice'
-import { hotelPackageDiscountPercent, hotelPackagePriceInclusions } from '../services/pricing'
+import { hotelPackagePriceInclusions } from '../services/pricing'
 
 export default function HotelRates({ hotel, meals, roomType, showRooms = false, compact = false, showInclusions = false, onChange, people, rooms, onRoomsChange }: { hotel: Hotel; meals?: { breakfast: boolean; dinner: boolean }; roomType?: string; showRooms?: boolean; compact?: boolean; showInclusions?: boolean; onChange?: (breakfast: boolean, dinner: boolean, price: number, roomType?: string) => void; people?: number; rooms?: string; onRoomsChange?: (value: string) => void }) {
   const [localBreakfast, setBreakfast] = useState(false)
@@ -17,7 +17,7 @@ export default function HotelRates({ hotel, meals, roomType, showRooms = false, 
   const { breakfast: breakfastPrice, dinner: dinnerPrice } = hotelMealPrices(hotel, selectedRoom?.roomType)
   const rateBasis = hotel.registeredHotelId || selectedRoom ? hotelRoomRateBasis(selectedRoom?.roomType) : hotel.rateBasis ?? 'per night'
   const price = hotelNightlyPrice(hotel, breakfast, dinner, selectedRoom?.roomType)
-  const regularPrice = <RegularPrice price={selectedRoom?.price ?? hotel.roomOnlyPrice ?? hotel.price} originalPrice={selectedRoom?.originalPrice ?? hotel.originalPrice} discountPercent={hotelPackageDiscountPercent} />
+  const regularPrice = <RegularPrice price={selectedRoom?.price ?? hotel.roomOnlyPrice ?? hotel.price} originalPrice={selectedRoom?.originalPrice ?? hotel.originalPrice} discountPercent={hotel.discountPercent} />
   const acStatus = <span className="hotel-ac-status" role="img" aria-label={`Hot & cold AC ${hotel.hotColdAc ? 'available' : 'not available'}`}>
     {hotel.hotColdAc ? <Check size={15} aria-hidden="true" /> : <X size={15} aria-hidden="true" />}
     <span>Hot &amp; cold AC</span>
