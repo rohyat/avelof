@@ -22,6 +22,11 @@ test('holiday destinations sit above the hero in a centred responsive row with o
       assert.equal(await navigation.getByRole('button', { name: `${name} Coming soon` }).isDisabled(), true)
     }
     assert.equal(await navigation.locator('svg').count(), 5)
+    const ladakhIcon = navigation.getByRole('button', { name: 'Ladakh Coming soon' }).locator('svg')
+    const spitiIcon = navigation.getByRole('button', { name: 'Spiti Valley Coming soon' }).locator('svg')
+    assert.equal(await ladakhIcon.evaluate((icon) => icon.classList.contains('lucide-mountain-snow')), true)
+    assert.equal(await spitiIcon.evaluate((icon) => icon.classList.contains('lucide-landmark')), true)
+    assert.notEqual(await spitiIcon.innerHTML(), await ladakhIcon.innerHTML())
     for (const width of [320, 390, 600, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       const bounds = await navigation.locator('.home-destination-card').evaluateAll((cards) => cards.map((card) => {
