@@ -9,6 +9,7 @@ import { BusinessError, businessErrorText, compressBusinessPhoto, deleteBusiness
 import { hotelStatusLabels } from '../data/hotelRegistration'
 import RegistrationReceipt from '../components/RegistrationReceipt'
 import SubmissionProgress from '../components/SubmissionFeedback'
+import PartnerPhotoEditor from '../components/PartnerPhotoEditor'
 import RegistrationForm from '../components/RegistrationForm'
 import MapLocationLink from '../components/MapLocationLink'
 import { locationFields, mapCoordinates } from '../services/mapLocation'
@@ -26,7 +27,8 @@ function PhotoPreview({ photo }: { photo: Blob }) {
 export default function BusinessRegistrationPage({ editing, onCancel }: { editing?: { business: OwnerBusiness; accessCode: string }; onCancel?: () => void } = {}) {
   const [photos, setPhotos] = useState<Blob[]>([])
   const [items, setItems] = useState(() => (editing?.business.items.length ? editing.business.items : ['']).map((name) => ({ id: crypto.randomUUID(), name })))
-  const [processing, setProcessing] = useState(false)
+  const [processing, setProcessing] = useState(Boolean(editing))
+  const [retainedPhotos, setRetainedPhotos] = useState<number[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [photoError, setPhotoError] = useState('')
@@ -58,14 +60,14 @@ export default function BusinessRegistrationPage({ editing, onCancel }: { editin
       publicationConsent: fields.has('publicationConsent'),
       websiteTrap: fields.get('websiteTrap') ?? '',
     }
-    const fingerprint = JSON.stringify({ details, photoVersion: photoVersion.current })
+    const fingerprint = JSON.stringify({ details, photoVersion: photoVersion.current, retainedPhotos })
     if (pending.current.fingerprint && pending.current.fingerprint !== fingerprint) pending.current.id = crypto.randomUUID()
     pending.current.fingerprint = fingerprint
     const parsed = businessSubmissionSchema.safeParse({ ...details, id: editing?.business.id ?? pending.current.id })
     if (!parsed.success) { setError(parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(' ')); return }
     inFlight.current = true
     setBusy(true)
-    try { setReceipt(editing ? await editBusiness(parsed.data, { accessCode: editing.accessCode, version: editing.business.version }, photos) : await saveBusiness(parsed.data, photos)) }
+    try { setReceipt(editing ? await editBusiness(parsed.data, { accessCode: editing.accessCode, version: editing.business.version }, photos, retainedPhotos) : await saveBusiness(parsed.data, photos)) }
     catch (failure) { setError(businessErrorText(failure)) }
     finally { inFlight.current = false; setBusy(false) }
   }
@@ -117,13 +119,15 @@ export default function BusinessRegistrationPage({ editing, onCancel }: { editin
           <label>Contact person's name<input name="contactName" maxLength={100} required autoComplete="name" defaultValue={editing?.business.contactName} /></label>
           <label>Private contact phone<input name="contactPhone" type="tel" maxLength={30} required autoComplete="tel" defaultValue={editing?.business.contactPhone} /></label>
           <label>Private contact email<input name="contactEmail" type="email" maxLength={200} required autoComplete="email" defaultValue={editing?.business.contactEmail} /></label>
-          <label className="review-text-field photo-upload-field"><span className="photo-upload-heading"><FileImage size={24} aria-hidden="true" /> {editing ? 'Replacement shop & product photos (optional)' : 'Shop, restaurant & product photos (1-5 required)'}</span><small>Choose between one and five JPEG, PNG or WebP photos, up to 5 MB each. Show your shop or restaurant and the products or dishes you offer. Photos are resized, compressed and stripped of original metadata before upload.</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required={!editing} onChange={(event) => void selectPhotos(Array.from(event.target.files ?? []))} /></label>
+          {editing ? <PartnerPhotoEditor kind="business" id={editing.business.id} accessCode={editing.accessCode} version={editing.business.version} onChange={(next, retained, blocked) => { photoVersion.current++; setPhotos(next); setRetainedPhotos(retained); setProcessing(blocked) }} /> : <>
+          <label className="review-text-field photo-upload-field"><span className="photo-upload-heading"><FileImage size={24} aria-hidden="true" /> Shop, restaurant & product photos (1-5 required)</span><small>Choose between one and five JPEG, PNG or WebP photos, up to 5 MB each. Show your shop or restaurant and the products or dishes you offer. Photos are resized, compressed and stripped of original metadata before upload.</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required onChange={(event) => void selectPhotos(Array.from(event.target.files ?? []))} /></label>
           {photoError && <p className="enquiry-error review-text-field" role="alert">{photoError}</p>}
           <div className="hotel-photo-grid review-text-field">{photos.map((photo, index) => <PhotoPreview key={index} photo={photo} />)}</div>
+          </>}
           <label className="enquiry-honeypot" aria-hidden="true">Website<input name="websiteTrap" tabIndex={-1} autoComplete="off" /></label>
           <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I am authorised to register this business and use these photos. I consent to publishing the business name, type, destination, address{coordinates ? ', existing map pin' : ''}, item names, website and photos if approved. My contact name, phone and email stay private. I understand this listing does not take orders or payments and does not guarantee a discount.</span></label>
           {error && <p className="enquiry-error review-text-field" role="alert">{error}</p>}
-          <p className="review-text-field" role="status">{processing ? 'Preparing photos...' : photos.length ? `${photos.length} photos ready to upload.` : editing ? 'Existing photos will be kept.' : 'Select at least one photo before submitting.'}</p>
+          {!editing && <p className="review-text-field" role="status">{processing ? 'Preparing photos...' : photos.length ? `${photos.length} photos ready to upload.` : 'Select at least one photo before submitting.'}</p>}
           {busy && <p className="review-text-field" role="status">Submitting your business for review…</p>}
           <button className="button button-dark" type="submit" disabled={processing || (!editing && !photos.length) || Boolean(photoError) || busy}>{busy ? 'Submitting…' : editing ? 'Save changes for approval' : 'Submit for approval'} <ArrowRight size={16} /></button>
           {editing && <button className="button button-outline" type="button" onClick={onCancel}>Cancel editing</button>}

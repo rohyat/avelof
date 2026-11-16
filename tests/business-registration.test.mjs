@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
 import { assertCentered, assertSaving } from './submission-feedback.mjs'
+import { mockPartnerPhotos } from './partner-photo-preview.mjs'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
 const id = 'c0a80123-4567-489a-8abc-000000000001'
@@ -131,6 +132,7 @@ test('business registration, moderation and discovery work without exposing priv
         const updates = []
         const lookups = []
         const errors = []
+        await mockPartnerPhotos(page)
         page.on('pageerror', (error) => errors.push(error.message))
         await page.route('**/api/businesses*', async (route) => {
           const request = route.request()
@@ -153,6 +155,7 @@ test('business registration, moderation and discovery work without exposing priv
           assert.equal(details.longitude, original.longitude)
           assert.deepEqual(details.items, ['Updated item', 'Kahwa'])
           assert.equal(form.getAll('photo').length, kind === 'shop' ? 2 : 0)
+          assert.deepEqual(JSON.parse(form.get('retainedPhotos')), kind === 'shop' ? [0, 2] : [0, 1, 2])
           updates.push(details)
           if (updates.length === 1) return route.fulfill({ status: 503, json: { error: 'Update could not be saved. Try again.' } })
           const { publicationConsent, websiteTrap, ...saved } = details
@@ -178,14 +181,15 @@ test('business registration, moderation and discovery work without exposing priv
           assert.equal(await page.getByLabel('Private contact email', { exact: true }).inputValue(), original.contactEmail)
           assert.equal(await page.locator('[name=kind]').inputValue(), kind)
           assert.equal(await page.locator('input[type=file]').getAttribute('required'), null)
-          await page.getByText('Existing photos will be kept.', { exact: true }).waitFor()
+          await page.getByAltText('Existing business photo 3').waitFor()
           await page.getByLabel('Business name', { exact: true }).fill('Valley Business')
           await page.getByLabel('Private contact phone', { exact: true }).fill('9123456789')
           await page.getByLabel('Item 1', { exact: true }).fill('Updated item')
           if (kind === 'shop') {
+            await page.getByRole('button', { name: 'Remove existing photo 2', exact: true }).click()
             const file = await photoFile(page)
             await page.locator('input[type=file]').setInputFiles([file, { ...file, name: 'products.png' }])
-            await page.getByRole('status').filter({ hasText: '2 photos ready' }).waitFor()
+            await page.getByRole('status').filter({ hasText: '4 of 5 photos selected.' }).waitFor()
           }
           await page.locator('[name=publicationConsent]').check()
           const submit = page.getByRole('button', { name: 'Save changes for approval', exact: true })

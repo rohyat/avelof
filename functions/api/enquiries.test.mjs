@@ -15,6 +15,7 @@ import { onRequest as onDriverImageRequest } from './driver-images/[id]/[index].
 import { driverAccessCode, maskedDriverLicence } from '../_lib/driverRegistration.ts'
 import { onRequest as onHotelStatusRequest } from './hotel-status.ts'
 import { onRequest as onHotelUpdateRequest } from './hotel-update.ts'
+import { onRequest as onPartnerPhotosRequest } from './partner-photos.ts'
 import { onRequest as onHotelImageRequest } from './hotel-images/[id]/[index].ts'
 import { customerHotelRate, hotelAccessCode, registrationPhotoBytes, validHotelJpeg } from '../_lib/hotelRegistration.ts'
 import { hotelCategories, hotelPhotoLimit, hotelUploadLimit } from '../../src/data/hotelRegistration.ts'
@@ -94,6 +95,7 @@ async function hotelRequest(DB, bucket, method, data, options = {}) {
     body = new FormData()
     body.append('details', JSON.stringify(data))
     if (options.auth) body.append('auth', JSON.stringify(options.auth))
+    if (options.retainedPhotos !== undefined) body.append('retainedPhotos', JSON.stringify(options.retainedPhotos))
     for (const image of options.photos ?? [testHotelJpeg]) body.append('photos', new Blob([image], { type: options.photoType ?? 'image/jpeg' }), 'test.jpg')
   } else if (data !== undefined) { headers['Content-Type'] = 'application/json'; body = JSON.stringify(data) }
   const env = {
@@ -116,6 +118,61 @@ function driverPayload() {
   }
 }
 const driverRequest = (DB, bucket, method, data, options = {}) => hotelRequest(DB, bucket, method, data, { ...options, handler: onDriverRequest })
+
+for (const kind of ['hotel', 'driver']) {
+  test(`${kind} private photo previews and selective edits retain only chosen photos with safe retries`, async () => {
+    const DB = database(), bucket = hotelBucket()
+    try {
+      const request = kind === 'hotel' ? hotelRequest : driverRequest
+      const input = kind === 'hotel' ? hotelPayload() : driverPayload()
+      const receipt = await (await request(DB, bucket, 'POST', input, { photos: Array(kind === 'hotel' ? 3 : 1).fill(testHotelJpeg) })).json()
+      const table = `${kind}_registrations`
+      const row = () => DB.sqlite.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(input.id)
+      const oldKeys = JSON.parse(row().photo_keys_json)
+      const preview = (overrides = {}, headers = {}) => onPartnerPhotosRequest({
+        request: new Request('https://avelof.test/api/partner-photos', { method: 'POST', headers: { Origin: 'https://avelof.test', 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ kind, id: input.id, version: 0, accessCode: receipt.accessCode, ...overrides }) }),
+        env: { DB },
+      })
+      assert.equal((await preview({ accessCode: 'WRNG0000' })).status, 404)
+      assert.equal((await preview({ version: 1 })).status, 409)
+      assert.equal((await preview({}, { Origin: 'https://other.test' })).status, 403)
+      const response = await preview()
+      assert.equal(response.status, 200)
+      assert.ok(response.headers.get('Cache-Control').includes('no-store'))
+      const body = await response.json()
+      assert.deepEqual(body.photos, oldKeys.map(() => `data:image/jpeg;base64,${testHotelJpeg.toString('base64')}`))
+      assert.ok(!JSON.stringify(body).includes(oldKeys[0]))
+      const auth = { accessCode: receipt.accessCode, version: 0, ...(kind === 'driver' ? { identifier: receipt.driverId } : {}) }
+      const data = kind === 'driver' ? Object.fromEntries(Object.entries(input).filter(([key]) => key !== 'id')) : input
+      const update = (retainedPhotos, photos = [], database = DB) => request(database, bucket, 'POST', data, { auth, photos, retainedPhotos, ...(kind === 'hotel' ? { handler: onHotelUpdateRequest } : {}) })
+      for (const indexes of [[], [0, 0], [oldKeys.length], [-1], [0.5], null, 'all']) {
+        assert.equal((await update(indexes)).status, 400, JSON.stringify(indexes))
+        assert.deepEqual(JSON.parse(row().photo_keys_json), oldKeys)
+        assert.equal(photoCount(DB), oldKeys.length)
+      }
+      const kept = kind === 'hotel' ? [2, 0] : []
+      // Upload failure must not remove any existing bytes or change the photo set.
+      assert.equal((await update(kept, [testHotelJpeg], failingPhotoDatabase(DB, 1))).status, 503)
+      assert.deepEqual(JSON.parse(row().photo_keys_json), oldKeys)
+      const result = await update(kept, [testHotelJpeg])
+      assert.equal(result.status, 200)
+      const saved = await result.json()
+      // Hotel cleanup is queued with waitUntil; let its database work finish.
+      await new Promise((resolve) => setImmediate(resolve))
+      const keys = JSON.parse(row().photo_keys_json)
+      assert.deepEqual(keys.slice(0, kept.length), kept.map((index) => oldKeys[index]))
+      assert.equal(keys.length, kept.length + 1)
+      assert.equal(photoCount(DB), keys.length)
+      for (const key of keys) assert.ok(DB.sqlite.prepare('SELECT content FROM registration_photos WHERE photo_key = ?').get(key))
+      // Preview indexes belong to a version; stale credentials cannot retrieve the new gallery.
+      assert.equal((await preview()).status, 409)
+      assert.deepEqual(await (await update(kept, [testHotelJpeg])).json(), saved)
+      assert.deepEqual(JSON.parse(row().photo_keys_json), keys)
+      assert.equal(photoCount(DB), keys.length)
+    } finally { DB.sqlite.close() }
+  })
+}
+
 test('driver registration is private, idempotent and unique by phone, with protected status lookup', async () => {
   const DB = database(), bucket = hotelBucket()
   try {
@@ -676,6 +733,11 @@ test('hotel registration persists photos, unique private contact and a stable re
     assert.equal(owner.photos, undefined)
     assert.equal(owner.accessCode, undefined)
     assert.equal(owner.payload_hash, undefined)
+    for (const identifier of ['9876543210', '98765 43210', '919876543210', '+91 9876543210', receipt.hotelId]) {
+      const response = await hotelRequest(DB, bucket, 'POST', { identifier, accessCode: receipt.accessCode.toLowerCase() }, { lookup: true })
+      assert.equal(response.status, 200, `Hotel lookup accepts ${identifier}`)
+      assert.equal((await response.json()).hotel.id, receipt.id)
+    }
     const legacyId = `AVELOF_HTL_${receipt.id.replaceAll('-', '').toUpperCase()}`
     assert.equal((await hotelRequest(DB, bucket, 'POST', { identifier: legacyId, accessCode: receipt.accessCode }, { lookup: true })).status, 200)
     const srinagar = { ...hotelPayload(), id: crypto.randomUUID(), phone: '9876543211', location: 'Srinagar' }

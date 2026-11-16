@@ -317,8 +317,9 @@ the business name, uppercased, plus the final four phone digits, matching hotel
 and driver access. If multiple businesses share a phone and code, use the ID.
 Credentials travel only in POST bodies, never URLs or browser storage. Public
 listings do not expose owner contacts or access codes; pending photos remain
-private. Edits keep existing photos unless 1-5 replacements are selected,
-preserve legacy descriptions, and hide the listing pending fresh approval.
+private. The edit form privately previews existing photos. Remove individual photos
+with X or add new ones, keeping 1-5 photos in total. Removals apply only on a successful
+save. Edits preserve legacy descriptions and hide the listing pending fresh approval.
 Name/phone changes can change the access code shown on the saved receipt.
 Version checks prevent stale edits, and unchanged retries recover saved updates
 without duplicating photo bytes. No additional database migration is needed
@@ -632,8 +633,15 @@ publication consent and Save changes for approval. Hotel updates use
 `auth` part. Saving forces pending status and immediately hides the listing and its
 photos from public access until the owner reviews and approves it again. It keeps
 registration IDs and linked reviews, and queues the existing owner alert.
-Existing photos are retained unless replacements are supplied (a hotel selection
-replaces the full set; a driver replacement replaces the portrait). Version checks
+Existing photos appear in the private edit form with individual X controls. Keep
+untouched photos, remove unwanted ones and add new uploads (1-5 total for hotels,
+exactly one portrait for drivers). Nothing is removed from storage until the edit
+is saved successfully. Cancel or failed saves leave stored photos unchanged.
+Private previews use `POST /api/partner-photos` with kind, registration UUID,
+access code and version in the JSON body; responses are no-store and pending photos
+remain inaccessible through public image URLs. Edits send retained photo indexes
+alongside new uploads; older API clients that omit indexes keep the previous
+keep-all/replace-all behaviour. Version checks
 prevent overwriting newer moderation or partner changes. Updated name/phone details
 can change the access code; save the code shown in the successful receipt.
 No database migration is needed. Older hotel room labels and meal pricing remain

@@ -50,10 +50,11 @@ export async function saveHotel(details: HotelSubmission, photos: Blob[]) {
 export async function lookupHotel(identifier: string, accessCode: string) {
   return z.object({ hotel: hotelStatusResultSchema }).parse(await requestHotel('/api/hotel-status', 'POST', { identifier, accessCode })).hotel
 }
-export async function updateHotel(details: HotelSubmission, version: number, accessCode: string, photos: Blob[]) {
+export async function updateHotel(details: HotelSubmission, version: number, accessCode: string, photos: Blob[], retainedPhotos?: number[]) {
   const body = new FormData()
   body.append('details', JSON.stringify(details))
   body.append('auth', JSON.stringify({ version, accessCode }))
+  if (retainedPhotos !== undefined) body.append('retainedPhotos', JSON.stringify(retainedPhotos))
   photos.forEach((photo, index) => body.append('photos', photo, `hotel-${index + 1}.jpg`))
   const receipt = hotelReceiptSchema.parse(await requestHotel('/api/hotel-update', 'POST', body))
   if (receipt.id !== details.id || receipt.status !== 'pending') throw new HotelError('Hotel update could not be confirmed. Retry with the same form.', 503)

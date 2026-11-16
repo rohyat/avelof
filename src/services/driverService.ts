@@ -20,10 +20,11 @@ export async function saveDriver(data: DriverSubmission, photo: Blob) {
 export async function lookupDriver(identifier: string, accessCode: string) {
   return z.object({ driver: driverStatusResultSchema }).parse(await requestHotel('/api/drivers', 'POST', { identifier, accessCode })).driver
 }
-export async function editDriver(auth: DriverEditAuth, details: DriverEditDetails, expectedId: string, photo?: Blob) {
+export async function editDriver(auth: DriverEditAuth, details: DriverEditDetails, expectedId: string, photo?: Blob, retainedPhotos?: number[]) {
   const body = new FormData()
   body.append('auth', JSON.stringify(auth))
   body.append('details', JSON.stringify(details))
+  if (retainedPhotos !== undefined) body.append('retainedPhotos', JSON.stringify(retainedPhotos))
   if (photo) body.append('photos', photo, 'driver-portrait.jpg')
   const receipt = driverReceiptSchema.parse(await requestHotel('/api/drivers', 'POST', body))
   if (receipt.id !== expectedId || receipt.status !== 'pending') throw new HotelError('Driver update could not be confirmed. Look up your status again.', 503)

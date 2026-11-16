@@ -221,7 +221,12 @@ h1 em, h2 em { color: inherit; font-weight: 500; }
 .discovery-content ul { padding-left: 20px; margin-bottom: 0; }
 .discovery-content li + li { margin-top: 10px; }
 .discovery-notice p { max-width: 760px; }
+.discovery-notice h2 { display: flex; align-items: flex-start; gap: 10px; }
+.discovery-notice h2 > svg { flex-shrink: 0; margin-top: .15em; }
 .discovery-notice .button { margin-top: 12px; }
+.editable-photo { position: relative; min-width: 0; }
+.editable-photo .photo-remove { position: absolute; top: 5px; right: 5px; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: #fff; color: var(--forest); cursor: pointer; }
+.editable-photo .photo-remove:focus-visible { outline: 3px solid var(--forest); outline-offset: 2px; }
 .discovery-card-heading, .activity-choice-heading { display: flex; align-items: flex-start; gap: 12px; }
 .discovery-card-heading > svg { flex-shrink: 0; margin-top: 3px; color: var(--forest); }
 .discovery-card-heading > span, .guide-point > span { min-width: 0; }

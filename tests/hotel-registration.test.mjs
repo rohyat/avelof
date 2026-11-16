@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
 import { dismissSubmission } from './submission-feedback.mjs'
+import { mockPartnerPhotos } from './partner-photo-preview.mjs'
 import { validHotelJpeg } from '../functions/_lib/hotelRegistration.ts'
 import { hotelPhotoLimit } from '../src/data/hotelRegistration.ts'
 
@@ -878,13 +879,15 @@ test('hotel registration, private lookup and moderation integrate with public st
         roomTypes: ['Standard (12 rooms)'],
       }
       delete current.photos
-      let saved, auth, replacementCount, fail = true
+      let saved, auth, replacementCount, retainedPhotos, fail = true
+      const previews = await mockPartnerPhotos(page)
       await page.route('**/api/hotel-status', (route) => route.fulfill({ json: { hotel: current } }))
       await page.route('**/api/hotel-update', async (route) => {
         const form = await new Response(route.request().postDataBuffer(), { headers: { 'Content-Type': route.request().headers()['content-type'] } }).formData()
         saved = JSON.parse(form.get('details'))
         auth = JSON.parse(form.get('auth'))
         replacementCount = form.getAll('photos').length
+        retainedPhotos = JSON.parse(form.get('retainedPhotos'))
         if (fail) return route.fulfill({ status: 409, json: { error: 'This hotel changed. Check your status again before editing.' } })
         return route.fulfill({ json: { saved: true, id, hotelId, accessCode: 'NEWH3210', status: 'pending' } })
       })
@@ -894,6 +897,13 @@ test('hotel registration, private lookup and moderation integrate with public st
         await page.getByLabel('Status access code').fill(accessCode)
         await page.getByRole('button', { name: 'Check status', exact: true }).click()
         await page.getByRole('button', { name: 'Edit hotel details' }).click()
+        await page.getByAltText('Existing hotel photo 3').waitFor()
+        assert.ok(previews.length > 0)
+        for (const preview of previews) assert.deepEqual(preview, { kind: 'hotel', id, accessCode, version: 3 })
+        await page.getByRole('button', { name: 'Remove existing photo 2', exact: true }).click()
+        await page.getByLabel('Add hotel photos', { exact: true }).setInputFiles(await makePhoto(page))
+        await page.getByRole('status').filter({ hasText: '3 of 5 photos selected.' }).waitFor()
+        await page.getByRole('button', { name: 'Remove new photo 1', exact: true }).click()
         assert.equal(await page.getByRole('combobox', { name: 'Exact area', exact: true }).inputValue(), 'custom')
         assert.equal(await page.getByRole('textbox', { name: 'Specify exact location', exact: true }).inputValue(), 'Near the gondola')
         assert.equal(await page.getByLabel('Hotel name', { exact: true }).inputValue(), hotel.name)
@@ -908,6 +918,9 @@ test('hotel registration, private lookup and moderation integrate with public st
         await page.getByRole('alert').filter({ hasText: 'This hotel changed' }).waitFor()
         assert.equal(await page.getByRole('dialog').count(), 0)
         assert.equal(await page.getByLabel('Hotel name', { exact: true }).inputValue(), 'New Hotel Name')
+        assert.deepEqual(retainedPhotos, [0, 2])
+        assert.equal(await page.getByAltText('Existing hotel photo 1').count(), 1)
+        assert.equal(await page.getByAltText('Existing hotel photo 2').count(), 0)
         fail = false
         await page.getByRole('button', { name: 'Save changes for approval' }).click()
         await page.getByRole('dialog', { name: 'Hotel registration saved' }).waitFor()
@@ -925,10 +938,51 @@ test('hotel registration, private lookup and moderation integrate with public st
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       } finally { await page.close() }
     })
+    await context.test('private photo loading errors require retry and cancel never submits removals', async () => {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+      const current = { ...publicHotel(), contactName: hotel.contactName, phone: hotel.phone, status: 'pending', version: 0 }
+      delete current.photos
+      await mockPartnerPhotos(page, 5)
+      let failed = true, updates = 0
+      await page.route('**/api/partner-photos', (route) => failed
+        ? route.fulfill({ status: 503, json: { error: 'Could not load your existing photos.' } })
+        : route.fallback())
+      await page.route('**/api/hotel-status', (route) => route.fulfill({ json: { hotel: current } }))
+      await page.route('**/api/hotel-update', (route) => { updates++; return route.fulfill({ status: 503, json: { error: 'Unexpected submission.' } }) })
+      try {
+        await page.goto(`${origin}/hotel-status`)
+        await page.getByLabel('Hotel ID or phone number').fill(hotelId)
+        await page.getByLabel('Status access code').fill(accessCode)
+        await page.getByRole('button', { name: 'Check status', exact: true }).click()
+        await page.getByRole('button', { name: 'Edit hotel details' }).click()
+        await page.getByRole('alert').filter({ hasText: 'Could not load your existing photos.' }).waitFor()
+        assert.equal(await page.getByRole('button', { name: 'Save changes for approval' }).isDisabled(), true)
+        failed = false
+        await page.getByRole('button', { name: 'Retry loading photos' }).click()
+        await page.getByAltText('Existing hotel photo 5').waitFor()
+        assert.equal(await page.getByLabel('Add hotel photos', { exact: true }).isDisabled(), true)
+        await page.waitForFunction(() => [...document.querySelectorAll('.partner-photo-editor img')].every((image) => image.complete && image.naturalWidth > 0))
+        await page.getByRole('button', { name: 'Remove existing photo 3', exact: true }).click()
+        assert.equal(await page.getByLabel('Add hotel photos', { exact: true }).isDisabled(), false)
+        await page.getByRole('button', { name: 'Cancel editing' }).click()
+        assert.equal(updates, 0)
+        await page.getByLabel('Hotel ID or phone number').fill(hotelId)
+        await page.getByLabel('Status access code').fill(accessCode)
+        await page.getByRole('button', { name: 'Check status', exact: true }).click()
+        await page.getByRole('button', { name: 'Edit hotel details' }).click()
+        await page.getByAltText('Existing hotel photo 3').waitFor()
+        assert.equal(await page.locator('.partner-photo-editor img').count(), 5)
+        for (const width of [320, 390, 1440]) {
+          await page.setViewportSize({ width, height: 900 })
+          assert.equal(await page.locator('.partner-photo-editor').evaluate((element) => element.scrollWidth > element.clientWidth), false)
+        }
+      } finally { await page.close() }
+    })
     await context.test('legacy hotel edit preserves room labels and meal pricing without inventing room rates', async () => {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
       const current = { ...publicHotel(), contactName: hotel.contactName, phone: hotel.phone, status: 'rejected', version: 0 }
       delete current.photos
+      await mockPartnerPhotos(page, 1)
       await page.route('**/api/hotel-status', (route) => route.fulfill({ json: { hotel: current } }))
       try {
         await page.goto(`${origin}/hotel-status`)

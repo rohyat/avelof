@@ -7,6 +7,7 @@ import { accessConfigured, allowAccessAttempt, equalHashes, hashText, isAdmin, p
 import { adminBusiness, businessAccessCode, businessColumns, businessPhotoKeys, businessReceipt, ownerBusiness, publicBusiness } from '../_lib/businessRegistration.ts'
 import type { BusinessEnv, BusinessRow } from '../_lib/businessRegistration.ts'
 import { limitedBody, validHotelJpeg } from '../_lib/hotelRegistration.ts'
+import { readRetainedPhotos, retainedPhotoKeys } from '../_lib/partnerPhotos.ts'
 
 const listSchema = z.object({
   scope: z.enum(['public', 'admin']).default('public'),
@@ -103,7 +104,9 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
     catch { return privateReply({ error: 'Invalid business registration form.' }, 400) }
     const editing = form.has('auth')
     if (!editing && !await allowAccessAttempt(request, DB, 'business-submit', 5)) return privateReply({ error: 'Too many submissions. Try again in ten minutes.' }, 429)
-    if ([...form.keys()].some((key) => !['details', 'photo', 'auth'].includes(key)) || form.getAll('details').length !== 1 || editing && form.getAll('auth').length !== 1 || !editing && form.getAll('photo').length < 1 || form.getAll('photo').length > 5) return privateReply({ error: 'Provide business details and 1-5 photos, or keep existing photos when editing.' }, 400)
+    if ([...form.keys()].some((key) => !['details', 'photo', 'auth', ...(editing ? ['retainedPhotos'] : [])].includes(key)) || form.getAll('details').length !== 1 || editing && form.getAll('auth').length !== 1 || !editing && form.getAll('photo').length < 1 || form.getAll('photo').length > 5) return privateReply({ error: 'Provide business details and 1-5 photos, or keep existing photos when editing.' }, 400)
+    const retained = readRetainedPhotos(form)
+    if (!retained.success) return privateReply({ error: 'Invalid retained photos.' }, 400)
     let authInput: unknown
     try { authInput = editing ? JSON.parse(String(form.get('auth'))) : undefined } catch { return privateReply({ error: 'Invalid update credentials.' }, 400) }
     const auth = businessEditAuthSchema.safeParse(authInput)
@@ -128,7 +131,7 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
     const photoDigest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(photoDigests))))
     const photoHash = images.length === 1 ? photoDigests[0] : Array.from(photoDigest, (byte) => byte.toString(16).padStart(2, '0')).join('')
     const { items, ...legacyData } = data
-    const payloadHash = await hashText(JSON.stringify(editing ? { operation: 'business-update', data, auth: auth.data, photoDigests } : { operation: 'business-submit', data: items.length ? data : legacyData, photoHash }))
+    const payloadHash = await hashText(JSON.stringify(editing ? { operation: 'business-update', data, auth: auth.data, photoDigests, ...(retained.data === undefined ? {} : { retainedPhotos: retained.data }) } : { operation: 'business-submit', data: items.length ? data : legacyData, photoHash }))
     submittingId = data.id
     submittingHash = payloadHash
     const existing = await DB.prepare(`SELECT ${businessColumns} FROM business_registrations WHERE id = ?`).bind(data.id).first<BusinessRow>()
@@ -143,7 +146,10 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
     }
 
     const uploadId = crypto.randomUUID()
-    const uploadedKeys = images.length ? images.map((_, index) => `businesses/${data.id}/${uploadId}/${index}.jpg`) : existing ? businessPhotoKeys(existing) : []
+    const newKeys = images.map((_, index) => `businesses/${data.id}/${uploadId}/${index}.jpg`)
+    const keptKeys = editing && existing ? retainedPhotoKeys(businessPhotoKeys(existing), retained.data, images.length) : []
+    if (!keptKeys) return privateReply({ error: 'Keep or upload between one and five business photos.' }, 400)
+    const uploadedKeys = [...keptKeys, ...newKeys]
     const uploadedKey = uploadedKeys[0]
     const registrationKey = JSON.stringify([data.kind, data.location, data.name, data.address].map((value) => value.trim().toLowerCase()))
     const { id, contactName, contactPhone, contactEmail, publicationConsent, websiteTrap, latitude, longitude, ...details } = data
@@ -155,10 +161,10 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
       await DB.batch([
         DB.prepare("UPDATE business_registrations SET registration_key = ?, contact_name = ?, contact_phone = ?, contact_email = ?, details_json = ?, photo_key = ?, photo_keys_json = ?, latitude = CASE WHEN ? THEN ? ELSE latitude END, longitude = CASE WHEN ? THEN ? ELSE longitude END, status = 'pending', owner_note = '', publication_consent = 1, payload_hash = ?, version = version + 1 WHERE id = ? AND version = ?")
           .bind(registrationKey, contactName, contactPhone, contactEmail, JSON.stringify(details), uploadedKey, JSON.stringify(uploadedKeys), latitude !== undefined ? 1 : 0, latitude ?? null, longitude !== undefined ? 1 : 0, longitude ?? null, payloadHash, id, auth.data.version),
-        ...images.map((image, index) => DB.prepare('INSERT INTO registration_photos (photo_key, content) SELECT ?, ? WHERE EXISTS (SELECT 1 FROM business_registrations WHERE id = ? AND payload_hash = ? AND version = ? AND photo_key = ?)')
-          .bind(uploadedKeys[index], new Uint8Array(image).buffer, id, payloadHash, auth.data.version + 1, uploadedKey)),
-        ...(images.length ? businessPhotoKeys(existing).map((key) => DB.prepare('DELETE FROM registration_photos WHERE photo_key = ? AND EXISTS (SELECT 1 FROM business_registrations WHERE id = ? AND payload_hash = ? AND version = ? AND photo_key = ?)')
-          .bind(key, id, payloadHash, auth.data.version + 1, uploadedKey)) : []),
+        ...images.map((image, index) => DB.prepare('INSERT INTO registration_photos (photo_key, content) SELECT ?, ? WHERE EXISTS (SELECT 1 FROM business_registrations WHERE id = ? AND payload_hash = ? AND version = ? AND photo_keys_json = ?)')
+          .bind(newKeys[index], new Uint8Array(image).buffer, id, payloadHash, auth.data.version + 1, JSON.stringify(uploadedKeys))),
+        ...businessPhotoKeys(existing).filter((key) => !keptKeys.includes(key)).map((key) => DB.prepare('DELETE FROM registration_photos WHERE photo_key = ? AND EXISTS (SELECT 1 FROM business_registrations WHERE id = ? AND payload_hash = ? AND version = ? AND photo_keys_json = ?)')
+          .bind(key, id, payloadHash, auth.data.version + 1, JSON.stringify(uploadedKeys))),
       ])
       const row = await DB.prepare(`SELECT ${businessColumns} FROM business_registrations WHERE id = ?`).bind(id).first<BusinessRow>()
       if (!row || row.payload_hash !== payloadHash || row.version !== auth.data.version + 1) return privateReply({ error: 'This business changed. Check your status again before editing.' }, 409)

@@ -9,6 +9,7 @@ import type { DriverRow } from '../_lib/driverRegistration.ts'
 import { deleteRegistrationPhotos, limitedBody, saveRegistrationPhoto, validHotelJpeg } from '../_lib/hotelRegistration.ts'
 import type { HotelEnv } from '../_lib/hotelRegistration.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
+import { readRetainedPhotos, retainedPhotoKeys } from '../_lib/partnerPhotos.ts'
 
 const listSchema = z.object({ scope: z.enum(['public', 'admin']).default('public'), page: z.coerce.number().int().min(1).max(10000).default(1), id: z.uuidv4().optional(), driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/).optional(), status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all') }).strict()
 const moderationSchema = hotelModerationObject.omit({ price: true, breakfastPrice: true, dinnerPrice: true, roomRates: true, latitude: true, longitude: true }).extend({ vehicleNumber: driverVehicleNumberSchema })
@@ -101,7 +102,9 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     try { form = await new Response(bytes, { headers: { 'Content-Type': request.headers.get('Content-Type')! } }).formData() } catch { return privateReply({ error: 'Invalid driver form.' }, 400) }
     if (form.has('auth')) {
       if (!await allowAccessAttempt(request, DB, 'driver-lookup', 10)) return privateReply({ error: 'Too many attempts. Try again in ten minutes.' }, 429)
-      if ([...form.keys()].some((key) => !['auth', 'details', 'photos'].includes(key)) || form.getAll('auth').length !== 1 || form.getAll('details').length !== 1 || form.getAll('photos').length > 1) return privateReply({ error: 'Unexpected driver fields.' }, 400)
+      if ([...form.keys()].some((key) => !['auth', 'details', 'photos', 'retainedPhotos'].includes(key)) || form.getAll('auth').length !== 1 || form.getAll('details').length !== 1 || form.getAll('photos').length > 1) return privateReply({ error: 'Unexpected driver fields.' }, 400)
+      const retained = readRetainedPhotos(form)
+      if (!retained.success) return privateReply({ error: 'Invalid retained portrait.' }, 400)
       let authInput: unknown
       let detailsInput: unknown
       try { authInput = JSON.parse(String(form.get('auth'))); detailsInput = JSON.parse(String(form.get('details'))) } catch { return privateReply({ error: 'Invalid driver edit.' }, 400) }
@@ -122,7 +125,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       const identifier = indianPhoneNumber(auth.data.identifier) || auth.data.identifier.toUpperCase()
       const proof = { identifier, accessCode: auth.data.accessCode, version: auth.data.version }
       const data = parsed.data
-      const payloadHash = await hashText(JSON.stringify({ edit: data, auth: proof, photoHashes }))
+      const payloadHash = await hashText(JSON.stringify({ edit: data, auth: proof, photoHashes, ...(retained.data === undefined ? {} : { retainedPhotos: retained.data }) }))
       const receipt = (row: DriverRow) => privateReply({ saved: true, id: row.id, driverId: row.driver_id, status: row.status, accessCode: driverAccessCode(row) })
       const replay = (row: DriverRow | null) => Boolean(row && row.version === auth.data.version + 1 && equalHashes(row.payload_hash, payloadHash))
       if (/^AVELOF-DRV-[0-9]{5,10}$/.test(identifier)) {
@@ -140,6 +143,8 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       const existing = found.row
       if (/^AVELOF-DRV-[0-9]{5,10}$/.test(identifier) && replay(existing)) return receipt(existing)
       if (existing.version !== auth.data.version) return privateReply({ error: 'This driver changed. Look up your status again before editing.' }, 409)
+      const keptKeys = retainedPhotoKeys(driverPhotoKeys(existing), retained.data, images.length, 1)
+      if (!keptKeys) return privateReply({ error: 'Keep or upload exactly one driver portrait.' }, 400)
       insertingId = existing.id
       if (images.length) {
         const key = `drivers/${existing.id}/${crypto.randomUUID()}/0.jpg`
@@ -150,7 +155,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       const { phone, age, licenceNumber, vehicleNumber, publicationConsent, website, ...details } = data
       void publicationConsent; void website
       const updated = await DB.prepare(`UPDATE driver_registrations SET phone = ?, private_json = ?, details_json = ?, photo_keys_json = ?, status = 'pending', owner_note = '', version = version + 1, payload_hash = ?, directory_credentials_consent = 1, directory_credentials_consented_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND version = ? AND NOT EXISTS (SELECT 1 FROM driver_registrations WHERE phone = ? AND id != ?) RETURNING ${driverColumns}`)
-        .bind(phone, JSON.stringify({ phone, age, licenceNumber, vehicleNumber }), JSON.stringify(details), JSON.stringify(keys.length ? keys : oldKeys), payloadHash, existing.id, auth.data.version, phone, existing.id).first<DriverRow>()
+        .bind(phone, JSON.stringify({ phone, age, licenceNumber, vehicleNumber }), JSON.stringify(details), JSON.stringify([...keptKeys, ...keys]), payloadHash, existing.id, auth.data.version, phone, existing.id).first<DriverRow>()
       if (!updated) {
         await deleteRegistrationPhotos(DB, keys); keys = []
         const current = await DB.prepare(`SELECT ${driverColumns} FROM driver_registrations WHERE id = ?`).bind(existing.id).first<DriverRow>()
@@ -159,9 +164,7 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       }
       saved = true
       keys = []
-      if (photos.length) {
-        try { await deleteRegistrationPhotos(DB, oldKeys) } catch (cleanupError) { console.error('Old driver photo cleanup failed', cleanupError) }
-      }
+      try { await deleteRegistrationPhotos(DB, oldKeys.filter((key) => !keptKeys.includes(key))) } catch (cleanupError) { console.error('Old driver photo cleanup failed', cleanupError) }
       queueOwnerPush(env, waitUntil, { title: 'Driver registration updated', body: 'A driver and vehicle are awaiting approval.', url: '/admin/panel/drivers', tag: `driver-${updated.id}` })
       return receipt(updated)
     }

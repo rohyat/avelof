@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { createAdminSession } from '../_lib/enquiryAccess.ts'
 import { onRequest } from './businesses.ts'
 import { onRequest as onBusinessImage } from './business-images/[id].ts'
+import { onRequest as onPartnerPhotos } from './partner-photos.ts'
 
 const jpeg = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAf/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAB//2Q==', 'base64')
 
@@ -66,9 +67,10 @@ async function adminCookie(env) {
   return `avelof_admin_local=${await createAdminSession(env)}`
 }
 
-async function sendRegistration(env, { id, name, kind, location, photoCount = 1, auth, ...overrides }, ip = '192.0.2.100') {
+async function sendRegistration(env, { id, name, kind, location, photoCount = 1, auth, retainedPhotos, ...overrides }, ip = '192.0.2.100') {
   const form = new FormData()
   if (auth) form.append('auth', JSON.stringify(auth))
+  if (retainedPhotos !== undefined) form.append('retainedPhotos', JSON.stringify(retainedPhotos))
   form.append('details', JSON.stringify({
     id,
     name,
@@ -100,6 +102,42 @@ function jsonRequest(path, method, data, cookie) {
     body: JSON.stringify(data),
   })
 }
+
+test('business private photo previews, selective removal and additive uploads are transactional', async (context) => {
+  const DB = new RegistrationDatabase()
+  context.after(() => DB.sqlite.close())
+  const env = envWithAdmin(DB)
+  const input = { id: crypto.randomUUID(), name: 'Gallery Shop', kind: 'shop', location: 'Srinagar', photoCount: 3 }
+  const receipt = await (await sendRegistration(env, input)).json()
+  const oldKeys = JSON.parse(DB.rows.get(input.id).photo_keys_json)
+  const preview = (overrides = {}) => onPartnerPhotos({ request: jsonRequest('/api/partner-photos', 'POST', { kind: 'business', id: input.id, accessCode: receipt.accessCode, version: 0, ...overrides }), env })
+  assert.equal((await preview({ accessCode: 'WRNG0000' })).status, 404)
+  const response = await preview()
+  assert.equal(response.status, 200)
+  assert.ok(response.headers.get('Cache-Control').includes('no-store'))
+  assert.deepEqual((await response.json()).photos, Array(3).fill(`data:image/jpeg;base64,${jpeg.toString('base64')}`))
+  let attempt = 110
+  const update = (retainedPhotos, photoCount = 0, version = 0) => sendRegistration(env, { ...input, auth: { accessCode: receipt.accessCode, version }, retainedPhotos, photoCount }, `192.0.2.${attempt++}`)
+  for (const indexes of [[], [1, 1], [3], [-1], null]) assert.equal((await update(indexes)).status, 400)
+  assert.equal((await update([0, 1, 2], 3)).status, 400)
+  DB.failBatch = 'photo'
+  assert.equal((await update([2, 0], 1)).status, 503)
+  assert.deepEqual(JSON.parse(DB.rows.get(input.id).photo_keys_json), oldKeys)
+  assert.equal(DB.photos.size, 3)
+  DB.failBatch = 'after'
+  const saved = await (await update([2, 0], 1)).json()
+  assert.equal(saved.saved, true, 'A lost response recovers the committed edit')
+  const keys = JSON.parse(DB.rows.get(input.id).photo_keys_json)
+  assert.deepEqual(keys.slice(0, 2), [oldKeys[2], oldKeys[0]])
+  assert.ok(!DB.photos.has(oldKeys[1]))
+  assert.equal(DB.photos.size, 3)
+  for (const key of keys) assert.ok(DB.photos.has(key))
+  assert.deepEqual(await (await update([2, 0], 1)).json(), saved)
+  assert.equal((await preview()).status, 409)
+  assert.equal((await update([1], 0, 1)).status, 200, 'Removal without uploads is saved')
+  assert.deepEqual(JSON.parse(DB.rows.get(input.id).photo_keys_json), [oldKeys[0]])
+  assert.equal(DB.photos.size, 1)
+})
 
 test('business galleries enforce 1-5 photos, preserve items, protect pending images and delete all photo bytes', async (context) => {
   const DB = new RegistrationDatabase()
@@ -284,13 +322,13 @@ test('business registration, owner access, private moderation, filtered publishi
   })
 
   await context.test('concurrent owner edits never add loser photo bytes or delete winner photos', async (context) => {
-    for (const identical of [true, false]) {
+    for (const retainedPhotos of [undefined, [0]]) for (const identical of [true, false]) {
       const DB = new RegistrationDatabase()
       context.after(() => DB.sqlite.close())
       const env = envWithAdmin(DB)
       const original = { id: crypto.randomUUID(), name: 'Race Shop', kind: 'shop', location: 'Srinagar', photoCount: 3 }
       await sendRegistration(env, original)
-      const edit = { ...original, items: ['Saffron'], photoCount: 2, auth: { accessCode: 'RACE3210', version: 0 } }
+      const edit = { ...original, items: ['Saffron'], photoCount: 2, retainedPhotos, auth: { accessCode: 'RACE3210', version: 0 } }
       const batch = DB.batch.bind(DB)
       DB.batch = async (statements) => {
         DB.batch = batch
@@ -299,7 +337,7 @@ test('business registration, owner access, private moderation, filtered publishi
       }
       assert.equal((await sendRegistration(env, edit)).status, identical ? 200 : 409)
       assert.equal(DB.rows.get(original.id).version, 1)
-      assert.equal(DB.photos.size, 2)
+      assert.equal(DB.photos.size, 2 + (retainedPhotos?.length ?? 0))
       assert.deepEqual([...DB.photos.keys()].sort(), JSON.parse(DB.rows.get(original.id).photo_keys_json).sort())
       assert.deepEqual(JSON.parse(DB.rows.get(original.id).details_json).items, identical ? ['Saffron'] : ['Walnuts'])
     }

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
 import { assertCentered, assertSaving } from './submission-feedback.mjs'
+import { mockPartnerPhotos } from './partner-photo-preview.mjs'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
 const id = '00000000-0000-4000-8000-000000000002'
@@ -315,7 +316,8 @@ test('partner onboarding and approved listings work separately from customer nav
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
       const { photo, ownerNote, createdAt, averageRating, reviewCount, ...editable } = driver
       void photo; void ownerNote; void createdAt; void averageRating; void reviewCount
-      let saved, auth, photoCount, fail = true
+      let saved, auth, photoCount, retainedPhotos, fail = true
+      await mockPartnerPhotos(page, 1)
       await page.route('**/api/drivers*', async (route) => {
         const request = route.request()
         if (request.headers()['content-type']?.startsWith('application/json')) return route.fulfill({ json: { driver: { ...editable, status: 'approved', version: 2 } } })
@@ -323,6 +325,7 @@ test('partner onboarding and approved listings work separately from customer nav
         saved = JSON.parse(form.get('details'))
         auth = JSON.parse(form.get('auth'))
         photoCount = form.getAll('photos').length
+        retainedPhotos = JSON.parse(form.get('retainedPhotos'))
         if (fail) return route.fulfill({ status: 503, json: { error: 'Driver update could not be confirmed. Retry with the same form.' } })
         return route.fulfill({ json: { saved: true, id, driverId, accessCode: 'NEWD3210', status: 'pending' } })
       })
@@ -335,16 +338,19 @@ test('partner onboarding and approved listings work separately from customer nav
         assert.equal(await page.getByLabel('Full legal name', { exact: true }).inputValue(), driver.fullName)
         assert.equal(await page.getByLabel('Age (minimum 18)', { exact: true }).inputValue(), '30')
         assert.equal(await page.getByLabel('Driving licence number', { exact: true }).inputValue(), driver.licenceNumber)
-        assert.equal(await page.locator('input[type="file"]').count(), 0)
+        await page.getByAltText('Existing driver photo 1').waitFor()
+        assert.equal(await page.getByLabel('Add driver portrait', { exact: true }).isDisabled(), true)
         await page.getByLabel('Full legal name', { exact: true }).fill('New Driver Name')
         await page.locator('[name="publicationConsent"]').check()
         await page.getByRole('button', { name: 'Save changes for approval' }).click()
         await page.getByRole('alert').filter({ hasText: 'Driver update could not be confirmed' }).waitFor()
         assert.equal(await page.getByRole('dialog').count(), 0)
         assert.equal(photoCount, 0)
-        await page.getByLabel('Replace portrait', { exact: true }).check()
-        await page.getByLabel('Driver portrait (one photo required)').setInputFiles({ name: 'portrait.jpg', mimeType: 'image/jpeg', buffer: jpeg })
-        await page.locator('.hotel-photo-grid img').waitFor()
+        assert.deepEqual(retainedPhotos, [0])
+        await page.getByRole('button', { name: 'Remove existing photo 1', exact: true }).click()
+        assert.equal(await page.getByRole('button', { name: 'Photos not ready', exact: true }).isDisabled(), true)
+        await page.getByLabel('Add driver portrait', { exact: true }).setInputFiles({ name: 'portrait.jpg', mimeType: 'image/jpeg', buffer: jpeg })
+        await page.getByAltText('New photo to upload').waitFor()
         fail = false
         await page.getByRole('button', { name: 'Save changes for approval' }).click()
         await page.getByRole('dialog', { name: 'Driver registration saved' }).waitFor()
@@ -353,6 +359,7 @@ test('partner onboarding and approved listings work separately from customer nav
         assert.equal(saved.id, undefined)
         assert.deepEqual(auth, { identifier: driverId, accessCode, version: 2 })
         assert.equal(photoCount, 1)
+        assert.deepEqual(retainedPhotos, [])
         assert.equal(page.url().includes(accessCode), false)
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
         await page.getByRole('button', { name: 'View registration details' }).click()

@@ -73,11 +73,12 @@ export async function lookupBusiness(identifier: string, accessCode: string) {
   return z.object({ business: businessOwnerSchema }).parse(await requestBusiness('/api/businesses', 'POST', { identifier, accessCode })).business
 }
 
-export async function editBusiness(details: BusinessSubmission, auth: BusinessEditAuth, photos: Blob[]) {
+export async function editBusiness(details: BusinessSubmission, auth: BusinessEditAuth, photos: Blob[], retainedPhotos?: number[]) {
   if (photos.length > 5) throw new BusinessError('Choose no more than five replacement photos.', 400)
   const body = new FormData()
   body.append('details', JSON.stringify(details))
   body.append('auth', JSON.stringify(auth))
+  if (retainedPhotos !== undefined) body.append('retainedPhotos', JSON.stringify(retainedPhotos))
   photos.forEach((photo, index) => body.append('photo', photo, `business-${index + 1}.jpg`))
   const receipt = businessReceiptSchema.parse(await requestBusiness('/api/businesses', 'POST', body))
   if (receipt.id !== details.id || receipt.status !== 'pending') throw new BusinessError('Business update could not be confirmed. Check your status again.', 503)

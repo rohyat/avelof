@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { Trash2 } from 'lucide-react'
 import NumberStepper from '../components/NumberStepper'
 import PartnerPhotos from '../components/PartnerPhotos'
+import PartnerPhotoEditor from '../components/PartnerPhotoEditor'
 import RegistrationReceipt from '../components/RegistrationReceipt'
 import SubmissionProgress from '../components/SubmissionFeedback'
 import RegistrationForm from '../components/RegistrationForm'
@@ -25,15 +26,13 @@ export default function DriverRegistrationPage() {
 
 function DriverForm({ editing, onCancel }: { editing?: { driver: OwnerDriver; accessCode: string }; onCancel?: () => void }) {
   const [photos, setPhotos] = useState<Blob[]>([])
-  const [replacePhoto, setReplacePhoto] = useState(false)
-  const [processing, setProcessing] = useState(false)
+  const [processing, setProcessing] = useState(Boolean(editing))
+  const [retainedPhotos, setRetainedPhotos] = useState<number[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [receipt, setReceipt] = useState<z.infer<typeof driverReceiptSchema> | null>(null)
   const pending = useRef({ id: crypto.randomUUID(), fingerprint: '' })
   const photoVersion = useRef(0)
-  const photoGeneration = useRef(0)
-  const generation = photoGeneration.current
   const inFlight = useRef(false)
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -52,13 +51,13 @@ function DriverForm({ editing, onCancel }: { editing?: { driver: OwnerDriver; ac
     pending.current.fingerprint = fingerprint
     const parsed = driverSubmissionSchema.safeParse({ ...details, id: editing?.driver.id ?? pending.current.id })
     if (!parsed.success) { setError(parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(' ')); return }
-    if ((!editing || replacePhoto) && photos.length !== 1) { setError('Select one valid driver portrait photo.'); return }
+    if (photos.length + (editing ? retainedPhotos.length : 0) !== 1) { setError('Keep or select one valid driver portrait photo.'); return }
     setBusy(true); inFlight.current = true
     try {
       if (editing) {
         const { id, ...editDetails } = parsed.data
         void id
-        setReceipt(await editDriver({ identifier: editing.driver.driverId, accessCode: editing.accessCode, version: editing.driver.version }, driverEditDetailsSchema.parse(editDetails), editing.driver.id, replacePhoto ? photos[0] : undefined))
+        setReceipt(await editDriver({ identifier: editing.driver.driverId, accessCode: editing.accessCode, version: editing.driver.version }, driverEditDetailsSchema.parse(editDetails), editing.driver.id, photos[0], retainedPhotos))
       } else setReceipt(await saveDriver(parsed.data, photos[0]))
     } catch (failure) { setError(hotelErrorText(failure)) }
     finally { setBusy(false); inFlight.current = false }
@@ -82,12 +81,11 @@ function DriverForm({ editing, onCancel }: { editing?: { driver: OwnerDriver; ac
         </section>
         <section className="hotel-form-fields registration-section" aria-labelledby="driver-portrait-title">
         <div className="registration-section-heading"><span>03</span><div><h2 id="driver-portrait-title">Portrait & final check</h2><p>A friendly face for your approved driver profile.</p></div></div>
-        {editing && <><p>Your existing portrait is retained unless you choose a replacement. It is not shown here for privacy.</p><label><input type="checkbox" checked={replacePhoto} onChange={(event) => { photoGeneration.current++; setReplacePhoto(event.target.checked); setPhotos([]); setProcessing(false) }} /> Replace portrait</label></>}
-        {(!editing || replacePhoto) && <PartnerPhotos onChange={(next, loading) => { if (generation !== photoGeneration.current) return; photoVersion.current++; setPhotos(next); setProcessing(loading) }} />}
+        {editing ? <PartnerPhotoEditor kind="driver" id={editing.driver.id} accessCode={editing.accessCode} version={editing.driver.version} onChange={(next, retained, blocked) => { photoVersion.current++; setPhotos(next); setRetainedPhotos(retained); setProcessing(blocked) }} /> : <PartnerPhotos onChange={(next, loading) => { photoVersion.current++; setPhotos(next); setProcessing(loading) }} />}
         <label className="enquiry-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
         <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I consent to publishing my full name, masked phone number, masked driving-licence number, driver portrait, vehicle registration, vehicle, base location and passenger seats after AVELOF approval. My age, full phone number and full driving-licence number stay private.</span></label>
         {error && <p className="enquiry-error review-text-field" role="alert">{error}</p>}
-        <button type="submit" className="button button-dark" disabled={processing || ((!editing || replacePhoto) && !photos.length)}>{busy ? 'Saving...' : processing ? 'Preparing photos...' : editing ? 'Save changes for approval' : 'Submit driver for approval'}</button>
+        <button type="submit" className="button button-dark" disabled={processing || (!editing && !photos.length)}>{busy ? 'Saving...' : processing ? editing ? 'Photos not ready' : 'Preparing photos...' : editing ? 'Save changes for approval' : 'Submit driver for approval'}</button>
         {editing && <button type="button" className="button button-outline" onClick={onCancel}>Cancel editing</button>}
         <p className="registration-submit-note">{editing ? 'Saving hides an approved listing immediately until AVELOF approves it again.' : 'Your name, portrait, vehicle details and registration appear only after approval.'}</p>
         </section>

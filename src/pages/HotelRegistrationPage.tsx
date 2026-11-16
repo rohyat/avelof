@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, FileImage, Handshake, Heart, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
 import SubmissionProgress from '../components/SubmissionFeedback'
+import PartnerPhotoEditor from '../components/PartnerPhotoEditor'
 import { hotelAreaOptions, hotelLocationLabel } from '../data/hotelRegistration'
 import RegistrationReceipt from '../components/RegistrationReceipt'
 import RegistrationForm from '../components/RegistrationForm'
@@ -30,7 +31,8 @@ function PhotoPreview({ photo, index }: { photo: Blob; index: number }) {
 }
 export default function HotelRegistrationPage({ editing, accessCode, onCancel }: { editing?: OwnerHotel; accessCode?: string; onCancel?: () => void } = {}) {
   const [photos, setPhotos] = useState<Blob[]>([])
-  const [processing, setProcessing] = useState(false)
+  const [processing, setProcessing] = useState(Boolean(editing))
+  const [retainedPhotos, setRetainedPhotos] = useState<number[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [photoError, setPhotoError] = useState('')
@@ -86,7 +88,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
       checkIn: fields.get('checkIn'), checkOut: fields.get('checkOut'), totalRooms: legacyRooms ? Number(fields.get('totalRooms')) : roomCounts.reduce((total, { count }) => total + count, 0),
       publicationConsent: fields.has('publicationConsent'), website: fields.get('website') ?? '',
     }
-    const fingerprint = JSON.stringify({ details, photoVersion: photoVersion.current })
+    const fingerprint = JSON.stringify({ details, photoVersion: photoVersion.current, retainedPhotos })
     if (pending.current.fingerprint && pending.current.fingerprint !== fingerprint) pending.current.id = crypto.randomUUID()
     pending.current.fingerprint = fingerprint
     const parsed = hotelSubmissionSchema.safeParse({ ...details, id: editing?.id ?? pending.current.id })
@@ -96,7 +98,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
     try {
       if (editing) {
         if (!accessCode) throw new HotelError('Check your status again before editing.', 401)
-        setReceipt(await updateHotel(parsed.data, editing.version, accessCode, photos))
+        setReceipt(await updateHotel(parsed.data, editing.version, accessCode, photos, retainedPhotos))
       } else setReceipt(await saveHotel(parsed.data, photos))
     }
     catch (failure) { setError(hotelErrorText(failure)) }
@@ -151,11 +153,12 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
         </section>
         <section className="hotel-form-fields registration-section" aria-labelledby="hotel-photos-title">
         <div className="registration-section-heading"><span>04</span><div><h2 id="hotel-photos-title">Photos & final check</h2><p>Give travellers a feel for your property, then send it for review.</p></div></div>
-        {editing && <p className="privacy-note review-text-field">Your existing photos are kept unless you choose replacement photos. A new selection replaces the entire photo set.</p>}
-        <label className="review-text-field photo-upload-field"><span className="photo-upload-heading"><FileImage size={24} aria-hidden="true" /> {editing ? 'Replacement hotel photos (optional)' : 'Hotel photos (1-5 required)'}</span><small>Choose photos to upload. If you select more than five, only the first five are used.</small><input aria-label={editing ? 'Replacement hotel photos (optional)' : 'Hotel photos (1-5 required)'} name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required={!editing} onChange={(event) => { const files = Array.from(event.target.files ?? []); if (editing && !files.length) { photoVersion.current++; setPhotos([]); setPhotoError(''); setPhotoNotice(''); setProcessing(false) } else void selectPhotos(files) }} /><small>JPEG, PNG or WebP; original files up to 5 MB each. Photos retain up to 1920 px and are compressed to at most 1 MB each; original metadata is removed.</small></label>
+        {editing ? <PartnerPhotoEditor kind="hotel" id={editing.id} accessCode={accessCode ?? ''} version={editing.version} onChange={(next, retained, blocked) => { photoVersion.current++; setPhotos(next); setRetainedPhotos(retained); setProcessing(blocked) }} /> : <>
+        <label className="review-text-field photo-upload-field"><span className="photo-upload-heading"><FileImage size={24} aria-hidden="true" /> Hotel photos (1-5 required)</span><small>Choose photos to upload. If you select more than five, only the first five are used.</small><input aria-label="Hotel photos (1-5 required)" name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required onChange={(event) => void selectPhotos(Array.from(event.target.files ?? []))} /><small>JPEG, PNG or WebP; original files up to 5 MB each. Photos retain up to 1920 px and are compressed to at most 1 MB each; original metadata is removed.</small></label>
         <p role="status" className="review-text-field">{photoNotice} {processing ? 'Preparing photos...' : photos.length ? `${photos.length} ${photos.length === 1 ? 'photo ready' : 'photos ready'} to upload.` : ''}</p>
         {photoError && <p className="enquiry-error review-text-field" role="alert">{photoError}</p>}
         <div className="hotel-photo-grid review-text-field">{photos.map((photo, index) => <PhotoPreview key={index} photo={photo} index={index} />)}</div>
+        </>}
         <label className="enquiry-honeypot" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
         <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I am authorised to register this property and publish these photos. I consent to publication of approved hotel details and photos, including the customer price{coordinates ? ' and the existing map pin' : ''}. My contact name and phone stay private. I will not upload guest faces, identity documents or payment information.</span></label>
         {error && <p className="enquiry-error review-text-field" role="alert">{error}</p>}
