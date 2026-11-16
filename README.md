@@ -17,13 +17,13 @@ and displayed with the approved hotel details.
 
 Hotel customer room rates are the submitted/admin-reviewed rates plus 45%,
 rounded up to a whole rupee: INR 2,000 becomes INR 2,900. Private partner/admin
-rates are not changed. A fixed 30% discount applies to that regular room rate:
-INR 2,900 becomes INR 2,030, rounded to paise. The regular rate is crossed out
-above the discounted rate with a 30% off label. Customer-facing rates use the
+rates are not changed. A fixed 25% discount applies to that regular room rate:
+INR 2,900 becomes INR 2,175, rounded to paise. The regular rate is crossed out
+above the discounted rate with a 25% off label. Customer-facing rates use the
 rupee symbol. There is no GST calculation, tax-status message or GST control.
 Selected meals are added separately without markup or discount.
 Deluxe and Premium regular package prices are INR 22,000 and INR 36,000 per person,
-discounted to INR 15,400 and INR 25,200. Home/cards, details, banners, enquiries and
+discounted to INR 16,500 and INR 27,000. Home/cards, details, banners, enquiries and
 planner estimates use discounted prices. The discount is fixed in shared pricing
 logic, not an admin setting. The retired pricing API, historical migration/table and old
 tax metadata are preserved for database compatibility but are no longer used
