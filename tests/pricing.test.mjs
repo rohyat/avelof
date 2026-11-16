@@ -20,20 +20,34 @@ test('homepage trust messages rotate every two seconds in place with pause and r
     assert.ok(copy.slice(0, 3).every((text) => text.split(/\s+/).length === 6))
     assert.equal(await points.locator('li').evaluateAll((items) => items.every((item) => {
       const style = getComputedStyle(item)
-      return style.backgroundColor === 'rgba(0, 0, 0, 0)' && style.borderTopWidth === '0px' && style.padding === '0px'
+      return style.backgroundColor === 'rgba(14, 35, 27, 0.85)' && style.borderTopWidth === '1px'
     })), true)
     assert.equal(await points.locator('li > svg').count(), 4)
-    assert.equal(await points.evaluate((element) => getComputedStyle(element).backgroundColor), 'rgba(14, 35, 27, 0.85)')
+    assert.equal(await points.evaluate((element) => getComputedStyle(element).backgroundColor), 'rgba(0, 0, 0, 0)')
     for (const width of [320, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 })
-      const layout = await points.evaluate((element) => {
+      const layout = await points.evaluate(async (element) => {
+        await Promise.all([...element.children].map(async (item, index) => {
+          const animation = item.getAnimations()[0]
+          await animation.ready
+          animation.pause()
+          animation.currentTime = index * 2000 + 1000
+        }))
         const hero = element.closest('.home-hero').getBoundingClientRect()
         const boxes = [...element.children].map((child) => child.getBoundingClientRect())
-        return { rows: new Set(boxes.map((box) => Math.round(box.top))).size, contained: boxes.every((box) => box.left >= hero.left && box.right <= hero.right && box.top >= hero.top && box.bottom <= hero.bottom), overflow: document.documentElement.scrollWidth > innerWidth }
+        const fitted = [...element.children].every((item) => {
+          const style = getComputedStyle(item)
+          const text = item.querySelector('span').getBoundingClientRect()
+          const icon = item.querySelector('svg').getBoundingClientRect()
+          const expected = text.width + icon.width + parseFloat(style.gap) + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) + 2
+          return Math.abs(item.getBoundingClientRect().width - expected) <= 1
+        })
+        return { rows: new Set(boxes.map((box) => Math.round(box.top))).size, contained: boxes.every((box) => box.left >= hero.left && box.right <= hero.right && box.top >= hero.top && box.bottom <= hero.bottom), overflow: document.documentElement.scrollWidth > innerWidth, fitted }
       })
       assert.equal(layout.rows, 1)
       assert.equal(layout.contained, true)
       assert.equal(layout.overflow, false)
+      assert.equal(layout.fitted, true, 'Each box fits its own icon, text and padding')
       if (width <= 600) assert.equal(await page.locator('.hero-trust').evaluate((element) => getComputedStyle(element).marginTop), '32px')
     }
     const sequence = await points.evaluate(async (element) => {
