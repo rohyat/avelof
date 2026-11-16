@@ -66,7 +66,8 @@ Hotel enquiry estimates update immediately from selected nights, rooms and
 meal add-ons. Hotel stay nights through **5 December 2026** use the current
 discounted room rate. Nights from **6 December 2026 onward** add 10% to that
 room-only rate, rounded to the nearest whole rupee (.50 up). Meals are added
-afterward without this increase; standard packages and cab rates do not change.
+afterward without this increase; cab rates do not change. Standard packages use
+the separate arrival-based seasonal rule below.
 Check-out is excluded, and stays spanning the change sum each applicable nightly
 rate before multiplying by rooms. For example, a room at INR 2,310 is INR 2,541
 from 6 December; 5-7 December is INR 4,851 room-only for one room/two nights.
@@ -85,6 +86,14 @@ they are estimates, not availability or booking confirmation. No migration neede
 
 Standard package enquiries scale the discounted per-person price
 by selected nights divided by the package's standard nights (sum of its stays).
+When the selected arrival date is 6 December 2026 or later, the entire
+duration-adjusted package price increases by 10%, rounded to paise. Arrivals
+through 5 December keep current rates even when the trip crosses the cutoff.
+Listed starting prices remain unchanged; the form explains the rule and saves
+the seasonal price and increase with the enquiry. Deluxe's standard 4-night
+price becomes INR 18,634; Premium's 5-night price becomes INR 30,492.
+Custom trip estimates retain their component pricing, including date-based hotel
+rates, without an additional package-wide increase.
 For example, Deluxe is INR 16,940 for 4 nights, INR 8,470 for 2 nights and
 INR 25,410 for 6 nights. The form labels the selected duration and saves that
 adjusted rate, not the full-duration base rate. Changing packages recalculates

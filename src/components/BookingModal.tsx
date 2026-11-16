@@ -11,7 +11,7 @@ import { hotelNightlyPrice, hotelSelectionValue, includedHotelMeals, selectedHot
 import HotelRates from './HotelRates'
 import HotelFeature from './HotelFeature'
 import RegularPrice from './RegularPrice'
-import { hotelPackagePriceInclusions, packagePriceForNights } from '../services/pricing'
+import { hotelPackagePriceInclusions, packagePriceForNights, packageSeasonNotice, packageSeasonStart } from '../services/pricing'
 import { hotelRateRange, hotelStayPrice } from '../services/hotelPricing'
 import { usePricing, useTourPackages } from '../services/pricingContext'
 import { PricingNotice } from './PricingProvider'
@@ -77,7 +77,8 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   const rentalDays = checkInDate && checkOutDate && nights >= 0 ? nights + 1 : 0
   const earliestCheckout = checkInDate ? new Date(Date.parse(checkInDate) + millisecondsPerDay).toISOString().slice(0, 10) : undefined
   const packageNights = selectedPackage?.stays.reduce((total, stay) => total + stay.nights, 0) ?? 0
-  const selectedPackagePrice = selectedPackage && nights > 0 && !customPackage ? packagePriceForNights(selectedPackage.price, packageNights, nights) : undefined
+  const seasonalPackage = Boolean(checkInDate && checkInDate >= packageSeasonStart)
+  const selectedPackagePrice = selectedPackage && nights > 0 && !customPackage ? packagePriceForNights(selectedPackage.price, packageNights, nights, checkInDate) : undefined
   const stayPrice = selectedRoomRate !== undefined && nights > 0 && validRoomQuantity ? hotelStayPrice(selectedRoomRate, Math.round((baseNightlyRate - selectedRoomRate) * 100) / 100, checkInDate, checkOutDate, roomQuantity) : undefined
   const nightlyRange = hotelRateRange(stayPrice?.minNightly ?? selectedNightlyRate, stayPrice?.maxNightly ?? selectedNightlyRate)
   const stayBreakdown = stayPrice?.groups.map((group) => `${group.nights} ${group.nights === 1 ? 'night' : 'nights'} × ₹${group.roomRate.toLocaleString('en-IN')} room-only per room`).join('; ')
@@ -103,7 +104,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     if (kind === 'package' && !customPackage) {
       if (pricing.loading || pricing.error) { setSubmitError('Wait for current package prices to load, or retry loading prices.'); return }
       if (!selectedPackage || selectedPackagePrice === undefined) { setSubmitError('Choose an available package and valid travel dates.'); return }
-      fields.packageRate = `₹${selectedPackagePrice.toLocaleString('en-IN')} per person for ${nights} ${nights === 1 ? 'night' : 'nights'}; based on ₹${selectedPackage.price.toLocaleString('en-IN')} for ${packageNights} nights`
+      fields.packageRate = `₹${selectedPackagePrice.toLocaleString('en-IN')} per person for ${nights} ${nights === 1 ? 'night' : 'nights'}; based on ₹${selectedPackage.price.toLocaleString('en-IN')} for ${packageNights} nights${seasonalPackage ? '; includes 10% seasonal increase for arrival from 6 December 2026' : ''}`
     }
     if (kind === 'hotel' || kind === 'package' && !customPackage) fields.priceInclusions = hotelPackagePriceInclusions
     if (kind === 'hotel') {
@@ -159,7 +160,8 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     {kind === 'package' && !customPackage && selectedPackage && <div className="privacy-note full-field package-price-summary">
       <RegularPrice price={selectedPackage.price} originalPrice={selectedPackage.originalPrice} />
       <p>Package rate: ₹{selectedPackage.price.toLocaleString('en-IN')} per person for {packageNights} nights.</p>
-      {selectedPackagePrice !== undefined && <p className="package-stay-estimate" role="status"><strong>Selected dates: ₹{selectedPackagePrice.toLocaleString('en-IN')} per person for {nights} {nights === 1 ? 'night' : 'nights'}.</strong> Price scales proportionally from the {packageNights}-night package. Itinerary changes are subject to availability and final confirmation.</p>}
+      <p>{packageSeasonNotice}</p>
+      {selectedPackagePrice !== undefined && <p className="package-stay-estimate" role="status"><strong>Selected dates: ₹{selectedPackagePrice.toLocaleString('en-IN')} per person for {nights} {nights === 1 ? 'night' : 'nights'}.</strong> Price scales proportionally from the {packageNights}-night package.{seasonalPackage && ' Includes 10% seasonal increase based on your arrival date.'} Itinerary changes are subject to availability and final confirmation.</p>}
       <p>{hotelPackagePriceInclusions}.</p>
     </div>}
     {kind === 'hotel' && (lockedHotel

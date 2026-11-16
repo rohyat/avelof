@@ -1350,6 +1350,16 @@ test('package prices scale by selected nights with paise rounding and reject inv
   for (const [standard, nights] of [[0, 1], [4, 0], [4, -1], [4, 1.5], [NaN, 1], [4, Infinity]]) assert.throws(() => packagePriceForNights(16940, standard, nights), RangeError)
 })
 
+test('package seasonal prices depend on arrival date rather than individual stay nights', () => {
+  assert.equal(packagePriceForNights(16940, 4, 4, '2026-12-05'), 16940)
+  assert.equal(packagePriceForNights(16940, 4, 4, '2026-12-06'), 18634)
+  assert.equal(packagePriceForNights(16940, 4, 2, '2026-12-06'), 9317)
+  assert.equal(packagePriceForNights(27720, 5, 5, '2027-01-01'), 30492)
+  assert.equal(packagePriceForNights(100, 3, 1, '2026-12-06'), 36.67)
+  assert.equal(packagePriceForNights(0, 4, 4, '2026-12-06'), 0)
+  for (const date of ['2026-02-30', 'not-a-date', '2026-13-06']) assert.throws(() => packagePriceForNights(16940, 4, 4, date), RangeError)
+})
+
 test('all enquiry types save with unique references and preserve custom itinerary text and price inclusions', async () => {
   const DB = database()
   try {

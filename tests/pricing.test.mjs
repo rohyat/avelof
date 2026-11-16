@@ -7,6 +7,50 @@ import { featuredOfferHotelId } from '../src/data/offers.ts'
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
 const id = featuredOfferHotelId
 
+test('package date selection adds 10% for arrivals after 5 December and saves the seasonal rate', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage({ viewport: { width: 390, height: 900 } })
+  let enquiry
+  await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
+  await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
+  await page.route('**/api/enquiries', (route) => {
+    enquiry = route.request().postDataJSON()
+    return route.fulfill({ status: 201, json: { saved: true, requestReference: enquiry.reference, reference: 'AVELOF_PRM_10001' } })
+  })
+  try {
+    await page.goto(`${origin}/tour-packages/deluxe`)
+    assert.ok((await page.locator('.detail-aside').innerText()).includes('16,940'))
+    await page.locator('.package-end-booking').getByRole('button', { name: 'Book Now', exact: true }).click()
+    const form = page.locator('.enquiry-form')
+    const estimate = form.locator('.package-stay-estimate')
+    await form.getByLabel('Start date', { exact: true }).fill('2026-12-05')
+    await form.getByLabel('End date', { exact: true }).fill('2026-12-09')
+    assert.ok((await estimate.innerText()).includes('₹16,940'))
+    await form.getByLabel('End date', { exact: true }).fill('2026-12-10')
+    await form.getByLabel('Start date', { exact: true }).fill('2026-12-06')
+    assert.ok((await estimate.innerText()).includes('₹18,634'))
+    assert.ok((await estimate.innerText()).includes('Includes 10% seasonal increase'))
+    await form.getByLabel('End date', { exact: true }).fill('2026-12-08')
+    assert.ok((await estimate.innerText()).includes('₹9,317'))
+    await form.locator('[name=packagePreference]').selectOption('Premium')
+    await form.getByLabel('End date', { exact: true }).fill('2026-12-11')
+    assert.ok((await estimate.innerText()).includes('₹30,492'))
+    await form.getByLabel('Start date', { exact: true }).fill('2026-12-05')
+    await form.getByLabel('End date', { exact: true }).fill('2026-12-10')
+    assert.ok((await estimate.innerText()).includes('₹27,720'))
+    assert.equal((await estimate.innerText()).includes('Includes 10% seasonal increase'), false)
+    await form.getByLabel('Start date', { exact: true }).fill('2026-12-06')
+    await form.getByLabel('End date', { exact: true }).fill('2026-12-11')
+    await form.getByLabel('Name', { exact: true }).fill('Seasonal Package Guest')
+    await form.getByLabel('Phone number').fill('9876543210')
+    await form.getByRole('button', { name: 'Submit enquiry', exact: true }).click()
+    await page.getByRole('heading', { name: 'Thank you for submitting your details.' }).waitFor()
+    assert.equal(enquiry.fields.packageRate, '₹30,492 per person for 5 nights; based on ₹27,720 for 5 nights; includes 10% seasonal increase for arrival from 6 December 2026')
+    assert.equal(enquiry.fields.priceInclusions, 'All taxes and charges included')
+    assert.equal(enquiry.fields.arrivalDate, '2026-12-06')
+  } finally { await browser.close() }
+})
+
 test('winter offers show both discounts with bounded snowfall on desktop/mobile and respect reduced motion', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage()
