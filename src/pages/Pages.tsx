@@ -93,7 +93,7 @@ export function HomePage() {
   return <>
     <nav className="home-destinations page-width" aria-label="Holiday destinations">
       <div className="home-destination-grid">
-        <Link className="home-destination-card" to="/destinations"><span className="home-destination-icon"><Sailboat size={26} aria-hidden="true" /></span><span className="home-destination-name">Kashmir</span><span className="home-destination-status">Explore places</span></Link>
+        <button className="home-destination-card" type="button" aria-pressed="true"><span className="home-destination-icon"><Sailboat size={26} aria-hidden="true" /></span><span className="home-destination-name">Kashmir</span></button>
         <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><MountainSnow size={26} aria-hidden="true" /></span><span className="home-destination-name">Ladakh</span><span className="home-destination-status">Coming soon</span></button>
         <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><Trees size={26} aria-hidden="true" /></span><span className="home-destination-name">Shimla</span><span className="home-destination-status">Coming soon</span></button>
         <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><TentTree size={26} aria-hidden="true" /></span><span className="home-destination-name">Manali</span><span className="home-destination-status">Coming soon</span></button>

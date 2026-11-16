@@ -510,9 +510,11 @@ keeps full descriptions and offers a return link to the saved planner.
 ## Image Storage
 
 The homepage has a centred five-destination row below the header and above the
-Kashmir hero. Kashmir links to the destination guide; Ladakh, Shimla, Manali and
+Kashmir hero. Kashmir is selected by default and keeps the existing Kashmir
+homepage content visible without navigating away. Its contrasting selected
+background is visible in both light and dark themes. Ladakh, Shimla, Manali and
 Spiti Valley are disabled and marked Coming soon. Desktop tiles are compact
-squares; the row stays compact on mobile and uses the current light/dark theme.
+squares; mobile tiles are smaller squares and retain the Coming soon labels.
 
 Catalog images are local files in `public/images/` and are delivered directly by
 Cloudflare Pages. Customer-submitted hotel and driver photos are private JPEG

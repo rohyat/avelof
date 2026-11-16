@@ -65,6 +65,10 @@ img { display: block; max-width: 100%; }
 .home-destination-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; max-width: 608px; margin-inline: auto; }
 .home-destination-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-width: 0; min-height: 112px; padding: 12px 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--ivory); color: var(--ink); text-align: center; }
 .home-destination-card:not(:disabled):hover { border-color: var(--forest); background: var(--glacier); }
+.home-destination-card[aria-pressed="true"], .home-destination-card[aria-pressed="true"]:hover { background: #18594e; border-color: #18594e; color: #fff; box-shadow: 0 0 0 2px var(--ivory), 0 0 0 3px #18594e; }
+.home-destination-card[aria-pressed="true"] .home-destination-icon { background: #307165; color: #fff; }
+:root[data-theme="dark"] .home-destination-card[aria-pressed="true"] { background: #a4d9c9; border-color: #a4d9c9; color: #123e39; box-shadow: 0 0 0 2px var(--ivory), 0 0 0 3px #a4d9c9; }
+:root[data-theme="dark"] .home-destination-card[aria-pressed="true"] .home-destination-icon { background: #c9eadf; color: #123e39; }
 .home-destination-card:disabled { color: var(--muted); background: var(--paper); cursor: not-allowed; }
 .home-destination-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--glacier); color: var(--forest); }
 .home-destination-card:disabled .home-destination-icon { color: var(--muted); }
@@ -78,12 +82,12 @@ img { display: block; max-width: 100%; }
 }
 @media (max-width: 600px) {
   .home-destinations { width: calc(100% - 24px); padding-block: 12px; }
-  .home-destination-grid { gap: 6px; }
-  .home-destination-card { min-height: 100px; padding: 10px 3px; }
-  .home-destination-icon { width: 36px; height: 36px; }
-  .home-destination-icon svg { width: 22px; height: 22px; }
-  .home-destination-name { font-size: 12px; }
-  .home-destination-status { font-size: 9px; }
+  .home-destination-grid { gap: 6px; max-width: 420px; }
+  .home-destination-card { aspect-ratio: 1; min-height: 0; padding: 3px 1px; gap: 2px; }
+  .home-destination-icon { width: 22px; height: 22px; flex-shrink: 0; }
+  .home-destination-icon svg { width: 18px; height: 18px; }
+  .home-destination-name { font-size: 9px; line-height: 1.2; white-space: nowrap; }
+  .home-destination-status { font-size: 8px; line-height: 1.2; white-space: nowrap; }
 }
 .offer-banner { position: relative; isolation: isolate; overflow: hidden; display: grid; grid-template-columns: minmax(180px, 1fr) minmax(0, 720px); align-items: center; gap: 24px; padding: 8px max(22px, calc((100% - 1200px) / 2)); background: radial-gradient(ellipse at 30% 0, #376f8c, transparent 65%), linear-gradient(110deg, #102d46, #1d5068 65%, #123d50); color: #fff; }
 .offer-snow { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; container-type: size; }
