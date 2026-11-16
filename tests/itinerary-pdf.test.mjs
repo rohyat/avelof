@@ -42,7 +42,7 @@ test('branded PDF contains the current promises, every contact link, itinerary, 
   for (const promise of brandPromises) assert.ok(contents.includes(promise), `Cover includes: ${promise}`)
   for (const contact of [business.phone, business.email, business.instagramHandle, 'avelof.in']) assert.ok(contents.includes(contact))
   for (const url of [business.website, `mailto:${business.email}`, business.instagram]) assert.ok(contents.includes(url))
-  for (const text of ['Custom Kashmir Itinerary', 'Arrive in Srinagar', 'Selected stays', 'Activities requested', 'Union cabs requested', 'help arrange a refund', 'amount paid', 'applicable local operator terms', 'planning guide', 'refine your choices', 'Inclusions', 'Exclusions', 'Thank you.']) {
+  for (const text of ['Custom Kashmir Itinerary', 'Arrive in Srinagar', 'Selected stays', 'Activities requested', 'Union cabs requested', 'will refund the amount', 'paid for that cab', 'planning guide', 'refine your choices', 'Inclusions', 'Exclusions', 'Thank you.']) {
     assert.ok(contents.includes(text), `PDF contains ${text}`)
   }
   assert.ok((contents.match(/info@avelof\.in/g) ?? []).length >= pdf.getNumberOfPages(), 'Contact details appear in each page footer')
@@ -69,7 +69,7 @@ test('Deluxe and Premium PDFs use their current package itinerary and union-cab 
     assert.equal(data.days.length, item.itinerary.length)
     assert.deepEqual(data.inclusions, item.inclusions)
     assert.deepEqual(data.exclusions, item.exclusions)
-    assert.ok(data.notes?.some((note) => note.includes('help arrange a refund of the amount paid')))
+    assert.ok(data.notes?.some((note) => note.includes('AVELOF will refund the amount you paid for that cab')))
   }
 })
 
@@ -154,7 +154,8 @@ test('planner and ready-made packages download branded PDFs at the intended step
     for (const next of ['Next: vehicle', 'Next: activities', 'Next: hotels']) {
       if (next === 'Next: activities') {
         await planner.locator('.planner-union-cabs').getByLabel(/Pahalgam/).check()
-        assert.ok((await planner.locator('.planner-union-refund-note').innerText()).includes('help arrange a refund'))
+        assert.ok((await planner.locator('.planner-union-refund-note').innerText()).includes('AVELOF will refund'))
+        assert.equal(await planner.locator('.planner-union-cabs > p:first-of-type + label').count(), 1, 'Refund promise appears before cab choices')
       }
       await planner.getByRole('button', { name: next, exact: true }).click()
     }
@@ -194,8 +195,8 @@ test('planner and ready-made packages download branded PDFs at the intended step
     assert.ok(tripPdf.toString('latin1').includes('Your Custom Kashmir Itinerary'))
     assert.ok(tripPdf.toString('latin1').includes('Places selected:'))
     assert.ok(tripPdf.toString('latin1').includes('Add union cabs in Pahalgam'))
-    assert.ok(tripPdf.toString('latin1').includes('applicable local operator terms'))
-    assert.ok(tripPdf.toString('latin1').includes('help arrange a refund of the amount paid'))
+    assert.ok(!tripPdf.toString('latin1').includes('applicable local operator terms'))
+    assert.ok(tripPdf.toString('latin1').includes('will refund the amount you paid'))
     assert.ok(tripPdf.toString('latin1').includes('planning guide'))
     assert.ok(tripPdf.toString('latin1').includes('Inclusions'))
     assert.ok(tripPdf.toString('latin1').includes('Thank you.'))

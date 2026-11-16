@@ -1,3 +1,5 @@
+export const unionCabRefundNote = 'If you select and pay AVELOF for a union cab but do not use it, AVELOF will refund the amount you paid for that cab.'
+
 export const unionCabOptions = [
   {
     id: 'pahalgam',

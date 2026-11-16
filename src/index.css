@@ -316,6 +316,9 @@ h1 em, h2 em { color: inherit; font-weight: 500; }
 .activity-choice strong, .activity-choice small { display: block; line-height: 1.6; }
 .activity-choice strong { font-size: 13px; }
 .activity-choice small { margin-top: 5px; font-size: 11px; }
+.planner-activity-option { min-width: 0; padding-bottom: 12px; border-radius: 6px; background: #f7f9f6; }
+.planner-activity-option > .text-link { margin: 0 12px 0 40px; font-size: 12px; }
+.planner-union-cabs .planner-union-refund-note { margin: 0 0 14px; }
 .planner-activity-summary { margin-block: 20px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; }
 .planner-activity-summary p { white-space: pre-line; font-size: 13px; line-height: 1.8; }
 @media (prefers-reduced-motion: reduce) { .home-shortcut-link, .home-shortcut-link::before, .home-shortcut-icon { transition: none; } }

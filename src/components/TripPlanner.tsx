@@ -21,7 +21,7 @@ import { hotelCategoryLabel, hotelLocationLabel } from '../data/hotelRegistratio
 import { enquiryPath } from '../services/bookingService'
 import { activitiesForPlaces, formatSelectedActivities } from '../data/activities'
 import ActivityChoices from './ActivityChoices'
-import { unionCabOptions, unionCabsForPlaces } from '../data/unionCabs'
+import { unionCabOptions, unionCabsForPlaces, unionCabRefundNote } from '../data/unionCabs'
 import DownloadItineraryPdfButton from './DownloadItineraryPdfButton'
 import type { ItineraryPdfData } from '../services/itineraryPdf'
 
@@ -575,7 +575,7 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
             <Link to={`/destinations?place=${encodeURIComponent(place.name)}`} state={{ tripReturn: { sectionId, returnPath: sectionId === 'package-planner' ? '/tour-packages' : '/' } }} onClick={preservePlanForHotelReturn}>View this place <ArrowRight size={13} /></Link>
           </article>)}</div>
         </fieldset>}
-        {step === 3 && <ActivityChoices placeIds={placeIds} selectedIds={activityIds} onChange={setActivityIds} />}
+        {step === 3 && <ActivityChoices placeIds={placeIds} selectedIds={activityIds} onChange={setActivityIds} sectionId={sectionId} onViewDetails={preservePlanForHotelReturn} />}
         {step === 2 && <div className="planner-vehicle-section">
           <p className="privacy-note" role="status">{recommendedVehicle ? `Suggested for ${people} people: ${recommendedVehicle.name} (${recommendedVehicle.seats} seats). You can choose a larger vehicle.` : 'No single listed vehicle fits your group. Contact AVELOF to arrange multiple vehicles.'}</p>
           <fieldset className="planner-vehicle-picker"><legend>Choose your vehicle</legend>
@@ -599,9 +599,9 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
           </fieldset>
           <div className="planner-vehicle-total" role="status"><OfferPrice price={vehicleTotal} /><strong>Vehicle rental estimate: ₹{vehicleTotal.toLocaleString('en-IN')}</strong><span>₹{selectedVehicle.price.toLocaleString('en-IN')} × {tripDays} days · vehicle only, not the full package price</span></div>
           <fieldset className="planner-union-cabs"><legend>Optional union cabs</legend>
+            <p className="planner-union-refund-note">{unionCabRefundNote}</p>
             {unionCabOptions.filter((option) => placeIds.includes(option.id)).map((option) => <label className="activity-choice" key={option.id}><input type="checkbox" checked={unionCabIds.includes(option.id)} onChange={(event) => setUnionCabIds(event.target.checked ? [...unionCabIds, option.id] : unionCabIds.filter((id) => id !== option.id))} /><span><strong>{option.label}</strong><small>{option.description}</small></span></label>)}
             {!unionCabOptions.some((option) => placeIds.includes(option.id)) && <p>Select Pahalgam or Gulmarg in Places to request union cabs there.</p>}
-            <p className="planner-union-refund-note">If you select and pay for a union cab but do not use it, AVELOF will help arrange a refund of the amount paid, subject to local operator terms.</p>
           </fieldset>
         </div>}
         </div>}
@@ -686,7 +686,7 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
             <div><h3>Your trip plan is ready.</h3><p>Download a branded PDF of your selected dates, places, stays, vehicle, activities and estimates before you send your contact details.</p><p className="planner-pdf-assurance"><FileDown size={16} aria-hidden="true" /> This is a planning guide, not your final trip. AVELOF will help refine and arrange your itinerary.</p></div>
             <DownloadItineraryPdfButton data={tripPdfData} label="Download your trip PDF" />
           </section>
-          <h3>Contact details</h3><p>Your selected dates, guests, vehicle, hotel rooms, activity and union-cab requests will be included automatically.</p>{selectedActivities && <section className="planner-activity-summary" aria-label="Requested activities"><h4>Requested activities</h4><p>{selectedActivities}</p><small>Subject to confirmation. Activity costs are separate from the estimate.</small></section>}{unionCabRequests && <section className="planner-activity-summary" aria-label="Requested union cabs"><h4>Requested union cabs</h4><p>{unionCabRequests}</p><small>If you select and pay for a union cab but do not use it, AVELOF will help arrange a refund of the amount paid, subject to local operator terms.</small></section>}<EnquiryForm kind="package" selectedItem="Custom package" additionalFields={enquiryFields} onSubmittingChange={setSubmitting} onPrepared={(saved) => { setReceipt(saved); requestAnimationFrame(() => { plannerRef.current?.focus(); plannerRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) }) }} />
+          <h3>Contact details</h3><p>Your selected dates, guests, vehicle, hotel rooms, activity and union-cab requests will be included automatically.</p>{selectedActivities && <section className="planner-activity-summary" aria-label="Requested activities"><h4>Requested activities</h4><p>{selectedActivities}</p><small>Subject to confirmation. Activity costs are separate from the estimate.</small></section>}{unionCabRequests && <section className="planner-activity-summary" aria-label="Requested union cabs"><h4>Requested union cabs</h4><p>{unionCabRequests}          </p><small>{unionCabRefundNote}</small></section>}<EnquiryForm kind="package" selectedItem="Custom package" additionalFields={enquiryFields} onSubmittingChange={setSubmitting} onPrepared={(saved) => { setReceipt(saved); requestAnimationFrame(() => { plannerRef.current?.focus(); plannerRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) }) }} />
         </>)}
         {step < 5 && <div className="planner-footer"><p>Your route is a starting point. Our local team will help check travel times, access and availability.</p>{step < 4 ? <button className="button button-dark" type="button" disabled={!tripDays} onClick={() => changeStep(step + 1)}>Next: {step === 0 ? 'places' : step === 1 ? 'vehicle' : step === 2 ? 'activities' : 'hotels'} <ArrowRight size={16} /></button> : <button className="button button-dark" type="button" disabled={!tripDays || invalidRooms} onClick={continueToEnquiry}>Continue with this plan <ArrowRight size={16} /></button>}</div>}
       </div>

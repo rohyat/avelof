@@ -2,6 +2,7 @@ import type { jsPDF as JsPDFDocument } from 'jspdf'
 import { business } from '../config.ts'
 import { brandPromises } from '../data/brandPromises.ts'
 import { kashmirPhotosForPdf } from '../data/kashmirPhotoGallery.ts'
+import { unionCabRefundNote } from '../data/unionCabs.ts'
 import type { TourPackage } from '../types.ts'
 
 export interface ItineraryPdfDay {
@@ -40,7 +41,6 @@ const paper = [249, 248, 243] as const
 const pale = [237, 243, 238] as const
 const promiseIconColor = [178, 113, 85] as const
 const planningNote = 'This PDF is a planning guide, not your final itinerary or a confirmed booking. AVELOF will help refine your choices and arrange the final trip.'
-const unionCabRefundNote = 'If you select and pay for a union cab but do not use it, AVELOF will help arrange a refund of the amount paid, subject to applicable local operator terms.'
 
 function setPdfTextColor(pdf: JsPDFDocument, color: readonly number[]) {
   pdf.setTextColor(color[0], color[1], color[2])
@@ -116,7 +116,7 @@ export function tourPackagePdfData(item: TourPackage): ItineraryPdfData {
     exclusions: item.exclusions,
     notes: [
       'Optional activities, tickets and access are subject to availability, local rules, weather and operator confirmation.',
-      ...(includesUnionCabs || excludesUnionCabs ? [`Union-cab charges and usage depend on the package, local operator terms and confirmation. ${unionCabRefundNote}`] : []),
+      ...(includesUnionCabs || excludesUnionCabs ? [`Union-cab charges and usage depend on the package and confirmation. ${unionCabRefundNote}`] : []),
     ],
   }
 }

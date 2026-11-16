@@ -470,8 +470,11 @@ Kashmir photos, inclusions and exclusions, linked contact details on each page,
 and a final thank-you page. Photos are also used in relevant package and
 destination galleries; stay imagery is labeled illustrative, not property-verified.
 The PDF explains that a custom plan is a guide rather than a final confirmed trip,
-and AVELOF will help refine and arrange the itinerary. Unused, paid union cabs
-may be eligible for a refund arranged by AVELOF, subject to local operator terms.
+and AVELOF will help refine and arrange the itinerary. AVELOF refunds the amount
+paid to AVELOF for a selected union cab if it is not used. This promise appears
+above the union-cab checkboxes and in the PDF and final review.
+Planner activity choices show headings and detail links; the activity catalogue
+keeps full descriptions and offers a return link to the saved planner.
 
 ## Image Storage
 

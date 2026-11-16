@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ArrowRight, Backpack, CalendarDays, CloudSun, CreditCard, HeartHandshake, IdCard, Leaf, MapPin, Pill, Route, Shirt, ShoppingBag, Smartphone, Snowflake, Sparkles, Sun, TicketCheck, Timer, Utensils, Wine } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { ArrowLeft, ArrowRight, Backpack, CalendarDays, CloudSun, CreditCard, HeartHandshake, IdCard, Leaf, MapPin, Pill, Route, Shirt, ShoppingBag, Smartphone, Snowflake, Sparkles, Sun, TicketCheck, Timer, Utensils, Wine } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
 import { travelGuideSections } from '../data/travelGuide'
 import MapLocationLink from '../components/MapLocationLink'
 import ActivityIcon from '../components/ActivityIcon'
@@ -29,16 +29,25 @@ function DiscoveryLayout({ title, eyebrow, copy, children }: { title: string; ey
 }
 
 export function ActivitiesPage() {
+  const location = useLocation()
+  const navigationState = location.state as { tripReturn?: { sectionId?: string; returnPath?: string } } | null
+  const returnContext = navigationState?.tripReturn
+  const tripReturn = (returnContext?.sectionId === 'custom-trip' && returnContext.returnPath === '/')
+    || (returnContext?.sectionId === 'package-planner' && returnContext.returnPath === '/tour-packages')
+  const plannerUrl = tripReturn ? `${returnContext?.returnPath}#${returnContext?.sectionId}` : '/#custom-trip'
+  const requestedActivity = new URLSearchParams(location.search).get('activity')
+  const initialActivity = activities.find((activity) => activity.id === requestedActivity)
   const [destination, setDestination] = useState('')
   const [category, setCategory] = useState('')
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(initialActivity?.name ?? '')
   const [limit, setLimit] = useState(12)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(initialActivity?.id ?? null)
   const searchItems = activities.map((activity) => ({ id: activity.id, label: activity.name, detail: `${activity.destination} / ${activity.category}` }))
   const matches = searchSuggestions(searchItems, search)
   const filtered = activities.filter((activity) => (!destination || activity.destination === destination) && (!category || activity.category === category) && (selectedId ? activity.id === selectedId : `${activity.name} ${activity.destination} ${activity.description} ${activity.season}`.toLowerCase().includes(search.trim().toLowerCase()) || matches.some((item) => item.id === activity.id)))
   return <DiscoveryLayout title="Activities" eyebrow="More ways to experience Kashmir" copy="Browse experiences by destination, then request your favourites when you plan a trip. This is an inspiration catalogue, not a live availability feed.">
-    <div className="discovery-notice"><Sparkles size={28} aria-hidden="true" /><h2>Your places. Your experiences.</h2><p>{activityAvailabilityNote}</p><p>ATV, motorbike and other entries marked for operator verification are enquiries only, not verified operating services. Winter sports require suitable snow; routes may close at any time.</p><Link className="button button-dark" to="/#custom-trip">Choose activities in Plan a trip <ArrowRight size={16} aria-hidden="true" /></Link></div>
+    {tripReturn && <Link className="button button-outline trip-return-button" to={plannerUrl}><ArrowLeft size={16} aria-hidden="true" /> Back to your trip</Link>}
+    <div className="discovery-notice"><Sparkles size={28} aria-hidden="true" /><h2>Your places. Your experiences.</h2><p>{activityAvailabilityNote}</p><p>ATV, motorbike and other entries marked for operator verification are enquiries only, not verified operating services. Winter sports require suitable snow; routes may close at any time.</p><Link className="button button-dark" to={plannerUrl}>Choose activities in Plan a trip <ArrowRight size={16} aria-hidden="true" /></Link></div>
     <div className="activity-filters">
       <label>Destination<select value={destination} onChange={(event) => { setDestination(event.target.value); setLimit(12) }}><option value="">All destinations</option>{activityDestinations.map((place) => <option key={place}>{place}</option>)}</select></label>
       <label>Activity category<select value={category} onChange={(event) => { setCategory(event.target.value); setLimit(12) }}><option value="">All categories</option>{activityCategories.map((item) => <option key={item}>{item}</option>)}</select></label>

@@ -52,6 +52,7 @@
 }
 :root[data-theme="dark"] :is(.planner-navigation > p, .planner-pdf-prompt .planner-pdf-assurance, .planner-union-refund-note) { color: #c5d8d1; }
 :root[data-theme="dark"] .planner-navigation > p { background: #203b35; border-color: #5b8074; }
+:root[data-theme="dark"] .planner-activity-option { background: #294640; }
 :root[data-theme="dark"] .planner-pdf-assurance svg, :root[data-theme="dark"] .planner-navigation > p svg { color: #f2ad98; }
 :root[data-theme="dark"] :is(main, .booking-modal, .install-dialog) :is(h1, h2, h3, h4, strong) { color: #e3efec; }
 :root[data-theme="dark"] :is(.detail-list li, .planner-steps li, .local-trip-points li, .discovery-content li) { color: #c5d8d1; }
