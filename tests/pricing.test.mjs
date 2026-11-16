@@ -7,6 +7,32 @@ import { featuredOfferHotelId } from '../src/data/offers.ts'
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
 const id = featuredOfferHotelId
 
+test('Deluxe and Premium headings offer white buttons to switch packages on desktop and mobile', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage()
+  await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
+  await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
+  try {
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto(`${origin}/tour-packages/deluxe`)
+      const premium = page.getByRole('link', { name: 'View Premium package', exact: true })
+      await premium.waitFor()
+      assert.equal(await premium.getAttribute('href'), '/tour-packages/premium')
+      await page.mouse.move(0, 0)
+      assert.equal(await premium.evaluate((element) => getComputedStyle(element).backgroundColor), 'rgb(255, 255, 255)')
+      assert.equal(await page.locator('.detail-title-row').evaluate((element) => element.scrollWidth > element.clientWidth), false)
+      await premium.click()
+      await page.getByRole('heading', { name: 'Premium', exact: true }).waitFor()
+      const deluxe = page.getByRole('link', { name: 'View Deluxe package', exact: true })
+      assert.equal(await deluxe.getAttribute('href'), '/tour-packages/deluxe')
+      assert.equal(await page.locator('.detail-title-row').evaluate((element) => element.scrollWidth > element.clientWidth), false)
+      await deluxe.click()
+      await page.getByRole('heading', { name: 'Deluxe', exact: true }).waitFor()
+    }
+  } finally { await browser.close() }
+})
+
 test('package date selection adds 10% for arrivals after 5 December and saves the seasonal rate', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage({ viewport: { width: 390, height: 900 } })

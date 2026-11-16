@@ -514,6 +514,9 @@ body.enquiry-open { overflow: hidden; }
 .detail-aside > p { margin: 18px 0; color: #758077; font-size: 10px; line-height: 1.75; }
 .detail-aside .button { width: 100%; }
 .package-detail-top .detail-heading { display: block; }
+.detail-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 16px 24px; }
+.package-switch-link { background: #fff; }
+.package-switch-link:hover { background: var(--glacier); }
 .package-detail-top .detail-heading p:not(.eyebrow) { max-width: 760px; font-size: 15px; }
 .package-hero-facts { display: flex; flex-wrap: wrap; gap: 10px 20px; margin-top: 18px; color: var(--forest); font-size: 12px; }
 .package-hero-facts span { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid #dfe7df; border-radius: 10px; background: #f5f8f3; }
