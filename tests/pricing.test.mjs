@@ -23,6 +23,7 @@ test('homepage trust messages rotate every two seconds in place with pause and r
       return style.backgroundColor === 'rgba(0, 0, 0, 0)' && style.borderTopWidth === '0px' && style.padding === '0px'
     })), true)
     assert.equal(await points.locator('li > svg').count(), 4)
+    assert.equal(await points.evaluate((element) => getComputedStyle(element).backgroundColor), 'rgba(14, 35, 27, 0.85)')
     for (const width of [320, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       const layout = await points.evaluate((element) => {
@@ -33,6 +34,7 @@ test('homepage trust messages rotate every two seconds in place with pause and r
       assert.equal(layout.rows, 1)
       assert.equal(layout.contained, true)
       assert.equal(layout.overflow, false)
+      if (width <= 600) assert.equal(await page.locator('.hero-trust').evaluate((element) => getComputedStyle(element).marginTop), '32px')
     }
     const sequence = await points.evaluate(async (element) => {
       const items = [...element.children]
@@ -45,6 +47,12 @@ test('homepage trust messages rotate every two seconds in place with pause and r
       })
     })
     assert.deepEqual(sequence, [[0], [1], [2], [3], [0]])
+    const directions = await points.evaluate((element) => [0, 3].map((index) => {
+      const item = element.children[index]
+      item.getAnimations()[0].currentTime = index * 2000 + 100
+      return new DOMMatrixReadOnly(getComputedStyle(item).transform).m41
+    }))
+    assert.ok(directions[0] > 0 && directions[1] < 0, 'Payment message slides from the opposite direction')
     assert.equal(await page.locator('.hero-trust button').count(), 0)
     await points.focus()
     assert.equal(await points.locator('li').first().evaluate((element) => getComputedStyle(element).animationPlayState), 'paused')
