@@ -17,7 +17,7 @@ import { hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration
 import NumberStepper from './NumberStepper'
 import { EnquiryForm } from './BookingModal'
 import { SubmissionSuccess } from './SubmissionFeedback'
-import { hotelCategoryLabel } from '../data/hotelRegistration'
+import { hotelCategoryLabel, hotelLocationLabel } from '../data/hotelRegistration'
 import { enquiryPath } from '../services/bookingService'
 import { activitiesForPlaces, formatSelectedActivities } from '../data/activities'
 import ActivityChoices from './ActivityChoices'
@@ -584,6 +584,7 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
                         >
                           <span className="planner-hotel-category">{hotelCategoryLabel(hotel.category)}</span>
                           <strong>{hotel.name}</strong>
+                          {hotel.exactLocation && <span>{hotelLocationLabel(hotel)}</span>}
                           <RotatingPhotos className="planner-hotel-photo" label={`${hotel.name} hotel photos`} photos={[...new Set([hotel.image, ...hotel.gallery])].map((image) => ({ image, alt: `${hotel.name}, hotel photo` }))} />
                         </button>
                         <HotelRates hotel={hotel} compact={day.hotelId !== hotel.id} showRooms={day.hotelId === hotel.id} people={people} rooms={day.roomCount} onRoomsChange={day.hotelId === hotel.id ? (roomCount) => updatePlan(index, { ...day, roomCount }) : undefined} roomType={day.hotelId === hotel.id ? day.roomType : undefined} meals={{ breakfast: day.hotelId === hotel.id && Boolean(day.breakfast), dinner: day.hotelId === hotel.id && Boolean(day.dinner) }} onChange={(breakfast, dinner, _price, roomType) => setPlans((current) => {

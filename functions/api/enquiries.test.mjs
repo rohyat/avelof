@@ -366,12 +366,12 @@ test('D1 numeric BLOB arrays are restored to exact JPEG response bytes', () => {
 test('driver numbers accept spaces and omitted separators and persist a dash before the last four digits', async () => {
   const DB = database(), bucket = hotelBucket()
   try {
-    for (const [index, vehicleNumber] of ['JK13J7748', 'JK 13 J 7748', 'jk13j-7748'].entries()) {
+    for (const [index, vehicleNumber] of ['JK13J7748', 'JK 13 J 7748', 'jk13j-7748', 'DL01AB1234', 'pb 10 ab 5678'].entries()) {
       const input = { ...driverPayload(), vehicleNumber, phone: `987654321${index}` }
       const response = await driverRequest(DB, bucket, 'POST', input, { headers: { 'CF-Connecting-IP': `192.0.2.${index + 60}` } })
       assert.equal(response.status, 201)
       const stored = DB.sqlite.prepare('SELECT private_json FROM driver_registrations WHERE id = ?').get(input.id)
-      assert.equal(JSON.parse(stored.private_json).vehicleNumber, 'JK13J-7748')
+      assert.equal(JSON.parse(stored.private_json).vehicleNumber, ['JK13J-7748', 'JK13J-7748', 'JK13J-7748', 'DL01AB-1234', 'PB10AB-5678'][index])
     }
   } finally { DB.sqlite.close() }
 })
@@ -379,7 +379,7 @@ test('driver numbers accept spaces and omitted separators and persist a dash bef
 test('driver validation and failed uploads never return success or leave unreferenced photos', async () => {
   const DB = database(), bucket = hotelBucket()
   try {
-    for (const [index, invalid] of [{ age: 17 }, { seats: 2.5 }, { price: -1 }, { vehicleId: 'Invalid' }, { location: 'Gulmarg' }, { vehicleNumber: 'JK01AB123' }, { vehicleNumber: 'DL01AB-1234' }].entries()) {
+    for (const [index, invalid] of [{ age: 17 }, { seats: 2.5 }, { price: -1 }, { vehicleId: 'Invalid' }, { location: 'Gulmarg' }, { vehicleNumber: 'JK01AB123' }, { vehicleNumber: 'DL01AB-123' }].entries()) {
       assert.equal((await driverRequest(DB, bucket, 'POST', { ...driverPayload(), ...invalid }, { headers: { 'CF-Connecting-IP': `192.0.2.${index + 1}` } })).status, 400)
     }
     assert.equal((await driverRequest(DB, bucket, 'POST', driverPayload(), { photos: [testHotelJpeg, testHotelJpeg], headers: { 'CF-Connecting-IP': '192.0.2.10' } })).status, 400)
@@ -610,22 +610,31 @@ test('room-type rates persist, require consistent minimum prices and remain edit
 })
 
 test('all five hotel categories persist through registration, owner lookup and approved listings', async () => {
+  for (const exactLocation of ['', '   ', 'x'.repeat(121)]) {
+    assert.equal(hotelSubmissionSchema.safeParse({ ...hotelPayload(), exactLocation }).success, false)
+  }
+  assert.equal(hotelSubmissionSchema.safeParse(hotelPayload()).success, true)
   assert.deepEqual(hotelCategories, ['Deluxe', 'Premium', 'Premium Plus', 'Diamond', 'Luxury'])
   for (const category of hotelCategories) {
     const DB = database()
     const bucket = hotelBucket()
     try {
-      const input = { ...hotelPayload(), category }
+      const input = { ...hotelPayload(), category, exactLocation: category === 'Diamond' ? 'Near the gondola' : 'Tangmarg' }
       const response = await hotelRequest(DB, bucket, 'POST', input)
       assert.equal(response.status, 201)
       const receipt = await response.json()
       const stored = DB.sqlite.prepare('SELECT details_json FROM hotel_registrations WHERE id = ?').get(input.id)
       assert.equal(JSON.parse(stored.details_json).category, category)
+      assert.equal(JSON.parse(stored.details_json).exactLocation, input.exactLocation)
       const lookup = await hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: receipt.accessCode }, { lookup: true })
-      assert.equal((await lookup.json()).hotel.category, category)
+      const owner = (await lookup.json()).hotel
+      assert.equal(owner.category, category)
+      assert.equal(owner.exactLocation, input.exactLocation)
       DB.sqlite.prepare("UPDATE hotel_registrations SET status = 'approved' WHERE id = ?").run(input.id)
       const listing = await hotelRequest(DB, bucket, 'GET')
-      assert.equal((await listing.json()).hotels[0].category, category)
+      const published = (await listing.json()).hotels[0]
+      assert.equal(published.category, category)
+      assert.equal(published.exactLocation, input.exactLocation)
     } finally { DB.sqlite.close() }
   }
 })

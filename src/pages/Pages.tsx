@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, BedDouble, BookOpen, CalendarDays,
 import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import { business } from '../config'
 import { rentalCars, tourPackages } from '../data/catalog'
-import { hotelCategoryLabel, hotelPriceRanges, hotelRoomOccupancy } from '../data/hotelRegistration'
+import { hotelCategoryLabel, hotelLocationLabel, hotelPriceRanges, hotelRoomOccupancy } from '../data/hotelRegistration'
 import { providedDestinationPhotos } from '../data/previewPhotos'
 import TripPlanner from '../components/TripPlanner'
 import DiscountLabel from '../components/DiscountLabel'
@@ -66,6 +66,7 @@ function CatalogCard({ item: initialItem, kind }: { item: CatalogItem; kind: Cat
         {seatingOptions.length > 0 && <fieldset className="vehicle-seat-options"><legend>Seating capacity</legend>{seatingOptions.map((vehicle) => <label key={vehicle.id}><input type="radio" name={`vehicle-seats-${initialItem.id}`} value={vehicle.id} checked={item.id === vehicle.id} onChange={() => setSelectedVehicleId(vehicle.id)} />{vehicle.seats}-seater</label>)}</fieldset>}
         {item.kind === 'hotel' && <div className="hotel-card-rooms"><span>Room types</span><ul aria-label="Available room types">{(item.roomRates ? item.roomRates.map((room) => room.roomType) : item.roomTypes.map((room) => room.replace(/\s*\(\d+ rooms?\)$/, ''))).map((room) => <li key={room}>{room}</li>)}</ul></div>}
         {item.kind === 'hotel' && <MapLocationLink location={item} />}
+        {item.kind === 'hotel' && item.exactLocation && <p className="hotel-exact-location"><MapPin size={14} aria-hidden="true" /> {hotelLocationLabel(item)}</p>}
         <div className={`catalog-bottom${kind === 'package' ? ' package-card-bottom' : ''}`}>
           {item.kind === 'hotel' ? <HotelRates hotel={item} compact /> : item.kind === 'car' && item.priceOnEnquiry ? <p className="price">Price on enquiry</p> : <p className="price">{item.kind === 'car' && !item.registeredDriverId && <OfferPrice price={item.price} />}{item.kind === 'package' && item.originalPrice !== undefined && <span className="original-price"><s aria-label={`Original price ${money(item.originalPrice)}`}>{money(item.originalPrice)}</s><DiscountLabel price={item.price} originalPrice={item.originalPrice} /></span>}{item.kind === 'car' && item.registeredDriverId ? `INR ${item.price.toLocaleString('en-IN')}` : money(item.price)}<small>{kind === 'package' ? ' / person' : ' / day from'}</small></p>}
           {kind === 'package' ? <div className="package-card-actions">
@@ -263,6 +264,7 @@ function CarDetail({ item }: { item: RentalCar }) {
 
 function HotelSummary({ item }: { item: Hotel }) {
   return <>
+    {item.exactLocation && <p className="hotel-exact-location"><MapPin size={16} aria-hidden="true" /> {hotelLocationLabel(item)}</p>}
     {item.registeredHotelId && <><p className="hotel-identifier">Hotel ID: {item.registeredHotelId} · {item.totalRooms} rooms</p><div className="hotel-card-rating"><ReviewStars rating={item.hotelAverageRating ?? 0} label={item.hotelAverageRating ? `${item.hotelAverageRating.toFixed(1)} out of 5 stars from ${item.hotelReviewCount} reviews` : 'No hotel ratings yet'} /><span>{item.hotelAverageRating ? `${item.hotelAverageRating.toFixed(1)} · ${item.hotelReviewCount} ${item.hotelReviewCount === 1 ? 'review' : 'reviews'}` : 'No ratings yet'}</span><Link className="text-link" to={`/hotels/${encodeURIComponent(item.registeredHotelId)}/reviews`}>View hotel reviews <ArrowRight size={14} /></Link></div></>}
   </>
 }

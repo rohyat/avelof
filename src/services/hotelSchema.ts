@@ -23,6 +23,7 @@ export function validHotelRoomRates(details: { roomRates?: HotelRoomRate[]; room
 }
 const hotelDetailsObject = z.object({
   name: text(120), location: z.enum(registrationLocations), category: z.enum(hotelCategories),
+  exactLocation: text(120).optional(),
   description: text(1600).min(20), price: hotelPriceSchema,
   mealPlan: z.enum(hotelMealPlans), taxDetails: z.enum(hotelTaxOptions),
   breakfastPrice: mealPriceSchema.optional(), dinnerPrice: mealPriceSchema.optional(),

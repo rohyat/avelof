@@ -42,6 +42,7 @@ async function fillRegistration(page) {
   await page.getByLabel("Contact person's name (private)").fill(hotel.contactName)
   await page.getByLabel('Phone number (private)').fill(hotel.phone)
   await page.getByRole('combobox', { name: 'Location', exact: true }).selectOption(hotel.location)
+  await page.getByRole('combobox', { name: 'Exact area', exact: true }).selectOption('Tangmarg')
   await page.getByLabel('AVELOF category').selectOption(hotel.category)
   for (const roomType of ['Standard', 'Deluxe', 'Premium', 'Family', 'Suite']) {
     const input = page.getByLabel(`${roomType} rooms`, { exact: true })
@@ -74,6 +75,38 @@ async function fillRegistration(page) {
 test('hotel registration, private lookup and moderation integrate with public stays', async (context) => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   try {
+    await context.test('exact areas follow destination, clear stale choices and display on hotel pages', async () => {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+      await page.route('**/api/hotels*', (route) => route.fulfill({ json: list([{ ...publicHotel(), exactLocation: 'Tangmarg' }]) }))
+      try {
+        await page.goto(`${origin}/register-hotel`)
+        const destination = page.getByRole('combobox', { name: 'Location', exact: true })
+        const area = page.getByRole('combobox', { name: 'Exact area', exact: true })
+        assert.equal(await area.isDisabled(), true)
+        const choices = [
+          ['Gulmarg', ['Main Gulmarg', 'Tangmarg']],
+          ['Pahalgam', ['Main Pahalgam', 'Rafting Point']],
+          ['Srinagar', ['Near Dal Lake', 'Near Airport', 'Main Srinagar']],
+          ...['Sonamarg', 'Doodhpathri', 'Yusmarg', 'Gurez'].map((value) => [value, [`Main ${value}`]]),
+        ]
+        for (const [value, options] of choices) {
+          await destination.selectOption(value)
+          assert.equal(await area.inputValue(), '')
+          assert.deepEqual(await area.locator('option:not([value=""])').allTextContents(), [...options, 'Specify location'])
+          await area.selectOption('custom')
+          const custom = page.getByRole('textbox', { name: 'Specify exact location', exact: true })
+          assert.equal(await custom.getAttribute('required'), '')
+          await custom.fill('Near the market')
+          await area.selectOption(options[0])
+          assert.equal(await custom.count(), 0)
+        }
+        await page.goto(`${origin}/hotels`)
+        await page.locator('.hotel-card .hotel-exact-location').waitFor()
+        assert.equal((await page.locator('.hotel-card .hotel-exact-location').textContent()).trim(), 'Tangmarg, Gulmarg')
+        await page.getByRole('link', { name: hotel.name, exact: true }).click()
+        assert.equal((await page.locator('.hotel-heading-summary .hotel-exact-location').textContent()).trim(), 'Tangmarg, Gulmarg')
+      } finally { await page.close() }
+    })
     await context.test('five hotel tiers appear in registration, public badges, filters and details', async () => {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
       const tiers = [
@@ -741,6 +774,7 @@ test('hotel registration, private lookup and moderation integrate with public st
         assert.equal(await page.getByRole('heading', { name: 'Your hotel registration has been saved.' }).count(), 0)
         assert.equal(await page.getByRole('dialog').count(), 0)
         const originalId = saved.id
+        assert.equal(saved.exactLocation, 'Tangmarg')
         fail = false
         await page.getByRole('button', { name: 'Submit hotel for approval' }).click()
         const progress = page.getByRole('dialog', { name: 'Saving your hotel registration' })
@@ -838,6 +872,7 @@ test('hotel registration, private lookup and moderation integrate with public st
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
       const current = {
         ...publicHotel(), contactName: hotel.contactName, phone: hotel.phone, version: 3, status: 'approved',
+        exactLocation: 'Near the gondola',
         breakfastPrice: 500, dinnerPrice: 700, mealPlan: 'Room only',
         roomRates: [{ roomType: 'Standard', count: 12, price: hotel.price }],
         roomTypes: ['Standard (12 rooms)'],
@@ -859,6 +894,8 @@ test('hotel registration, private lookup and moderation integrate with public st
         await page.getByLabel('Status access code').fill(accessCode)
         await page.getByRole('button', { name: 'Check status', exact: true }).click()
         await page.getByRole('button', { name: 'Edit hotel details' }).click()
+        assert.equal(await page.getByRole('combobox', { name: 'Exact area', exact: true }).inputValue(), 'custom')
+        assert.equal(await page.getByRole('textbox', { name: 'Specify exact location', exact: true }).inputValue(), 'Near the gondola')
         assert.equal(await page.getByLabel('Hotel name', { exact: true }).inputValue(), hotel.name)
         assert.equal(await page.getByLabel("Contact person's name (private)", { exact: true }).inputValue(), hotel.contactName)
         assert.equal(await page.getByLabel('Standard rooms', { exact: true }).inputValue(), '12')

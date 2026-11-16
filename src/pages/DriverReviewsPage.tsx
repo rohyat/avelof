@@ -6,7 +6,7 @@ import ReviewCard from '../components/ReviewCard'
 import ReviewCarousel from '../components/ReviewCarousel'
 import ReviewStars from '../components/ReviewStars'
 import SubmissionProgress, { SubmissionSuccess } from '../components/SubmissionFeedback'
-import { hotelCategoryLabel } from '../data/hotelRegistration'
+import { hotelCategoryLabel, hotelLocationLabel } from '../data/hotelRegistration'
 import { loadPublicDriverByDisplayId } from '../services/driverService'
 import { loadPublicHotelByDisplayId } from '../services/hotelService'
 import { reviewSubmissionSchema } from '../services/reviewSchema'
@@ -39,7 +39,7 @@ export default function DriverReviewsPage() {
   useEffect(() => {
     const controller = new AbortController()
     const subjectRequest = reviewKind === 'hotel'
-      ? loadPublicHotelByDisplayId(subjectId, controller.signal).then((hotel) => hotel && ({ name: hotel.name, displayId: hotel.hotelId, description: `${hotelCategoryLabel(hotel.category)} · ${hotel.location}`, photo: hotel.photos[0] }))
+      ? loadPublicHotelByDisplayId(subjectId, controller.signal).then((hotel) => hotel && ({ name: hotel.name, displayId: hotel.hotelId, description: `${hotelCategoryLabel(hotel.category)} · ${hotelLocationLabel(hotel)}`, photo: hotel.photos[0] }))
       : loadPublicDriverByDisplayId(subjectId, controller.signal).then((driver) => driver && ({ name: driver.fullName, displayId: driver.driverId, description: `${driver.vehicleName} · ${driver.location}`, photo: driver.photo }))
     Promise.all([
       subjectRequest,

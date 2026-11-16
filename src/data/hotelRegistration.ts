@@ -1,4 +1,13 @@
 export const registrationLocations = ['Srinagar', 'Gulmarg', 'Pahalgam', 'Sonamarg', 'Doodhpathri', 'Yusmarg', 'Gurez'] as const
+export function hotelAreaOptions(destination: string): string[] {
+  if (destination === 'Gulmarg') return ['Main Gulmarg', 'Tangmarg']
+  if (destination === 'Pahalgam') return ['Main Pahalgam', 'Rafting Point']
+  if (destination === 'Srinagar') return ['Near Dal Lake', 'Near Airport', 'Main Srinagar']
+  return registrationLocations.some((location) => location === destination) ? [`Main ${destination}`] : []
+}
+export function hotelLocationLabel(hotel: { location: string; exactLocation?: string }) {
+  return hotel.exactLocation ? `${hotel.exactLocation}, ${hotel.location}` : hotel.location
+}
 export const hotelLocationCodes: Record<(typeof registrationLocations)[number], string> = {
   Srinagar: 'SRG',
   Gulmarg: 'GLM',

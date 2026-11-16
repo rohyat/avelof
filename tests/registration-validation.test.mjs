@@ -42,10 +42,10 @@ test('all partner registrations mark required fields and show nearby feedback on
     assert.equal(await age.inputValue(), '19')
     await age.locator('../..').getByRole('alert').waitFor({ state: 'detached' })
     const number = page.locator('input[name=vehicleNumber]')
-    for (const input of ['JK13J7748', 'JK 13 J 7748', 'jk13j-7748']) {
+    for (const [input, expected] of [['JK13J7748', 'JK13J-7748'], ['JK 13 J 7748', 'JK13J-7748'], ['jk13j-7748', 'JK13J-7748'], ['DL01AB1234', 'DL01AB-1234'], ['pb 10 ab 5678', 'PB10AB-5678']]) {
       await number.fill(input)
       await number.blur()
-      assert.equal(await number.inputValue(), 'JK13J-7748')
+      assert.equal(await number.inputValue(), expected)
       assert.equal(await number.getAttribute('aria-invalid'), 'false')
     }
     await number.fill('JK13J77')

@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, FileImage, Handshake, Heart, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
 import SubmissionProgress from '../components/SubmissionFeedback'
+import { hotelAreaOptions, hotelLocationLabel } from '../data/hotelRegistration'
 import RegistrationReceipt from '../components/RegistrationReceipt'
 import RegistrationForm from '../components/RegistrationForm'
 import PartnerRegistrationLayout from '../components/PartnerRegistrationLayout'
@@ -36,6 +37,8 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
   const [photoNotice, setPhotoNotice] = useState('')
   const [receipt, setReceipt] = useState<HotelReceipt | null>(null)
   const [destination, setDestination] = useState(editing?.location ?? '')
+  const [area, setArea] = useState(() => editing?.exactLocation ? hotelAreaOptions(editing.location).includes(editing.exactLocation) ? editing.exactLocation : 'custom' : '')
+  const [customArea, setCustomArea] = useState(() => editing?.exactLocation && !hotelAreaOptions(editing.location).includes(editing.exactLocation) ? editing.exactLocation : '')
   const coordinates = mapCoordinates(editing ?? {})
   const pending = useRef({ fingerprint: '', id: crypto.randomUUID() })
   const inFlight = useRef(false)
@@ -70,6 +73,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
     const details = {
       name: fields.get('name'), contactName: fields.get('contactName'), phone: fields.get('phone'),
       category: fields.get('category'), location: fields.get('location'),
+      exactLocation: area === 'custom' ? customArea.trim() : area || undefined,
       ...locationFields(coordinates),
       description: editing ? fields.get('description') : `${String(fields.get('category'))} accommodation in ${String(fields.get('location'))}.`,
       price: legacyRooms ? Number(fields.get('legacyPrice')) : Math.min(...roomCounts.map(({ price }) => price)),
@@ -113,7 +117,9 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
         <label>Hotel name<input name="name" maxLength={120} required defaultValue={editing?.name} /></label>
         <label>Contact person's name (private)<input name="contactName" maxLength={80} autoComplete="name" required defaultValue={editing?.contactName} /></label>
         <label>Phone number (private)<input name="phone" type="tel" autoComplete="tel" maxLength={30} required placeholder="10-digit Indian phone number" defaultValue={editing?.phone} /><small>One hotel per phone number. You can use this number for private status lookup.</small></label>
-        <label>Location<select name="location" required value={destination} onChange={(event) => setDestination(event.target.value)}><option value="" disabled>Select location</option>{registrationLocations.map((location) => <option key={location}>{location}</option>)}</select></label>
+        <label>Location<select name="location" required value={destination} onChange={(event) => { setDestination(event.target.value); setArea(''); setCustomArea('') }}><option value="" disabled>Select location</option>{registrationLocations.map((location) => <option key={location}>{location}</option>)}</select></label>
+        <label>Exact area<select aria-label="Exact area" aria-describedby="hotel-area-help" name="areaChoice" required={!editing || Boolean(editing.exactLocation)} disabled={!destination} value={area} onChange={(event) => { setArea(event.target.value); setCustomArea('') }}><option value="" disabled>Select exact area</option>{hotelAreaOptions(destination).map((value) => <option key={value}>{value}</option>)}<option value="custom">Specify location</option></select><small id="hotel-area-help">Shown publicly to help guests understand where your hotel is situated.</small></label>
+        {area === 'custom' && <label>Specify exact location<input name="customArea" required maxLength={120} value={customArea} onChange={(event) => setCustomArea(event.target.value)} placeholder="Enter the area or nearby landmark" /></label>}
         <label>AVELOF category<select name="category" required defaultValue={editing?.category ?? ''}><option value="" disabled>Select category</option>{hotelCategories.map((category) => <option key={category} value={category}>{hotelCategoryLabels[category]}</option>)}</select><small>Our accommodation categories are not official star certifications.</small></label>
         {editing && <label className="review-text-field">Hotel description<textarea name="description" required minLength={20} maxLength={1600} defaultValue={editing.description} /></label>}
         </section>
@@ -196,7 +202,7 @@ export function HotelStatusPage() {
     {error && <p className="enquiry-error" role="alert">{error}</p>}
     {hotel && <section className="admin-review-record hotel-owner-status" aria-label="Hotel submission status">
       <h2>{hotel.name}</h2><p className="hotel-identifier">{hotel.hotelId}</p><p role="status">{hotelStatusLabels[hotel.status]}</p>
-      <p>{hotel.location} · {hotelCategoryLabels[hotel.category]}</p><p>{hotel.description}</p>
+      <p>{hotelLocationLabel(hotel)} · {hotelCategoryLabels[hotel.category]}</p><p>{hotel.description}</p>
       <p>{hotel.status === 'approved' ? 'Published' : 'Current'} rate: INR {hotel.price.toLocaleString('en-IN')} {hotelRoomRateBasis(selectedHotelRoom(hotel)?.roomType)}.</p>
       <p>{hotel.mealPlan} · {hotel.taxDetails}</p>
       {hotel.roomRates && <ul>{hotel.roomRates.map((room) => <li key={room.roomType}>{room.roomType}: INR {room.price.toLocaleString('en-IN')} {hotelRoomRateBasis(room.roomType)}</li>)}</ul>}
@@ -226,7 +232,7 @@ function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminH
   }
   return <article className="admin-review-record">
     <div className="admin-review-heading"><h2>{hotel.name}</h2><span className="enquiry-status">{hotelStatusLabels[hotel.status]}</span></div>
-    <p className="hotel-identifier">{hotel.hotelId}</p><p>{hotel.location} · {hotelCategoryLabels[hotel.category]}</p>
+    <p className="hotel-identifier">{hotel.hotelId}</p><p>{hotelLocationLabel(hotel)} · {hotelCategoryLabels[hotel.category]}</p>
     <MapLocationLink location={hotel} />
     <p>Private contact: {hotel.contactName} · {hotel.phone}</p><p>{hotel.description}</p>
     <div className="hotel-photo-grid">{hotel.photos.map((photo, index) => <a href={photo} key={photo} target="_blank" rel="noreferrer"><img src={photo} alt={`${hotel.name}, submitted photo ${index + 1}`} loading="lazy" /></a>)}</div>

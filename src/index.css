@@ -550,6 +550,8 @@ body.enquiry-open { overflow: hidden; }
   .package-inclusions .include-grid { grid-template-columns: minmax(0, 1fr); }
 }
 .hotel-heading-summary { margin-top: 20px; }
+.hotel-exact-location { display: flex; align-items: flex-start; gap: 6px; color: var(--forest); font-size: 12px; overflow-wrap: anywhere; }
+.hotel-exact-location svg { flex-shrink: 0; margin-top: 2px; }
 .hotel-end-booking { display: none; margin: 24px 0 32px; }
 .detail-related { padding: 7px 0; }
 .detail-related h2 { margin-bottom: 18px; }

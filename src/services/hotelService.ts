@@ -83,7 +83,7 @@ export function toCatalogHotel(hotel: PublicHotel): Hotel {
   return {
     kind: 'hotel', id: hotel.id, registeredHotelId: hotel.hotelId,
     hotelAverageRating: hotel.averageRating, hotelReviewCount: hotel.reviewCount,
-    name: hotel.name, location: hotel.location, category: hotel.category, price: hotel.price,
+    name: hotel.name, location: hotel.location, exactLocation: hotel.exactLocation, category: hotel.category, price: hotel.price,
     latitude: hotel.latitude, longitude: hotel.longitude,
     image: hotel.photos[0], gallery: hotel.photos,
     description: hotel.description, rateBasis: hotelRoomRateBasis(selectedHotelRoom(hotel)?.roomType),

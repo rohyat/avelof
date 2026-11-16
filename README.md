@@ -11,6 +11,12 @@ npm run dev
 
 Create a production build with `npm run build`. Run the configured linter with `npm run lint`.
 
+Driver vehicle numbers temporarily allow non-JK state prefixes as well as JK.
+The basic format remains two letters, two district digits, one or two series
+letters and four final digits (for example `DL01AB1234`). Spaces and hyphens are
+normalised, with the final value stored as `DL01AB-1234`. This applies to both
+new registrations and edits; malformed or incomplete numbers remain invalid.
+
 Public registrations (hotels, drivers, restaurants and shops), enquiries
 (including the custom planner and local trips), and reviews display a centred
 loading dialog while their save request is pending. Escape cannot dismiss the
@@ -28,6 +34,16 @@ Hotel registration tiers are Deluxe (2-star), Premium (3-star), Premium Plus
 not official star certifications or guest review scores. Existing category
 values remain valid; existing Luxury records are not automatically reassigned
 to Diamond. Owners can edit and resubmit a listing when its tier needs changing.
+
+Hotel registration asks for an exact area below the destination: Gulmarg has
+Main Gulmarg/Tangmarg, Pahalgam has Main Pahalgam/Rafting Point, and Srinagar has
+Near Dal Lake/Near Airport/Main Srinagar. Other destinations offer their main
+area. Every destination also supports Specify location with a required free-text
+area (up to 120 characters). Changing destination clears the previous area.
+Areas are public and remain separate from the destination used for filtering,
+trip routing and hotel IDs. Older records without an area remain supported;
+their owners can add one through private editing. Areas are stored in the
+existing hotel details JSON, so no database migration is needed.
 
 Planner, booking and local-trip dates use the shared `DateInput` control with a
 persistent Lucide calendar icon. The native date picker, validation and ISO
