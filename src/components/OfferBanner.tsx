@@ -3,11 +3,12 @@ import type { CSSProperties } from 'react'
 import { ArrowRight, BedDouble, Snowflake } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { rentalCars } from '../data/catalog'
-import { diwaliReferencePrice } from '../data/offers'
+import { diwaliReferencePrice, featuredOfferHotelId } from '../data/offers'
 import DiscountLabel from './DiscountLabel'
 import { hotelPackagePriceInclusions } from '../services/pricing'
 import { usePricing, useTourPackages } from '../services/pricingContext'
 import { PricingNotice } from './PricingProvider'
+import { useRegisteredHotels } from '../services/hotelService'
 
 const startingCab = rentalCars.reduce((lowest, car) => car.price < lowest.price ? car : lowest)
 interface BannerOffer {
@@ -17,6 +18,7 @@ interface BannerOffer {
   image?: string
   price?: number
   originalPrice?: number
+  discountPercent?: number
   priceLabel: string
   referenceLabel: string
   href: string
@@ -24,6 +26,8 @@ interface BannerOffer {
 export default function OfferBanner() {
   const tourPackages = useTourPackages()
   const pricing = usePricing()
+  const registered = useRegisteredHotels(true, featuredOfferHotelId)
+  const hotel = registered.hotels.find((item) => item.id === featuredOfferHotelId)
   const offers: BannerOffer[] = [
   ...tourPackages.filter((item) => !item.underDevelopment).map((item) => ({
     id: item.id,
@@ -37,9 +41,11 @@ export default function OfferBanner() {
     href: `/tour-packages/${item.id}`,
   })),
   {
-    id: 'hotels', title: 'Hotels', description: 'Kashmir stays · Room-only rates',
-    priceLabel: pricing.settings?.discountPercent ? `Flat ${pricing.settings.discountPercent}% off hotel rooms` : 'Explore Kashmir stays',
-    referenceLabel: '', href: '/hotels',
+    id: 'hotels', title: 'Hotels',
+    description: hotel ? `${hotel.name} · ${hotel.location}` : 'Kashmir stays',
+    image: hotel?.image, price: hotel?.price, originalPrice: hotel?.originalPrice, discountPercent: hotel?.discountPercent,
+    priceLabel: hotel ? 'from / room / night · Room only' : '',
+    referenceLabel: 'Original price', href: hotel ? `/hotels/${hotel.id}` : '/hotels',
   },
   {
     id: 'cabs', title: 'Cabs', description: 'Transfers & sightseeing · Vehicle only',
@@ -83,11 +89,14 @@ export default function OfferBanner() {
 
   if (pricing.loading || pricing.error || !pricing.settings) return <section className="offer-banner" aria-label="Travel offers"><PricingNotice /></section>
   return <section className="offer-banner" aria-label="Travel offers">
-    <div className="offer-snow" aria-hidden="true">{Array.from({ length: 44 }, (_, index) => <span key={index} style={{
+    <div className="offer-snow" aria-hidden="true">{Array.from({ length: 36 }, (_, index) => <span key={index} style={{
       left: `${(index * 37) % 100}%`,
-      '--snow-size': `${4 + index % 5}px`,
-      '--snow-duration': `${5 + index % 5}s`,
-      '--snow-delay': `${-index * 1.3}s`,
+      '--snow-size': `${1.5 + (index * 7 % 8) * .5}px`,
+      '--snow-opacity': .25 + (index * 3 % 6) * .1,
+      '--snow-blur': `${index % 3 === 0 ? .6 : 0}px`,
+      '--snow-drift': `${(index % 2 ? -1 : 1) * (12 + index * 7 % 32)}px`,
+      '--snow-duration': `${8 + index * 3 % 9}s`,
+      '--snow-delay': `${-index * 2.7}s`,
     } as CSSProperties} />)}</div>
     <div className="offer-banner-heading"><div className="offer-heading-line"><Snowflake className="offer-winter-icon" size={28} aria-hidden="true" /><strong>Winter offers are live</strong></div><span className="offer-heading-subtitle">Flat {pricing.settings.discountPercent}% off on packages &amp; hotels · 30% off on cabs</span><span className="offer-heading-subtitle">{hotelPackagePriceInclusions}</span></div>
     <div className="offer-carousel" role="region" aria-roledescription="carousel" aria-label="Packages, hotels and cabs offers"
@@ -100,7 +109,8 @@ export default function OfferBanner() {
         {offers.map((offer, index) => <article key={offer.id} className={`offer-tile${offer.id === 'cabs' ? ' offer-tile-cabs' : ''}`} role="group" aria-roledescription="slide" aria-label={`${index + 1} of ${offers.length}: ${offer.title}`}>
           <div className="offer-image-frame">{offer.image ? <img src={offer.image} alt="" /> : <BedDouble className="offer-hotel-icon" size={40} aria-hidden="true" />}</div>
           <div className="offer-tile-copy"><strong>{offer.title}</strong><span>{offer.description}</span>
-            {offer.price !== undefined && offer.originalPrice !== undefined && offer.originalPrice > offer.price && <span className="offer-reference-price">{offer.referenceLabel} <s>₹{offer.originalPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</s><DiscountLabel price={offer.price} originalPrice={offer.originalPrice} /></span>}
+            {offer.id === 'hotels' && !hotel && <span role={registered.loading ? 'status' : 'alert'}>{registered.loading ? 'Loading current hotel offer...' : registered.error || 'Crown Prince is not currently listed.'}{registered.error && <> <button className="text-link" type="button" onClick={registered.reload}>Retry hotel offer</button></>}</span>}
+            {offer.price !== undefined && offer.originalPrice !== undefined && offer.originalPrice > offer.price && <span className="offer-reference-price">{offer.referenceLabel} <s>₹{offer.originalPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</s>{offer.discountPercent === undefined ? <DiscountLabel price={offer.price} originalPrice={offer.originalPrice} /> : <span className="discount-label">{offer.discountPercent}% off</span>}</span>}
             <span className="offer-payable">{offer.price !== undefined && <b>₹{offer.price.toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(offer.price) ? 0 : 2, maximumFractionDigits: 2 })}</b>} {offer.priceLabel}</span>
           </div>
           <Link className="offer-explore" to={offer.href} tabIndex={activeOfferIndex === index ? 0 : -1} aria-label={`Explore ${offer.title}`}>Explore Now <ArrowRight size={14} /></Link>

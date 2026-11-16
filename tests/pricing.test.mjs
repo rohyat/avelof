@@ -2,29 +2,51 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
 import { discountedHotelPackagePrice, discountedHotelRoomPrice } from '../src/services/pricing.ts'
+import { featuredOfferHotelId } from '../src/data/offers.ts'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
-const id = '00000000-0000-4000-8000-000000000001'
+const id = featuredOfferHotelId
 
 test('winter offers show both discounts with bounded snowfall on desktop/mobile and respect reduced motion', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage()
+  let hotelState = 'available'
   await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
-  await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
+  await page.route('**/api/hotels*', (route) => route.fulfill(hotelState === 'error'
+    ? { status: 503, json: { error: 'Hotel offer could not be loaded.' } }
+    : { json: { hotels: hotelState === 'missing' ? [] : [{
+      id, hotelId: 'AVELOF_HTL_10003SRG', name: 'Hotel Crown Prince', location: 'Srinagar', category: 'Deluxe',
+      description: 'Comfortable hotel rooms in the heart of Srinagar.', price: 2310, originalPrice: 3000, discountPercent: 23,
+      roomTypes: ['Standard (6 rooms)'], totalRooms: 6, mealPlan: 'Room only', heating: 'Centralised heating',
+      amenities: ['Wi-Fi'], highlights: ['Near the market'], checkIn: '14:00', checkOut: '11:00',
+      photos: [`/api/hotel-images/${id}/0`],
+    }], total: hotelState === 'missing' ? 0 : 1, page: 1, pageSize: 25 } }))
+  await page.route('**/api/hotel-images/**', (route) => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="84" height="68"><rect width="84" height="68" fill="#376f8c"/></svg>' }))
   try {
     await page.goto(origin)
     const banner = page.getByRole('region', { name: 'Travel offers', exact: true })
     await banner.getByText('Winter offers are live', { exact: true }).waitFor()
     assert.ok((await banner.innerText()).includes('Flat 23% off on packages & hotels · 30% off on cabs'))
-    assert.equal(await banner.getByRole('link', { name: 'Explore Hotels', exact: true }).getAttribute('href'), '/hotels')
-    assert.ok((await banner.getByRole('group', { name: '3 of 4: Hotels', exact: true }).innerText()).includes('Flat 23% off hotel rooms'))
-    assert.equal(await banner.locator('.offer-snow > span').count(), 44)
+    const hotelSlide = banner.getByRole('group', { name: '3 of 4: Hotels', exact: true })
+    await hotelSlide.getByText('Hotel Crown Prince · Srinagar', { exact: true }).waitFor()
+    assert.equal(await banner.getByRole('link', { name: 'Explore Hotels', exact: true }).getAttribute('href'), `/hotels/${id}`)
+    assert.ok((await hotelSlide.innerText()).includes('₹2,310'))
+    assert.equal(await hotelSlide.locator('s').innerText(), '₹3,000')
+    assert.equal(await hotelSlide.locator('.discount-label').innerText(), '23% off')
+    assert.equal(await hotelSlide.locator('img').getAttribute('src'), `/api/hotel-images/${id}/0`)
+    await page.waitForFunction(() => document.querySelector('.offer-tile:nth-child(3) img')?.naturalWidth > 0)
+    assert.equal(await banner.locator('.offer-snow > span').count(), 36)
     const snow = banner.locator('.offer-snow')
     assert.equal(await snow.getAttribute('aria-hidden'), 'true')
     assert.equal(await snow.evaluate((element) => getComputedStyle(element).pointerEvents), 'none')
     for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       assert.equal(await banner.evaluate((element) => element.scrollWidth > element.clientWidth), false)
+      assert.equal(await snow.evaluate((element) => {
+        const banner = element.closest('.offer-banner').getBoundingClientRect()
+        const bounds = element.getBoundingClientRect()
+        return bounds.top >= banner.top && bounds.bottom <= banner.bottom
+      }), true)
       const flake = snow.locator('span').first()
       assert.equal(await flake.evaluate((element) => getComputedStyle(element).animationName), 'offer-snowfall')
       const positions = await flake.evaluate(async (element) => {
@@ -45,10 +67,22 @@ test('winter offers show both discounts with bounded snowfall on desktop/mobile 
     await banner.getByRole('button', { name: 'Show Hotels offer', exact: true }).click()
     await page.waitForFunction(() => document.querySelector('.offer-dot[title=Hotels]')?.getAttribute('aria-current') === 'true')
     await banner.getByRole('link', { name: 'Explore Hotels', exact: true }).click()
-    await page.waitForURL('**/hotels')
+    await page.waitForURL(`**/hotels/${id}`)
     await banner.getByRole('button', { name: 'Show Cabs offer', exact: true }).click()
     await page.waitForFunction(() => document.querySelector('.offer-dot[title=Cabs]')?.getAttribute('aria-current') === 'true')
     assert.ok((await banner.locator('.offer-tile-cabs').innerText()).includes('30% off'))
+    hotelState = 'error'
+    await page.reload()
+    await hotelSlide.getByRole('alert').filter({ hasText: 'Hotel offer could not be loaded.' }).waitFor()
+    assert.equal(await hotelSlide.locator('s, .offer-payable b').count(), 0)
+    hotelState = 'available'
+    await hotelSlide.getByRole('button', { name: 'Retry hotel offer' }).click()
+    await hotelSlide.getByText('Hotel Crown Prince · Srinagar', { exact: true }).waitFor()
+    hotelState = 'missing'
+    await page.reload()
+    await hotelSlide.getByRole('alert').filter({ hasText: 'Crown Prince is not currently listed.' }).waitFor()
+    assert.equal(await hotelSlide.getByRole('link').getAttribute('href'), '/hotels')
+    assert.equal(await hotelSlide.locator('s, .offer-payable b').count(), 0)
   } finally { await browser.close() }
 })
 
@@ -101,7 +135,7 @@ test('admin discount saves across reloads, propagates to packages/hotels and han
       assert.ok((await deluxe.locator('.price').innerText()).includes('17,600'))
       assert.equal(await deluxe.locator('.discount-label').innerText(), '20% off')
       assert.ok((await page.locator('.offer-heading-subtitle').first().innerText()).includes('Flat 20% off on packages & hotels'))
-      assert.ok((await page.getByRole('group', { name: '3 of 4: Hotels', exact: true }).innerText()).includes('Flat 20% off hotel rooms'))
+      assert.equal(await page.getByRole('group', { name: '3 of 4: Hotels', exact: true }).locator('.discount-label').innerText(), '20% off')
       assert.equal(await page.locator('.offer-tile').filter({ hasText: 'Premium package' }).locator('.discount-label').innerText(), '20% off')
       await page.goto(`${origin}/tour-packages/deluxe`)
       assert.ok((await page.locator('.detail-aside').innerText()).includes('17,600'))

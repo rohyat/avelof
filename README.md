@@ -54,8 +54,10 @@ Breakfast/dinner labels and selected-meal messages state the coverage: 2 people
 per room per day, or 4 in a Family room (twice the meal add-on).
 Cabs, their rates and existing 30% offer remain unchanged.
 The winter offer banner shows the saved hotel/package percentage alongside the
-30% cab offer. A Hotels slide links to the live hotel collection without inventing
-a starting rate. Larger snowflakes fall against a deep-blue winter background.
+30% cab offer. The Hotels slide uses Crown Prince's current public photo, regular
+and discounted rates, discount percentage and detail link, with explicit loading,
+unavailable and retry states rather than a hardcoded rate. Snowflakes vary in size,
+depth, opacity, speed and drift against a deep-blue winter background.
 Decorative falling snow stays within the banner on desktop/mobile,
 does not intercept clicks, and is hidden when reduced motion is requested.
 
