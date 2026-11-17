@@ -167,7 +167,8 @@ test('business registration, moderation and discovery work without exposing priv
         try {
           await page.goto(`${origin}/partners`)
           assert.equal(await page.getByRole('link', { name: 'Browse the directory', exact: true }).count(), 0)
-          await page.locator('.partner-options article').filter({ hasText: 'Restaurants & shops' }).getByRole('link', { name: 'Edit your details', exact: true }).click()
+          assert.equal(await page.getByRole('link', { name: 'Edit your details', exact: true }).count(), 0)
+          await page.goto(`${origin}/business-status`)
           assert.equal(new URL(page.url()).pathname, '/business-status')
           await page.getByLabel('Business ID or phone number', { exact: true }).fill(id)
           await page.getByLabel('Status access code', { exact: true }).fill('NOPE3210')

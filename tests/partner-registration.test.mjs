@@ -166,15 +166,15 @@ test('partner onboarding and approved listings work separately from customer nav
         assert.equal(await page.locator('footer').getByRole('link', { name: 'Partner with AVELOF' }).count(), 1)
         assert.equal(await page.getByRole('link', { name: 'Register your hotel', exact: true }).getAttribute('href'), '/register-hotel')
         assert.equal(await page.getByRole('link', { name: 'Register as a driver', exact: true }).getAttribute('href'), '/register-driver')
-        assert.deepEqual(await page.getByRole('link', { name: 'Edit your details', exact: true }).evaluateAll((links) => links.map((link) => link.getAttribute('href'))), ['/hotel-status', '/driver-status', '/business-status'])
+        assert.equal(await page.getByRole('link', { name: 'Edit your details', exact: true }).count(), 0)
+        assert.equal(await page.locator('.home-call-tile').count(), 1)
         assert.equal(await page.getByText('Already registered?', { exact: true }).count(), 0)
-        assert.ok(await page.locator('.partner-edit-action .button-outline').evaluateAll((links) => links.every((link) => getComputedStyle(link).backgroundColor === 'rgb(255, 255, 255)')))
         for (const width of [320, 390, 1440]) {
           await page.setViewportSize({ width, height: 900 })
           assert.ok(await page.locator('.partner-options .partner-edit-action').evaluateAll((groups) => groups.every((group) => {
-            const [edit, register] = [...group.querySelectorAll('.button')].map((button) => button.getBoundingClientRect())
-            return Math.abs(edit.width - register.width) < 1 && Math.abs(edit.height - register.height) < 1 && Math.abs(edit.left - register.left) < 1
-          })), `Edit and register buttons must match at ${width}px`)
+            const buttons = group.querySelectorAll('.button')
+            return buttons.length === 1 && buttons[0].getAttribute('href').startsWith('/register-')
+          })), `Only registration buttons appear at ${width}px`)
         }
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
         for (const kind of ['hotel', 'driver']) {
@@ -182,8 +182,7 @@ test('partner onboarding and approved listings work separately from customer nav
           const editLink = page.locator('.partner-registration-hero').getByRole('link', { name: 'Edit your details', exact: true })
           if (kind === 'hotel') {
             assert.equal(await editLink.count(), 0)
-            await page.goto(`${origin}/partners`)
-            await page.locator('a[href="/hotel-status"]').click()
+            await page.goto(`${origin}/hotel-status`)
             await page.getByRole('heading', { name: 'Edit your hotel details', exact: true }).waitFor()
             continue
           }

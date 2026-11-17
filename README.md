@@ -441,8 +441,10 @@ Apply `0023_business_photo_gallery.sql` before deploying these gallery changes;
 it preserves existing single-photo listings. Only the local migration has been
 applied during development.
 
+The Partners page shows registration buttons only, alongside its call-help tile;
+editing remains available on the separate hotel, driver and business status pages.
 Restaurant/shop owners can check and edit details at `/business-status`, linked
-from Partners and the registration receipt. Use the business ID (or registered
+from the registration receipt. Use the business ID (or registered
 phone) and private status access code: the first four alphanumeric characters of
 the business name, uppercased, plus the final four phone digits, matching hotel
 and driver access. If multiple businesses share a phone and code, use the ID.
