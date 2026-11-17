@@ -120,7 +120,7 @@ export function HomePage() {
         <Link className="home-shortcut-link" to="/travel-guide"><span className="home-shortcut-icon"><BookOpen size={20} aria-hidden="true" /></span><span>Travel Guide</span></Link>
         <Link className="home-shortcut-link" to="/partners"><span className="home-shortcut-icon"><Users size={20} aria-hidden="true" /></span><span>Partner</span></Link>
       </nav>
-      <div className="page-width home-call-panel"><a className="home-call-tile" href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}><span className="home-call-icon"><Phone size={26} aria-hidden="true" /></span><div className="home-call-copy"><HeroTrustPoints /><strong>Your Kashmir memories<br />start with a conversation.</strong><span>We’ll help you plan your trip based on your requirements.</span></div><span className="home-call-action"><span>Call AVELOF directly <ArrowUpRight size={18} aria-hidden="true" /></span><b>{business.phone}</b></span></a></div>
+      <div className="page-width home-call-panel"><a className="home-call-tile" href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}><span className="home-call-icon"><Phone size={26} aria-hidden="true" /></span><div className="home-call-copy"><HeroTrustPoints /><span>We’ll help you plan your trip based on your requirements.</span></div><span className="home-call-action"><span>Call AVELOF directly <ArrowUpRight size={18} aria-hidden="true" /></span><b>{business.phone}</b></span></a></div>
     </section>
     <section className="section page-width reasons-section">
       <SectionHeading eyebrow="Why choose AVELOF?" title={'Your Kashmir holiday,\nthoughtfully brought together.'} copy="Local knowledge, stays, transportation and personal assistance—all in one place as you plan your journey." />

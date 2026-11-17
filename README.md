@@ -271,14 +271,14 @@ optional help channel, not the enquiry submission flow.
 
 Tile order: Plan a trip, Packages, Hotels, Cabs, Local Trips, Drivers, Bookings,
 Places, Activities, Food & Shopping, Travel Guide, Partner. A full-width direct
-call tile below leads with “Your Kashmir memories start with a conversation” and uses
+call tile below says “We’ll help you plan your trip based on your requirements” and uses
 the business phone number in a prominent Call AVELOF directly panel, with
-supporting copy about planning a trip based on the customer's requirements. The entire tile
+no additional large headline, keeping the mobile tile compact. The entire tile
 remains a single tap-to-call link, with a stacked layout on mobile.
-The same four hero commitments rotate inside the call tile above its headline,
+The same four hero commitments rotate inside the call tile above its planning message,
 replacing the introductory label rather than adding a separate strip; reduced-motion
 preferences show all four without animation. On mobile the phone icon is
-vertically centred beside the main headline, below the small introductory label.
+vertically centred beside the planning message, below the rotating commitments.
 Reviews remain available on their existing page, without a homepage shortcut.
 
 The package comparison dialog keeps only a short travel-date/availability and

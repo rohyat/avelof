@@ -19,7 +19,7 @@ test('homepage shortcuts place local trips after cabs and offer a full-width dir
     const call = page.locator('.home-call-tile')
     assert.equal(await call.getAttribute('href'), `tel:${business.phone.replace(/[^\d+]/g, '')}`)
     assert.ok((await call.textContent()).includes(business.phone))
-    assert.equal(await call.locator('strong').textContent(), 'Your Kashmir memoriesstart with a conversation.')
+    assert.equal(await call.getByText(/Your Kashmir memories/).count(), 0)
     assert.equal(await call.locator('.home-call-copy > span:last-child').textContent(), 'We’ll help you plan your trip based on your requirements.')
     assert.equal(await call.locator('.home-call-action > span').textContent(), 'Call AVELOF directly ')
     const reassurance = page.locator('.home-call-panel .hero-trust')
@@ -30,6 +30,7 @@ test('homepage shortcuts place local trips after cabs and offer a full-width dir
     assert.equal(await reassurance.locator('li').first().evaluate((el) => getComputedStyle(el).animationName), 'hero-trust-cycle')
     for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 })
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
       const navBox = await nav.boundingBox()
       const callBox = await call.boundingBox()
       assert.ok(callBox.y >= navBox.y + navBox.height)
@@ -37,12 +38,13 @@ test('homepage shortcuts place local trips after cabs and offer a full-width dir
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       assert.equal(await call.evaluate((el) => el.scrollWidth > el.clientWidth), false)
       const trustBox = await reassurance.boundingBox()
-      const headlineBox = await call.locator('strong').boundingBox()
+      const headlineBox = await call.locator('.home-call-copy > span:last-child').boundingBox()
       assert.ok(trustBox.y >= callBox.y && trustBox.y + trustBox.height <= headlineBox.y)
       if (width <= 600) {
         const icon = await call.locator('.home-call-icon').boundingBox()
-        const headline = await call.locator('strong').boundingBox()
+        const headline = await call.locator('.home-call-copy > span:last-child').boundingBox()
         assert.ok(Math.abs(icon.y + icon.height / 2 - headline.y - headline.height / 2) < 1, 'Mobile phone icon is centred on the headline')
+        assert.ok(callBox.height <= 300, `Mobile call tile stays compact at ${width}px: ${callBox.height}`)
       }
     }
     await page.emulateMedia({ reducedMotion: 'reduce' })
