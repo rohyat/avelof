@@ -133,7 +133,7 @@ export function ladakhJourneyPdfData(trip: LadakhJourney): ItineraryPdfData {
   return {
     region: 'Ladakh',
     photos: ladakhJourneyPhotos(trip).map((photo) => ({ image: photo.src, caption: photo.title })),
-    photoNote: trip.section === 'bike-trips' ? 'Owner-supplied riding inspiration; locations unverified. Not confirmed departures, offered bikes or included support.' : undefined,
+    photoNote: trip.section === 'bike-trips' ? 'Owner-supplied riding inspiration; locations unverified. Not confirmed departures, offered bikes or included support.' : trip.photo.unverified ? trip.photo.note : undefined,
     title: `${trip.name} - Ladakh Planning Guide`,
     subtitle: trip.description,
     dates: trip.duration,

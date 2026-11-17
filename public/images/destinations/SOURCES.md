@@ -47,12 +47,17 @@ These six JPEG copies use quality 86:
 Blossom, frozen-river, night-sky and unidentified canyon photographs are not
 used to substantiate destination or seasonal claims.
 Scooters shown by the lake are photo backdrops, not evidence of offered rentals.
-The existing homepage river photograph is unchanged.
+The Ladakh homepage now uses the Phuktal photograph, swapped with the
+Kashmir to Ladakh Journey package cover at the owner's request. That package
+uses the former homepage river photograph across its card, detail gallery and
+PDF, with an explicit unverified-location caption. Other journey covers remain
+unchanged.
 
 ## Existing images
 
 `ladakh-river-canyon-user.jpg` is the photo supplied by the site owner in chat
-on 17 November 2026 for the Ladakh homepage. It is an optimised JPEG copy;
+on 17 November 2026 for the Ladakh homepage, subsequently moved to the
+Kashmir to Ladakh Journey package. It is an optimised JPEG copy;
 the original attachment is unchanged. The exact river/location and photographer
 were not provided, so the site uses descriptive alt text without a specific
 location or photographer attribution.

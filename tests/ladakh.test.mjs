@@ -24,7 +24,7 @@ for (const width of [320, 390, 768, 820, 1024, 1440]) {
         assert.match(await link.getAttribute('href'), /^\/ladakh\/[\w-]+$/)
         assert.equal(await link.locator('svg').count(), 1)
       }
-      assert.match(await page.locator('.ladakh-hero').evaluate((hero) => getComputedStyle(hero).backgroundImage), /ladakh-river-canyon-user\.jpg/)
+      assert.match(await page.locator('.ladakh-hero').evaluate((hero) => getComputedStyle(hero).backgroundImage), /ladakh-phuktal-user\.jpg/)
       assert.equal(await page.locator('.ladakh-hero a, .ladakh-hero button, .ladakh-hero figure').count(), 0)
       assert.equal(await page.locator('.ladakh-hero .hero-trust-points li').count(), 4)
       assert.equal(await page.getByText('Original landscape illustration, not a location photograph.', { exact: true }).count(), 0)

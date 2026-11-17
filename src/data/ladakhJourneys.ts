@@ -53,7 +53,13 @@ const itineraries = [
 
 export const ladakhPackageJourneys: LadakhJourney[] = ladakhPackages.map((trip, index) => ({
   ...trip, id: ['ladakh-essentials', 'ladakh-explorer', 'kashmir-to-ladakh'][index], section: 'packages',
-  photo: ladakhPhotoPreview[index], itinerary: itineraries[index], preference: trip.name, checks: stayChecks,
+  photo: index === 2 ? {
+    src: '/images/destinations/ladakh-river-canyon-user.jpg',
+    alt: 'A river winding through a steep mountain canyon',
+    title: 'Mountain river journey',
+    note: 'Exact river and location unverified. Inspiration only, not a confirmed itinerary stop.',
+    unverified: true,
+  } : ladakhPhotoPreview[index], itinerary: itineraries[index], preference: trip.name, checks: stayChecks,
 }))
 
 export const ladakhBikeJourneys: LadakhJourney[] = [ladakhPackageJourneys[0], ladakhPackageJourneys[2]].map((trip, index) => ({
@@ -70,7 +76,7 @@ export const ladakhCabJourneys: LadakhJourney[] = [
     itinerary: [{ day: 'Transfer', title: 'Airport & local stay', detail: 'Share your flight details, arrival or departure time, stay address, group size and luggage. Pickup arrangements, waiting time, vehicle and fare must be confirmed. Rest and acclimatise after arrival.' }],
     preference: ladakhEnquiryPreferences.car, checks: ['Vehicle type, passenger seats and luggage capacity', 'Flight timing, meeting point and waiting charges', 'Driver, fare, taxes and cancellation terms'] },
   { ...ladakhPackageJourneys[0], id: 'private-ladakh-circuit', section: 'car-rentals', name: 'Private Ladakh Circuit Cab', label: 'Multi-day transport planning', description: 'Plan private transport for a proposed Leh, Nubra and Pangong circuit. Accommodation and activities are separate unless included in a written quote.', preference: ladakhEnquiryPreferences.car, checks: ['Local vehicle permissions and any vehicle changes', 'Driver, vehicle size, luggage capacity and daily route', 'Fuel, tolls, parking, permits and driver allowances', 'Accommodation, meals and activities quoted separately'] },
-  { ...ladakhPackageJourneys[2], id: 'srinagar-leh-transfer', section: 'car-rentals', name: 'Srinagar - Kargil - Leh Transfer', label: 'Road-entry transport', duration: '2 travel days + Leh rest time', stops: ['Srinagar', 'Kargil', 'Leh'], description: 'Discuss a road approach via Kargil, subject to seasonal openings, local transport arrangements and time to acclimatise in Leh.', itinerary: itineraries[2].slice(0, 4), preference: ladakhEnquiryPreferences.car, checks: ['Road openings, vehicle changes and local transport rules', 'Kargil stop, stay costs and suitable breaks', 'Driver allowance, fuel, tolls, parking and disruption terms'] },
+  { ...ladakhPackageJourneys[2], id: 'srinagar-leh-transfer', section: 'car-rentals', photo: ladakhPhotoPreview[2], name: 'Srinagar - Kargil - Leh Transfer', label: 'Road-entry transport', duration: '2 travel days + Leh rest time', stops: ['Srinagar', 'Kargil', 'Leh'], description: 'Discuss a road approach via Kargil, subject to seasonal openings, local transport arrangements and time to acclimatise in Leh.', itinerary: itineraries[2].slice(0, 4), preference: ladakhEnquiryPreferences.car, checks: ['Road openings, vehicle changes and local transport rules', 'Kargil stop, stay costs and suitable breaks', 'Driver allowance, fuel, tolls, parking and disruption terms'] },
 ]
 
 export const ladakhJourneys = [...ladakhPackageJourneys, ...ladakhBikeJourneys, ...ladakhCabJourneys]

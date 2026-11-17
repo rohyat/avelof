@@ -24,7 +24,7 @@ export default function LadakhJourneyPage({ section }: { section: LadakhJourneyS
       </div></div>
     </section>
     <section className="detail-gallery page-width">{ladakhJourneyPhotos(trip).slice(0, 3).map((photo, index) => <img key={photo.src} className={index === 0 ? 'gallery-main' : undefined} src={photo.src} alt={photo.alt} />)}</section>
-    <p className="privacy-note page-width package-image-note">{section === 'bike-trips' ? 'Owner-supplied riding inspiration; exact locations unverified. Not verified AVELOF departures, offered rental bikes or included support.' : 'Ladakh sightseeing photographs, not confirmed stops, accommodation or offered vehicles.'} {ladakhPlanningNote}</p>
+    <p className="privacy-note page-width package-image-note">{section === 'bike-trips' ? 'Owner-supplied riding inspiration; exact locations unverified. Not verified AVELOF departures, offered rental bikes or included support.' : trip.photo.unverified ? trip.photo.note : 'Ladakh sightseeing photographs, not confirmed stops, accommodation or offered vehicles.'} {ladakhPlanningNote}</p>
     <div className="page-width"><CallAssistance /></div>
     <div className="detail-layout page-width package-detail-layout"><div className="detail-body">
       <section className="detail-section package-journey" aria-labelledby="journey-title"><p className="eyebrow">The journey</p><h2 id="journey-title">Your Ladakh journey</h2><p>{trip.description} Our team can discuss a suitable pace and alternative stops around your dates.</p>

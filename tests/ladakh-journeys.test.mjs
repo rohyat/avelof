@@ -19,7 +19,7 @@ test('Ladakh has three packages, two bike itineraries and three cab options with
   assert.equal(new Set(ladakhJourneys.map(pathFor)).size, 8)
   for (const trip of ladakhJourneys) {
     assert.ok(trip.checks.length >= 3)
-    if (trip.section !== 'bike-trips') assert.ok(!trip.photo.unverified)
+    if (trip.section !== 'bike-trips' && trip.id !== 'kashmir-to-ladakh') assert.ok(!trip.photo.unverified)
     assert.ok(trip.itinerary.length > 0)
     assert.equal('price' in trip, false, 'No invented rates')
     assert.equal(new Set(trip.itinerary.map((day) => day.day)).size, trip.itinerary.length)
@@ -31,6 +31,36 @@ test('Ladakh has three packages, two bike itineraries and three cab options with
     }
   }
   assert.deepEqual(ladakhPackageJourneys.map((trip) => trip.itinerary.length), [7, 8, 9])
+})
+
+test('Ladakh homepage and Kashmir to Ladakh package swap photos without changing other journey covers', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage()
+  await setup(page)
+  try {
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto(`${origin}/ladakh`)
+      const hero = page.locator('.ladakh-hero')
+      await hero.waitFor()
+      assert.match(await hero.evaluate((element) => getComputedStyle(element).backgroundImage), /ladakh-phuktal-user\.jpg/)
+      await page.goto(`${origin}/ladakh/packages`)
+      const expected = ['ladakh-pangong-user.jpg', 'ladakh-nubra-signpost-user.jpg', 'ladakh-river-canyon-user.jpg']
+      for (const [index, filename] of expected.entries()) {
+        assert.equal(await page.locator('.catalog-image img').nth(index).getAttribute('src'), `/images/destinations/${filename}`)
+      }
+      await page.goto(`${origin}/ladakh/packages/kashmir-to-ladakh`)
+      const cover = page.locator('.detail-gallery img').first()
+      await cover.waitFor()
+      assert.equal(await cover.getAttribute('src'), '/images/destinations/ladakh-river-canyon-user.jpg')
+      await cover.evaluate((image) => image.decode())
+      assert.ok(await cover.evaluate((image) => image.naturalWidth > 0))
+      assert.match(await page.locator('.package-image-note').innerText(), /location unverified/)
+      assert.match(ladakhPackageJourneys[2].photo.note, /location unverified/)
+    }
+    assert.equal(ladakhCabJourneys[2].photo.src, '/images/destinations/ladakh-phuktal-user.jpg')
+    assert.equal(ladakhBikeJourneys[1].photo.src, '/images/destinations/ladakh-bike-convoy-user.jpg')
+  } finally { await browser.close() }
 })
 
 test('every Ladakh catalog card opens its own itinerary and enquiry, including direct refresh and unknown routes', async () => {

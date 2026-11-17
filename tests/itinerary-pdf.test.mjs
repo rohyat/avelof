@@ -84,11 +84,14 @@ test('Ladakh PDFs match each displayed itinerary without Kashmir routes, rates o
   for (const trip of ladakhJourneys) {
     const data = ladakhJourneyPdfData(trip)
     assert.equal(data.region, 'Ladakh')
+    assert.equal(data.photos[0].image, trip.photo.src)
+    if (trip.id === 'kashmir-to-ladakh') assert.match(data.photoNote, /location unverified/)
     assert.deepEqual(data.days.map(({ label, title, detail }) => ({ day: label, title, detail })), trip.itinerary)
     const pdf = await buildBrandedItineraryPdf(data)
     const contents = Buffer.from(pdf.output('arraybuffer')).toString('latin1')
     for (const text of [trip.name, 'Summer 2027 planning preview', 'at least 48 hours', 'Price on enquiry', 'A glimpse of Ladakh', 'No travel service is included by default']) assert.ok(contents.includes(text), text)
     for (const photo of ladakhJourneyPhotos(trip)) assert.ok(contents.includes(photo.title))
+    if (trip.id === 'kashmir-to-ladakh') assert.ok(contents.includes('Exact river and location unverified.'))
     for (const text of ['Your Kashmir journey', 'A glimpse of Kashmir', 'Current displayed package rate', 'Deluxe', 'Premium']) assert.ok(!contents.includes(text), text)
   }
 })
