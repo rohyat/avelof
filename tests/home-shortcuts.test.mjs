@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
 import { business } from '../src/config.ts'
+import { brandPromises } from '../src/data/brandPromises.ts'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://127.0.0.1:8792'
 
@@ -21,6 +22,9 @@ test('homepage shortcuts place local trips after cabs and offer a full-width dir
     assert.equal(await call.locator('strong').textContent(), 'Your Kashmir memoriesstart with a conversation.')
     assert.equal(await call.locator('.home-call-copy > span:last-child').textContent(), 'We’ll help you plan your trip based on your requirements.')
     assert.equal(await call.locator('.home-call-action > span').textContent(), 'Call AVELOF directly ')
+    const reassurance = page.locator('.home-call-panel .hero-trust')
+    assert.deepEqual(await reassurance.locator('li span').allTextContents(), [...brandPromises])
+    assert.equal(await reassurance.locator('li').first().evaluate((el) => getComputedStyle(el).animationName), 'hero-trust-cycle')
     for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       const navBox = await nav.boundingBox()
@@ -29,6 +33,18 @@ test('homepage shortcuts place local trips after cabs and offer a full-width dir
       assert.ok(Math.abs(navBox.width - callBox.width) < 1)
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       assert.equal(await call.evaluate((el) => el.scrollWidth > el.clientWidth), false)
+      const trustBox = await reassurance.boundingBox()
+      assert.ok(trustBox.y + trustBox.height <= callBox.y)
+      if (width <= 600) {
+        const icon = await call.locator('.home-call-icon').boundingBox()
+        const headline = await call.locator('strong').boundingBox()
+        assert.ok(Math.abs(icon.y + icon.height / 2 - headline.y - headline.height / 2) < 1, 'Mobile phone icon is centred on the headline')
+      }
+    }
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    for (const item of await reassurance.locator('li').all()) {
+      assert.equal(await item.evaluate((el) => getComputedStyle(el).animationName), 'none')
+      assert.equal(await item.isVisible(), true)
     }
     await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
     assert.equal(await call.evaluate((el) => getComputedStyle(el).color), 'rgb(255, 255, 255)')

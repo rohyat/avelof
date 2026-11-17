@@ -275,6 +275,9 @@ call tile below leads with “Your Kashmir memories start with a conversation”
 the business phone number in a prominent Call AVELOF directly panel, with
 supporting copy about planning a trip based on the customer's requirements. The entire tile
 remains a single tap-to-call link, with a stacked layout on mobile.
+The same four hero commitments rotate above the call tile; reduced-motion
+preferences show all four without animation. On mobile the phone icon is
+vertically centred beside the main headline, below the small introductory label.
 Reviews remain available on their existing page, without a homepage shortcut.
 
 The package comparison dialog keeps only a short travel-date/availability and
