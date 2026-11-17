@@ -120,7 +120,7 @@ export function HomePage() {
         <Link className="home-shortcut-link" to="/travel-guide"><span className="home-shortcut-icon"><BookOpen size={20} aria-hidden="true" /></span><span>Travel Guide</span></Link>
         <Link className="home-shortcut-link" to="/partners"><span className="home-shortcut-icon"><Users size={20} aria-hidden="true" /></span><span>Partner</span></Link>
       </nav>
-      <div className="page-width"><a className="home-call-tile" href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}><Phone size={30} aria-hidden="true" /><span><strong>Call us directly</strong><span>Let’s discuss your travel requirements.</span><b>{business.phone}</b></span><ArrowUpRight size={24} aria-hidden="true" /></a></div>
+      <div className="page-width"><a className="home-call-tile" href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}><span className="home-call-icon"><Phone size={26} aria-hidden="true" /></span><span className="home-call-copy"><span className="home-call-label">A little local guidance</span><strong>Let’s discuss your<br />travel requirements.</strong><span>Call us directly. We’ll help you plan.</span></span><span className="home-call-action"><span>Call AVELOF <ArrowUpRight size={18} aria-hidden="true" /></span><b>{business.phone}</b></span></a></div>
     </section>
     <section className="section page-width reasons-section">
       <SectionHeading eyebrow="Why choose AVELOF?" title={'Your Kashmir holiday,\nthoughtfully brought together.'} copy="Local knowledge, stays, transportation and personal assistance—all in one place as you plan your journey." />
