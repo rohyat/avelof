@@ -12,6 +12,13 @@ import { useRegisteredHotels } from '../services/hotelService'
 import { business } from '../config'
 
 const startingCab = rentalCars.reduce((lowest, car) => car.price < lowest.price ? car : lowest)
+
+function SocialIcon({ platform }: { platform: 'instagram' | 'facebook' }) {
+  return <svg className="offer-social-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    {platform === 'instagram' ? <><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" /></> : <path d="M14 21v-8h3l.5-4H14V7c0-1 .5-2 2-2h2V1.5A25 25 0 0 0 15 1c-3 0-5 2-5 5v3H7v4h3v8" />}
+  </svg>
+}
+
 interface BannerOffer {
   id: string
   title: string
@@ -103,13 +110,13 @@ export default function OfferBanner() {
     } as CSSProperties}><Snowflake size={12} strokeWidth={1.5} /></span>)}</div>
     <div className="offer-banner-heading"><div className="offer-heading-line"><Snowflake className="offer-winter-icon" size={28} aria-hidden="true" /><strong>Winter offers are live</strong></div><span className="offer-heading-subtitle">Flat {pricing.settings.discountPercent}% off on packages &amp; hotels · 30% off on cabs</span><span className="offer-heading-subtitle">{hotelPackagePriceInclusions}</span>
       <details className="offer-social">
-        <summary>Get extra 4% off</summary>
+        <summary><span>Get extra 4% off</span><span className="offer-social-follow">Follow us on <span><SocialIcon platform="instagram" /> Instagram</span> + <span><SocialIcon platform="facebook" /> Facebook</span></span></summary>
         <div className="offer-social-panel">
           <strong>Follow both. Get extra 4% off your package.</strong>
           <p>Follow AVELOF on Instagram and Facebook to be eligible for an extra 4% off tour packages.</p>
           <div className="offer-social-links">
-            <a href={business.instagram} target="_blank" rel="noopener noreferrer">Follow on Instagram <ExternalLink size={16} aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span></a>
-            <a href={business.facebook} target="_blank" rel="noopener noreferrer">Follow on Facebook <ExternalLink size={16} aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span></a>
+            <a href={business.instagram} target="_blank" rel="noopener noreferrer"><SocialIcon platform="instagram" /> Follow on Instagram <ExternalLink size={16} aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span></a>
+            <a href={business.facebook} target="_blank" rel="noopener noreferrer"><SocialIcon platform="facebook" /> Follow on Facebook <ExternalLink size={16} aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span></a>
           </div>
           <p>After following both pages, let our team know during your enquiry. AVELOF will verify your eligibility and confirm the extra discount in your final quote. It is not applied automatically to the prices shown.</p>
         </div>

@@ -103,6 +103,9 @@ img { display: block; max-width: 100%; }
 .offer-heading-line + .offer-heading-subtitle { color: #ffe0ad; font-weight: 600; }
 .offer-social { min-width: 0; width: 100%; margin-top: 4px; padding-left: 36px; }
 .offer-social summary { width: fit-content; color: #ffe0ad; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.offer-social-follow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 4px; color: #e0edf5; font-size: 11px; font-weight: 500; }
+.offer-social-follow > span { display: inline-flex; align-items: center; gap: 4px; }
+.offer-social-icon { flex-shrink: 0; vertical-align: middle; }
 .offer-social-panel { display: grid; gap: 10px; margin-top: 10px; padding: 14px; border: 1px solid #7096aa; border-radius: 10px; background: #102d46; color: #fff; }
 .offer-social-panel > strong { font-size: 15px; }
 .offer-social-panel > p { margin: 0; color: #e0edf5; font-size: 12px; line-height: 1.6; }
