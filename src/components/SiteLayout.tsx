@@ -1,6 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom'
-import { Menu, Moon, Sun, X } from 'lucide-react'
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react'
+import { Link, NavLink, Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
+import { ArrowLeft, Menu, Moon, Sun, X } from 'lucide-react'
 import { business } from '../config'
 import { rentalCars, tourPackages } from '../data/catalog'
 import BookingModal from './BookingModal'
@@ -61,6 +61,7 @@ export default function SiteLayout() {
   const menuToggleRef = useRef<HTMLButtonElement>(null)
   const [booking, setBooking] = useState<{ kind: BookingKind; item?: string } | null>(null)
   const location = useLocation()
+  const navigate = useNavigate()
   const navigationType = useNavigationType()
   const previousLocation = useRef({ pathname: location.pathname, hash: location.hash })
 
@@ -112,7 +113,7 @@ export default function SiteLayout() {
     previousLocation.current = { pathname: location.pathname, hash: location.hash }
   }, [location.hash, location.key, location.pathname, navigationType])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let frame = 0
     let pendingPosition = { x: window.scrollX, y: window.scrollY }
     const save = () => {
@@ -127,6 +128,7 @@ export default function SiteLayout() {
     window.addEventListener('scroll', save, { passive: true })
     window.addEventListener('pagehide', saveOnPageHide)
     return () => {
+      cancelAnimationFrame(frame)
       if (frame) saveScrollPosition(location.key, pendingPosition.x, pendingPosition.y)
       window.removeEventListener('scroll', save)
       window.removeEventListener('pagehide', saveOnPageHide)
@@ -171,12 +173,28 @@ export default function SiteLayout() {
 
   const openBooking = (kind: BookingKind, selectedItem?: string) => setBooking({ kind, item: selectedItem })
   const closeMenu = () => setMenuOpen(false)
+  const returnHome = (event: MouseEvent<HTMLAnchorElement>) => {
+    closeMenu()
+    if (location.pathname === '/' && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button === 0) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    }
+  }
+  const goBack = () => {
+    closeMenu()
+    if (typeof window.history.state?.idx === 'number' && window.history.state.idx > 0) {
+      navigate(-1)
+    } else {
+      navigate('/', { replace: true })
+    }
+  }
 
   return (
     <>
       <OfferBanner />
       <header className="site-header">
-        <div className="header-brand-group"><Link className="brand" to="/" aria-label="AVELOF home" onClick={closeMenu}><img className="brand-logo" src="/app-icon-512.png?v=chinar-1" alt="" width={44} height={44} /><span>AVELOF<small>BEYOND EXPECTATIONS</small></span></Link>
+        <div className="header-brand-group">
+          {location.pathname !== '/' && <button type="button" className="page-back-button" onClick={goBack} aria-label="Go back" title="Go back"><ArrowLeft size={20} aria-hidden="true" /></button>}
+          <Link className="brand" to="/" aria-label="AVELOF home" onClick={returnHome}><img className="brand-logo" src="/app-icon-512.png?v=chinar-1" alt="" width={44} height={44} /><span>AVELOF<small>BEYOND EXPECTATIONS</small></span></Link>
           <button type="button" className="theme-toggle" role="switch" aria-label="Dark mode" aria-checked={darkMode} onClick={() => setDarkMode((current) => !current)}>{darkMode ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}<span className="theme-toggle-track" aria-hidden="true"><span className="theme-toggle-thumb" /></span></button>
         </div>
         <button ref={menuToggleRef} className="icon-button menu-toggle" aria-expanded={menuOpen} aria-controls="main-navigation" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => { const next = !menuOpen; setMenuOpen(next); if (next) window.dispatchEvent(new Event('avelof:pause-review-carousel')) }}>{menuOpen ? <X /> : <Menu />}</button>
@@ -188,7 +206,7 @@ export default function SiteLayout() {
       <a className="whatsapp-float" href={createWhatsAppUrl('Hello AVELOF, I would like help planning my Kashmir journey.')} target="_blank" rel="noreferrer" aria-label="Chat with AVELOF on WhatsApp" title="Chat with AVELOF on WhatsApp"><WhatsAppIcon size={28} /></a>
       <footer className="site-footer">
         <div className="footer-main">
-          <div className="footer-brand"><Link className="brand brand-light" to="/" aria-label="AVELOF home"><img className="brand-logo" src="/app-icon-512.png?v=chinar-1" alt="" width={44} height={44} /><span>AVELOF<small>YOUR KASHMIR EXPERIENCE</small></span></Link><p>Your stay. Your journey.<br />Your Kashmir experience.</p></div>
+          <div className="footer-brand"><Link className="brand brand-light" to="/" aria-label="AVELOF home" onClick={returnHome}><img className="brand-logo" src="/app-icon-512.png?v=chinar-1" alt="" width={44} height={44} /><span>AVELOF<small>YOUR KASHMIR EXPERIENCE</small></span></Link><p>Your stay. Your journey.<br />Your Kashmir experience.</p></div>
           <div><h3>Explore</h3><Link to="/tour-packages">Tour packages</Link><Link to="/local-trips">Local Trips</Link><Link to="/car-rentals">Car rentals</Link><Link to="/drivers">Our drivers</Link><Link to="/hotels">Hotels & stays</Link><Link to="/destinations">Destinations</Link><Link to="/partners">Partner with AVELOF</Link></div>
           <div><h3>AVELOF</h3><Link to="/about">About & Contact</Link><Link to="/reviews">Reviews</Link><Link to="/my-enquiries">Check bookings</Link><a href={business.instagram} target="_blank" rel="noreferrer">Instagram</a><InstallApp /><Link to="/admin/panel">Admin sign-in</Link></div>
           <div><h3>Email our team</h3><a href={`mailto:${business.email}`}>{business.email}</a><span>Kashmir, India</span></div>
