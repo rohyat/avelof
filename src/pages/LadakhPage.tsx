@@ -4,6 +4,7 @@ import { ArrowRight, BedDouble, BookOpen, CalendarDays, CarFront, ChevronDown, C
 import BackButton from '../components/BackButton'
 import HolidayDestinations from '../components/HolidayDestinations'
 import CallAssistance from '../components/CallAssistance'
+import HeroTrustPoints from '../components/HeroTrustPoints'
 import RegionalEnquiryForm from '../components/RegionalEnquiryForm'
 import { business } from '../config'
 import { ladakhEnquiryPreferences, ladakhFaqs, ladakhPackages, ladakhPlaces, ladakhPages } from '../data/ladakh'
@@ -59,15 +60,11 @@ export default function LadakhPage({ section = 'home' }: { section?: LadakhSecti
   return <div className="ladakh-page">
     {home ? <>
       <HolidayDestinations destination="ladakh" />
-      <section className="ladakh-hero"><div className="page-width ladakh-hero-grid">
-        <div className="ladakh-hero-copy">
+      <section className="home-hero ladakh-hero"><div className="hero-content page-width">
           <span className="ladakh-season"><CalendarDays size={15} aria-hidden="true" /> Summer 2027 planning preview</span>
           <h1>Experience Ladakh.<br /><em>A different kind of journey.</em></h1>
           <p>High passes. Quiet monasteries. Open roads. Explore a holiday shaped around Ladakh, your pace and the journey ahead.</p>
-          <div className="ladakh-hero-actions"><Link className="button button-dark" to="/ladakh/packages">Explore proposed routes <ArrowRight size={17} aria-hidden="true" /></Link><Link className="text-link" to="/ladakh/bike-trips"><Motorbike size={19} aria-hidden="true" /> Here for the ride?</Link></div>
-          <p className="ladakh-launch-note">Launch preview: routes and departures are being planned. Approved hotels and drivers are listed separately; availability still needs confirmation.</p>
-        </div>
-        <figure className="ladakh-hero-art"><img src="/images/destinations/ladakh-river-canyon-user.jpg" width={768} height={994} alt="A turquoise river winding through rugged red-brown mountain cliffs" fetchPriority="high" /><figcaption className="ladakh-art-caption"><span>THE JOURNEY IS THE DESTINATION</span><strong>Passes. Plateaus.<br />A little perspective.</strong></figcaption></figure>
+          <HeroTrustPoints />
       </div></section>
       <section className="home-shortcuts"><nav className="home-shortcut-grid page-width" aria-label="Explore Ladakh">{shortcuts.map(({ label, path, icon: Icon }) => <Link className="home-shortcut-link" to={`/ladakh/${path}`} key={label}><span className="home-shortcut-icon"><Icon size={22} aria-hidden="true" /></span><span>{label}</span></Link>)}</nav><div className="page-width"><CallAssistance regional /></div></section>
       <section className="section page-width"><p className="eyebrow">Plan for the place</p><h2>Your route comes first.</h2><p>Start in Leh or travel from Srinagar via Kargil. Share your dates, group size, preferred pace and stay style before choosing a final itinerary.</p><AltitudeNotice /></section>
