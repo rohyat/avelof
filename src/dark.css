@@ -59,6 +59,9 @@
 :root[data-theme="dark"] .planner-steps li[aria-current="step"] .planner-step-number { background: #246a5a; border-color: #7ab6a5; color: #fff; }
 :root[data-theme="dark"] .planner-steps li.is-complete .planner-step-number { background: #294640; color: #e3efec; }
 :root[data-theme="dark"] .partner-privacy-note { background: #203b35; border-color: #5b8074; }
+:root[data-theme="dark"] .partner-registration-hero { background: linear-gradient(120deg, #203b35, #1c302c); border-color: #48665f; }
+:root[data-theme="dark"] :is(.partner-hero-icon, .partner-registration-guide li > span) { background: #294640; border-color: #48665f; color: #a4d9c9; }
+:root[data-theme="dark"] .partner-review-badge { color: #a4d9c9; }
 :root[data-theme="dark"] :is(.home-hero, .local-trips-hero, .page-hero) :is(h1, h2, p, strong, .eyebrow) { color: #fff; }
 :root[data-theme="dark"] .local-trips-hero { background-color: #123e39; }
 :root[data-theme="dark"] .hero-content h1 em { color: #f1c79d; }

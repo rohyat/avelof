@@ -166,28 +166,22 @@ test('partner onboarding and approved listings work separately from customer nav
         assert.equal(await page.locator('footer').getByRole('link', { name: 'Partner with AVELOF' }).count(), 1)
         assert.equal(await page.getByRole('link', { name: 'Register your hotel', exact: true }).getAttribute('href'), '/register-hotel')
         assert.equal(await page.getByRole('link', { name: 'Register as a driver', exact: true }).getAttribute('href'), '/register-driver')
-        assert.equal(await page.getByRole('link', { name: 'Edit your details', exact: true }).count(), 0)
+        assert.deepEqual(await page.getByRole('link', { name: 'Edit your details', exact: true }).evaluateAll((links) => links.map((link) => link.getAttribute('href'))), ['/hotel-status', '/driver-status', '/business-status'])
         assert.equal(await page.locator('.home-call-tile').count(), 1)
         assert.equal(await page.getByText('Already registered?', { exact: true }).count(), 0)
         for (const width of [320, 390, 1440]) {
           await page.setViewportSize({ width, height: 900 })
           assert.ok(await page.locator('.partner-options .partner-edit-action').evaluateAll((groups) => groups.every((group) => {
             const buttons = group.querySelectorAll('.button')
-            return buttons.length === 1 && buttons[0].getAttribute('href').startsWith('/register-')
-          })), `Only registration buttons appear at ${width}px`)
+            return buttons.length === 2 && buttons[0].getAttribute('href').startsWith('/register-') && buttons[1].getAttribute('href').endsWith('-status') && buttons[1].getBoundingClientRect().top >= buttons[0].getBoundingClientRect().bottom
+          })), `Edit links appear below registration buttons at ${width}px`)
         }
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
         for (const kind of ['hotel', 'driver']) {
           await page.goto(`${origin}/register-${kind}`)
           const editLink = page.locator('.partner-registration-hero').getByRole('link', { name: 'Edit your details', exact: true })
-          if (kind === 'hotel') {
-            assert.equal(await editLink.count(), 0)
-            await page.goto(`${origin}/hotel-status`)
-            await page.getByRole('heading', { name: 'Edit your hotel details', exact: true }).waitFor()
-            continue
-          }
-          assert.equal(await editLink.getAttribute('href'), `/${kind}-status`)
-          await editLink.click()
+          assert.equal(await editLink.count(), 0)
+          await page.goto(`${origin}/${kind}-status`)
           await page.getByRole('heading', { name: `Edit your ${kind} details`, exact: true }).waitFor()
           assert.equal(await page.getByRole('button', { name: 'Check status', exact: true }).count(), 1)
         }

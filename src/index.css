@@ -791,12 +791,13 @@ body.enquiry-open { overflow: hidden; }
 .photo-upload-field:focus-within { outline: 2px solid var(--forest); outline-offset: 3px; }
 .partner-registration-page { padding-bottom: 80px; }
 .partner-back-link { margin-bottom: 24px; }
-.partner-registration-hero { display: flex; justify-content: space-between; align-items: center; gap: 32px; padding: 38px 42px; margin-bottom: 32px; border: 1px solid #dce8e1; border-radius: 16px; background: linear-gradient(120deg, #eaf3ed, #f8f6ef); }
+.partner-registration-hero { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 22px 28px; margin-bottom: 24px; border: 1px solid #dce8e1; border-radius: 16px; background: linear-gradient(120deg, #eaf3ed, #f8f6ef); }
 .partner-registration-hero .eyebrow { margin: 0 0 12px; color: var(--forest); }
-.partner-registration-hero h1 { margin: 0 0 16px; color: var(--forest); font-family: var(--serif); font-size: clamp(32px, 4vw, 48px); line-height: 1.12; }
+.partner-registration-hero h1 { margin: 0 0 12px; color: var(--forest); font-family: var(--serif); font-size: clamp(28px, 3vw, 38px); line-height: 1.12; }
 .partner-registration-hero p:not(.eyebrow) { max-width: 590px; margin: 0 0 20px; color: #52665c; font-size: 15px; line-height: 1.75; }
 .partner-review-badge { display: inline-flex; align-items: center; gap: 8px; color: var(--forest); font-size: 12px; font-weight: 600; }
-.partner-hero-icon { display: grid; place-items: center; flex-shrink: 0; width: 124px; height: 124px; border: 1px solid #d4e2d9; border-radius: 50%; color: var(--forest); background: #ffffffa6; }
+.partner-hero-icon { display: grid; place-items: center; flex-shrink: 0; width: 72px; height: 72px; border: 1px solid #d4e2d9; border-radius: 50%; color: var(--forest); background: #ffffffa6; }
+.partner-hero-icon svg { width: 40px; height: 40px; }
 .partner-registration-layout { display: grid; grid-template-columns: minmax(230px, .75fr) minmax(0, 2fr); gap: 32px; align-items: start; }
 .partner-registration-guide { padding: 24px 6px; }
 .partner-registration-guide > .eyebrow { margin: 0 0 10px; }
