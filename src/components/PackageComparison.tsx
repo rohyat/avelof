@@ -41,11 +41,8 @@ export default function PackageComparison({ className = '' }: { className?: stri
   return <>
     <button ref={trigger} type="button" className={`button button-outline package-compare-button ${className}`} disabled={packages.length < 2} aria-haspopup="dialog" onClick={() => setOpen(true)}><ArrowLeftRight size={16} aria-hidden="true" />Compare</button>
     {open && <dialog ref={dialog} className="package-comparison" aria-label="Compare Kashmir packages" aria-describedby="package-comparison-description" onCancel={() => setOpen(false)} onClose={() => setOpen(false)} onClick={(event) => { if (event.target === event.currentTarget) { const bounds = event.currentTarget.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) setOpen(false) } }}>
-      <header className="comparison-heading"><div><p className="eyebrow">Find your kind of journey</p><h2>Compare packages</h2></div><button type="button" className="icon-button" aria-label="Close package comparison" autoFocus onClick={() => setOpen(false)}><X size={22} /></button></header>
+      <header className="comparison-heading"><h2>Compare packages</h2><button type="button" className="icon-button" aria-label="Close package comparison" autoFocus onClick={() => setOpen(false)}><X size={22} /></button></header>
       <p id="package-comparison-description">Compare all three packages. Prices depend on travel dates and availability; your enquiry is not a confirmed booking.</p>
-      <p className="privacy-note">Hotel categories describe the requested stay standard; individual properties and official classifications are confirmed separately.</p>
-      <p className="comparison-tier-note">Premium includes all Deluxe services, with upgraded stays, heating and union cabs. Luxury includes all Premium services, plus Gondola tickets, a dedicated guide and a final luxury houseboat night. Trip lengths and hotel categories differ by package.</p>
-      <p className="comparison-mobile-hint">Compare each feature below. Tap a heading to expand all three packages.</p>
       <div className="comparison-mobile">
         {rows.map((row, index) => <details className="comparison-feature" key={row.label} open={index < 2 || row.label === 'Hotel category'}>
           <summary>{row.label}</summary>

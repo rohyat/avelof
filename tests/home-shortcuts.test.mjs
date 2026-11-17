@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict'
+import { test } from 'node:test'
+import { chromium } from 'playwright'
+import { business } from '../src/config.ts'
+
+const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://127.0.0.1:8792'
+
+test('homepage shortcuts place local trips after cabs and offer a full-width direct call', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage()
+  await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
+  await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
+  try {
+    await page.goto(origin)
+    const nav = page.getByRole('navigation', { name: 'Explore AVELOF' })
+    assert.deepEqual(await nav.getByRole('link').allTextContents(), ['Plan a trip', 'Packages', 'Hotels', 'Cabs', 'Local Trips', 'Drivers', 'Bookings', 'Places', 'Activities', 'Food & Shopping', 'Travel Guide', 'Partner'])
+    assert.equal(await nav.getByRole('link', { name: 'Reviews', exact: true }).count(), 0)
+    const call = page.locator('.home-call-tile')
+    assert.equal(await call.getAttribute('href'), `tel:${business.phone.replace(/[^\d+]/g, '')}`)
+    assert.ok((await call.textContent()).includes(business.phone))
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      const navBox = await nav.boundingBox()
+      const callBox = await call.boundingBox()
+      assert.ok(callBox.y >= navBox.y + navBox.height)
+      assert.ok(Math.abs(navBox.width - callBox.width) < 1)
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+      assert.equal(await call.evaluate((el) => el.scrollWidth > el.clientWidth), false)
+    }
+    await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
+    assert.equal(await call.evaluate((el) => getComputedStyle(el).color), 'rgb(255, 255, 255)')
+  } finally { await browser.close() }
+})

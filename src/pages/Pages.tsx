@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, ArrowUpRight, BedDouble, BookOpen, CalendarDays, CarFront, Check, CircleCheck, CircleMinus, ClipboardList, Compass, Mail, MapPin, Mountain, MountainSnow, Package, Phone, PlaneLanding, PlaneTakeoff, Plus, Route, Sailboat, ShieldCheck, ShoppingBag, Sparkles, Star, TentTree, Trees, UserRound, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, BedDouble, BookOpen, CalendarDays, CarFront, Check, CircleCheck, CircleMinus, ClipboardList, Compass, Mail, MapPin, Mountain, MountainSnow, Package, Phone, PlaneLanding, PlaneTakeoff, Plus, Route, Sailboat, ShieldCheck, ShoppingBag, Sparkles, TentTree, Trees, UserRound, Users } from 'lucide-react'
 import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import { business } from '../config'
 import { rentalCars } from '../data/catalog'
@@ -111,16 +111,16 @@ export function HomePage() {
         <Link className="home-shortcut-link" to="/tour-packages"><span className="home-shortcut-icon"><Package size={20} aria-hidden="true" /></span><span>Packages</span></Link>
         <Link className="home-shortcut-link" to="/hotels"><span className="home-shortcut-icon"><BedDouble size={20} aria-hidden="true" /></span><span>Hotels</span></Link>
         <Link className="home-shortcut-link" to="/car-rentals"><span className="home-shortcut-icon"><CarFront size={20} aria-hidden="true" /></span><span>Cabs</span></Link>
+        <Link className="home-shortcut-link" to="/local-trips"><span className="home-shortcut-icon"><MountainSnow size={20} aria-hidden="true" /></span><span>Local Trips</span></Link>
         <Link className="home-shortcut-link" to="/drivers"><span className="home-shortcut-icon"><UserRound size={20} aria-hidden="true" /></span><span>Drivers</span></Link>
         <Link className="home-shortcut-link" to="/my-enquiries"><span className="home-shortcut-icon"><ClipboardList size={20} aria-hidden="true" /></span><span>Bookings</span></Link>
         <Link className="home-shortcut-link" to="/destinations"><span className="home-shortcut-icon"><MapPin size={20} aria-hidden="true" /></span><span>Places</span></Link>
         <Link className="home-shortcut-link" to="/activities"><span className="home-shortcut-icon"><Sparkles size={20} aria-hidden="true" /></span><span>Activities</span></Link>
-        <Link className="home-shortcut-link" to="/reviews"><span className="home-shortcut-icon"><Star size={20} aria-hidden="true" /></span><span>Reviews</span></Link>
         <Link className="home-shortcut-link" to="/food-and-shopping"><span className="home-shortcut-icon"><ShoppingBag size={20} aria-hidden="true" /></span><span>Food &amp; Shopping</span></Link>
         <Link className="home-shortcut-link" to="/travel-guide"><span className="home-shortcut-icon"><BookOpen size={20} aria-hidden="true" /></span><span>Travel Guide</span></Link>
         <Link className="home-shortcut-link" to="/partners"><span className="home-shortcut-icon"><Users size={20} aria-hidden="true" /></span><span>Partner</span></Link>
-        <Link className="home-shortcut-link local-trips-shortcut" to="/local-trips"><span className="home-shortcut-icon"><MountainSnow size={20} aria-hidden="true" /></span><span>Local Trips</span></Link>
       </nav>
+      <div className="page-width"><a className="home-call-tile" href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}><Phone size={30} aria-hidden="true" /><span><strong>Call us directly</strong><span>Let’s discuss your travel requirements.</span><b>{business.phone}</b></span><ArrowUpRight size={24} aria-hidden="true" /></a></div>
     </section>
     <section className="section page-width reasons-section">
       <SectionHeading eyebrow="Why choose AVELOF?" title={'Your Kashmir holiday,\nthoughtfully brought together.'} copy="Local knowledge, stays, transportation and personal assistance—all in one place as you plan your journey." />

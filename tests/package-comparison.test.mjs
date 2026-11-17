@@ -49,6 +49,7 @@ test('comparison shows live catalog details, supports keyboard closure and links
       await buttons.first().click()
       const dialog = page.getByRole('dialog', { name: 'Compare Kashmir packages' })
       await dialog.waitFor()
+      assert.deepEqual(await dialog.locator(':scope > p').allTextContents(), ['Compare all three packages. Prices depend on travel dates and availability; your enquiry is not a confirmed booking.'])
       assert.equal(await page.evaluate(() => document.body.style.overflow), 'hidden')
       const rows = dialog.locator('tbody tr')
       assert.deepEqual(await rows.locator('th').allTextContents(), ['Days & nights', 'Price per person', 'Places', 'Hotel category', 'Overnight stays', 'Transport', 'Tour guide', 'Inclusions', 'Exclusions'])

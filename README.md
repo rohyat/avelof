@@ -269,8 +269,13 @@ contact options (WhatsApp, phone, email and Instagram). There is no enquiry form
 on this page; Plan a trip leads to the existing planner. WhatsApp remains an
 optional help channel, not the enquiry submission flow.
 
-Tile order: Plan a trip, Packages, Hotels, Cabs, Drivers, Bookings, Places,
-Activities, Reviews, Food & Shopping, Travel Guide, Partner, Local Trips.
+Tile order: Plan a trip, Packages, Hotels, Cabs, Local Trips, Drivers, Bookings,
+Places, Activities, Food & Shopping, Travel Guide, Partner. A full-width direct
+call tile below uses the business phone number to discuss travel requirements.
+Reviews remain available on their existing page, without a homepage shortcut.
+
+The package comparison dialog keeps only a short travel-date/availability and
+enquiry notice above the feature comparison, without introductory paragraphs.
 
 Local Trips (`/local-trips`) offers sourced trek ideas and picnic/day-trip
 requests using destination attractions and vehicle choices from the existing
