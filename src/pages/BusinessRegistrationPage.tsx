@@ -1,3 +1,4 @@
+import BackButton from '../components/BackButton'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
@@ -94,7 +95,7 @@ export default function BusinessRegistrationPage({ editing, onCancel }: { editin
 
   return <section className="enquiry-access-page page-width">
     <Link className="text-link" to="/partners">Partner with AVELOF</Link>
-    <div className="enquiry-access-heading"><div><p className="eyebrow">Local restaurants and shops</p><h1>{editing ? 'Edit your business' : 'Register your business'}</h1><p>Share your business with travellers. AVELOF reviews every submission before it appears in Food & Shopping.</p></div></div>
+    <div className="enquiry-access-heading"><BackButton /><div><p className="eyebrow">Local restaurants and shops</p><h1>{editing ? 'Edit your business' : 'Register your business'}</h1><p>Share your business with travellers. AVELOF reviews every submission before it appears in Food & Shopping.</p></div></div>
     {receipt ? <RegistrationReceipt kind="Business" reference={receipt.id} accessCode={receipt.accessCode}>
       <h2>Your registration has been received.</h2>
       <p>Status: {hotelStatusLabels[receipt.status]}. Your listing is not public until approved. This is a discovery listing only; it does not accept orders or payments, and no discount or booking is guaranteed.</p>
@@ -158,7 +159,7 @@ export function BusinessStatusPage() {
     finally { setBusy(false); inFlight.current = false }
   }
   if (editing && business) return <BusinessRegistrationPage editing={{ business, accessCode }} onCancel={() => { setEditing(false); setBusiness(null); setAccessCode('') }} />
-  return <section className="enquiry-access-page page-width"><Link to="/partners">Partner with AVELOF</Link><h1>Edit your business details</h1><p>Enter your business ID or registered phone number and status access code to check your restaurant or shop registration. The code uses the first four letters of the business name and last four phone digits.</p><form className="review-submission-form" onSubmit={submit}><label>Business ID or phone number<input name="identifier" maxLength={80} required autoComplete="off" /></label><label>Status access code<input name="accessCode" minLength={5} maxLength={12} required autoComplete="off" /></label><button className="button button-dark" disabled={busy}>{busy ? 'Checking...' : 'Check status'}</button></form>{error && <p className="enquiry-error" role="alert">{error}</p>}{business && <section className="admin-review-record hotel-owner-status"><h2>{business.name}</h2><p>{businessKindLabels[business.kind]} · {business.location}</p><p className="hotel-identifier">{business.id}</p><p role="status">{hotelStatusLabels[business.status]}</p>{business.status === 'approved' ? <Link to="/food-and-shopping">View business directory</Link> : <p>Not publicly listed.</p>}<p>Saving changes hides your listing until it is approved again.</p><button className="button button-dark" type="button" onClick={() => setEditing(true)}>Edit registration</button></section>}</section>
+  return <section className="enquiry-access-page page-width"><div className="page-back-line"><BackButton /><Link to="/partners">Partner with AVELOF</Link></div><h1>Edit your business details</h1><p>Enter your business ID or registered phone number and status access code to check your restaurant or shop registration. The code uses the first four letters of the business name and last four phone digits.</p><form className="review-submission-form" onSubmit={submit}><label>Business ID or phone number<input name="identifier" maxLength={80} required autoComplete="off" /></label><label>Status access code<input name="accessCode" minLength={5} maxLength={12} required autoComplete="off" /></label><button className="button button-dark" disabled={busy}>{busy ? 'Checking...' : 'Check status'}</button></form>{error && <p className="enquiry-error" role="alert">{error}</p>}{business && <section className="admin-review-record hotel-owner-status"><h2>{business.name}</h2><p>{businessKindLabels[business.kind]} · {business.location}</p><p className="hotel-identifier">{business.id}</p><p role="status">{hotelStatusLabels[business.status]}</p>{business.status === 'approved' ? <Link to="/food-and-shopping">View business directory</Link> : <p>Not publicly listed.</p>}<p>Saving changes hides your listing until it is approved again.</p><button className="button button-dark" type="button" onClick={() => setEditing(true)}>Edit registration</button></section>}</section>
 }
 
 function BusinessRecord({ business, disabled, save, remove }: {
@@ -266,7 +267,7 @@ export function AdminBusinessesPage() {
     } finally { setSaving(false); inFlight.current = false }
   }
   return <section className="enquiry-access-page page-width">
-    <h1>Food & Shopping registrations</h1>
+    <div className="page-back-line"><BackButton /><h1>Food & Shopping registrations</h1></div>
     {signedOut ? <p><Link to="/admin/panel">Sign in to the owner dashboard</Link> to manage business registrations.</p> : <>
       <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><Link to="/admin/panel/reviews">Reviews</Link><Link to="/admin/panel/hotels">Hotels</Link><Link to="/admin/panel/drivers">Drivers</Link><span aria-current="page">Food & Shopping</span></nav>
       <p>Review business accuracy, publication consent, identity, operating details and the submitted photo before approval. Owner contact details remain private. These are discovery listings only, without ordering, checkout or guaranteed discounts.</p>

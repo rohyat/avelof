@@ -1,3 +1,4 @@
+import BackButton from '../components/BackButton'
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, CalendarDays, Clock, Compass, MapPin, Search, ShieldCheck, Sparkles, X } from 'lucide-react'
@@ -38,7 +39,7 @@ export default function DestinationsPage() {
   return <>
     <section className="page-hero places-hero">
       <div className="page-width">
-        <div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>Places</span></div>
+        <div className="breadcrumb"><BackButton /><Link to="/">Home</Link><span>/</span><span>Places</span></div>
         <p className="eyebrow">Near the lake. Beyond the mountains.</p>
         <h1>Places to visit<br /><em>in Kashmir.</em></h1>
         <p>Find the places that fit your pace, from a Srinagar morning to a few nights in the high valleys.</p>

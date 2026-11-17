@@ -1,3 +1,4 @@
+import BackButton from '../components/BackButton'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
@@ -111,7 +112,7 @@ export function DriverStatusPage() {
     catch (failure) { setError(hotelErrorText(failure)) } finally { setBusy(false) }
   }
   if (editing && driver) return <PartnerRegistrationLayout kind="driver" editing><DriverForm editing={{ driver, accessCode }} onCancel={() => { setEditing(false); setDriver(null); setAccessCode('') }} /></PartnerRegistrationLayout>
-  return <section className="enquiry-access-page page-width"><Link to="/partners">Partner with AVELOF</Link><h1>Edit your driver details</h1><p>Enter your driver ID or registered phone and the status access code received after submission to check your status and edit your details.</p>
+  return <section className="enquiry-access-page page-width"><div className="page-back-line"><BackButton /><Link to="/partners">Partner with AVELOF</Link></div><h1>Edit your driver details</h1><p>Enter your driver ID or registered phone and the status access code received after submission to check your status and edit your details.</p>
     <form className="review-submission-form" onSubmit={submit}><label>Driver ID or phone number<input name="identifier" maxLength={80} required autoComplete="off" /></label><label>Status access code<input name="accessCode" minLength={5} maxLength={12} required autoComplete="off" /></label><button className="button button-dark" disabled={busy}>Check status</button></form>
     {error && <p className="enquiry-error" role="alert">{error}</p>}
     {driver && <section className="admin-review-record hotel-owner-status"><h2>{driver.fullName}</h2><p>{driver.vehicleName} · {driver.location} · {driver.seats} seats</p><p className="hotel-identifier">{driver.driverId}</p><p role="status">{hotelStatusLabels[driver.status]}</p>{driver.status === 'approved' ? <Link to="/drivers">View driver listing</Link> : <p>Not publicly listed.</p>}<p>Saving changes hides your listing until it is approved again.</p><button type="button" className="button button-dark" onClick={() => setEditing(true)}>Edit registration</button></section>}
@@ -163,7 +164,7 @@ export function AdminDriversPage() {
       else setError(hotelErrorText(failure))
     } finally { setSaving(false); inFlight.current = false }
   }
-  return <section className="enquiry-access-page page-width"><h1>Driver registrations</h1>
+  return <section className="enquiry-access-page page-width"><div className="page-back-line"><BackButton /><h1>Driver registrations</h1></div>
     {signedOut ? <p><Link to="/admin/panel">Sign in to the owner dashboard</Link> to manage drivers.</p> : <>
       <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><Link to="/admin/panel/reviews">Reviews</Link><Link to="/admin/panel/hotels">Hotels</Link><span aria-current="page">Drivers</span><Link to="/admin/panel/businesses">Food & Shopping</Link></nav><OwnerPushNotifications />
       <p>Verify driver identity, licence validity, commercial eligibility, vehicle permits, insurance and photos before approval. No driver rate is required. Full phone and driving-licence numbers remain private.</p>

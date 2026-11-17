@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react'
-import { ArrowLeft, Building2, CarFront, ClipboardCheck, FileImage, ShieldCheck } from 'lucide-react'
+import { Building2, CarFront, ClipboardCheck, FileImage, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import BackButton from './BackButton'
 
 export default function PartnerRegistrationLayout({ kind, children, editing = false }: { kind: 'hotel' | 'driver'; children: ReactNode; editing?: boolean }) {
   const hotel = kind === 'hotel'
   const Icon = hotel ? Building2 : CarFront
   return <section className="enquiry-access-page page-width partner-registration-page">
-    <Link className="text-link partner-back-link" to="/partners"><ArrowLeft size={16} /> Partner with AVELOF</Link>
+    <div className="partner-back-link page-back-line"><BackButton /><Link className="text-link" to="/partners">Partner with AVELOF</Link></div>
     <header className="partner-registration-hero">
       <div>
         <h1>{editing ? hotel ? 'Edit your hotel' : 'Edit your driver registration' : hotel ? 'Register your hotel' : 'Register as a driver'}</h1>

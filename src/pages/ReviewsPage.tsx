@@ -1,3 +1,4 @@
+import BackButton from '../components/BackButton'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, RefreshCw, Star, Trash2 } from 'lucide-react'
@@ -96,7 +97,7 @@ export default function ReviewsPage() {
   return <>
     {submitting && <SubmissionProgress title="Saving your review" />}
     {saved && <SubmissionSuccess title="Your review has been saved">{saved === 'published' ? 'Your review is published and now appears in Guest reviews.' : 'Your submission has been saved but is not currently published.'}</SubmissionSuccess>}
-    <section className="page-hero"><div className="page-width"><div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>Reviews</span></div><p className="eyebrow">Stories from the valley</p><h1>Travel leaves<br /><em>a little something.</em></h1><p>Every honest experience matters. Positive, mixed, and critical feedback is welcome.</p></div></section>
+    <section className="page-hero"><div className="page-width"><div className="breadcrumb"><BackButton /><Link to="/">Home</Link><span>/</span><span>Reviews</span></div><p className="eyebrow">Stories from the valley</p><h1>Travel leaves<br /><em>a little something.</em></h1><p>Every honest experience matters. Positive, mixed, and critical feedback is welcome.</p></div></section>
     <section className="reviews-page page-width">
       <div className="review-invite review-invite-top"><div><p className="eyebrow">Share your experience</p><h2>We’d love to hear your story.</h2></div><a className="button button-dark" href="#share-review">Write a review <ArrowRight size={16} /></a></div>
       <div className="review-feed-heading"><div><h2>Guest reviews</h2>{listing && listing.total > 0 && <p>{listing.averageRating?.toFixed(1)} out of 5 · {listing.total} published {listing.total === 1 ? 'review' : 'reviews'}</p>}</div><button className="icon-button" onClick={() => refresh()} disabled={loading} title="Refresh reviews" aria-label="Refresh reviews"><RefreshCw size={18} /></button></div>
@@ -218,7 +219,7 @@ export function AdminReviewsPage() {
 
   return <section className="enquiry-access-page admin-reviews-page page-width">
     <Link className="text-link" to="/admin/panel"><ArrowLeft size={16} /> Owner dashboard</Link>
-    <div className="enquiry-access-heading"><Star size={28} /><div><p className="eyebrow">AVELOF owner access</p><h1>Review moderation</h1></div></div>
+    <div className="enquiry-access-heading"><BackButton /><Star size={28} /><div><p className="eyebrow">AVELOF owner access</p><h1>Review moderation</h1></div></div>
     {signedOut ? <p>Please <Link className="text-link" to="/admin/panel">sign in to the owner dashboard</Link> before managing reviews.</p> : <>
       <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><span aria-current="page">Reviews</span><Link to="/admin/panel/hotels">Hotels</Link><Link to="/admin/panel/drivers">Drivers</Link><Link to="/admin/panel/businesses">Food & Shopping</Link></nav>
       <OwnerPushNotifications />

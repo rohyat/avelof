@@ -1,3 +1,4 @@
+import BackButton from '../components/BackButton'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ArrowLeft, Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, LockKeyhole, LogOut, RefreshCw, Save, Search, Trash2 } from 'lucide-react'
@@ -133,7 +134,7 @@ export default function EnquiriesPage() {
 
   return <section className="enquiry-access-page page-width">
     <Link className="text-link" to="/"><ArrowLeft size={16} /> Home</Link>
-    <div className="enquiry-access-heading"><ClipboardList size={28} /><div><p className="eyebrow">Your AVELOF journey</p><h1>Check your bookings</h1></div></div>
+    <div className="enquiry-access-heading"><BackButton /><ClipboardList size={28} /><div><p className="eyebrow">Your AVELOF journey</p><h1>Check your bookings</h1></div></div>
     <div className="enquiry-access-layout">
       <div className="booking-lookup-panel"><form className="enquiry-lookup-form" onSubmit={submit} aria-busy={busy}>
         <label className="full-field">Booking ID or phone number<input value={identifier} onChange={(event) => setIdentifier(event.target.value)} onBlur={(event) => { const phone = indianPhoneNumber(event.target.value); if (phone) setIdentifier(phone) }} required maxLength={40} autoComplete="off" spellCheck={false} placeholder="Booking ID or 10-digit phone number" /></label>
@@ -259,7 +260,7 @@ export function AdminEnquiriesPage() {
 
   return <section className="enquiry-access-page admin-enquiries-page page-width">
     <Link className="text-link" to="/my-enquiries"><ArrowLeft size={16} /> Check bookings</Link>
-    <div className="enquiry-access-heading"><LockKeyhole size={28} /><div><p className="eyebrow">AVELOF owner access</p><h1>{signedIn ? 'Enquiry dashboard' : 'Owner sign-in'}</h1></div></div>
+    <div className="enquiry-access-heading"><BackButton /><LockKeyhole size={28} /><div><p className="eyebrow">AVELOF owner access</p><h1>{signedIn ? 'Enquiry dashboard' : 'Owner sign-in'}</h1></div></div>
     {error && <p className="enquiry-error" role="alert">{error}</p>}
     {signedIn && notice && <p className="booking-admin-notice" role="status">{notice}</p>}
     {signedIn === null ? <p role="status">Checking your session...</p> : !signedIn ? <form className="enquiry-lookup-form admin-login-form" onSubmit={login} aria-busy={busy}>

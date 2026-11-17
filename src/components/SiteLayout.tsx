@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react'
-import { Link, NavLink, Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
-import { ArrowLeft, Menu, Moon, Sun, X } from 'lucide-react'
+import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom'
+import { Menu, Moon, Sun, X } from 'lucide-react'
 import { business } from '../config'
 import { rentalCars, tourPackages } from '../data/catalog'
 import BookingModal from './BookingModal'
@@ -61,7 +61,6 @@ export default function SiteLayout() {
   const menuToggleRef = useRef<HTMLButtonElement>(null)
   const [booking, setBooking] = useState<{ kind: BookingKind; item?: string } | null>(null)
   const location = useLocation()
-  const navigate = useNavigate()
   const navigationType = useNavigationType()
   const previousLocation = useRef({ pathname: location.pathname, hash: location.hash })
 
@@ -179,14 +178,6 @@ export default function SiteLayout() {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     }
   }
-  const goBack = () => {
-    closeMenu()
-    if (typeof window.history.state?.idx === 'number' && window.history.state.idx > 0) {
-      navigate(-1)
-    } else {
-      navigate('/', { replace: true })
-    }
-  }
 
   return (
     <>
@@ -202,7 +193,6 @@ export default function SiteLayout() {
         </nav>
       </header>
       <main>
-        {location.pathname !== '/' && <div className="page-width page-back-row"><button type="button" className="page-back-button" onClick={goBack} aria-label="Go back" title="Go back"><ArrowLeft size={20} aria-hidden="true" /></button></div>}
         <Outlet context={{ openBooking } satisfies SiteContext} />
       </main>
       <a className="whatsapp-float" href={createWhatsAppUrl('Hello AVELOF, I would like help planning my Kashmir journey.')} target="_blank" rel="noreferrer" aria-label="Chat with AVELOF on WhatsApp" title="Chat with AVELOF on WhatsApp"><WhatsAppIcon size={28} /></a>

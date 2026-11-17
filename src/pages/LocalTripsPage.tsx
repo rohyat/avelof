@@ -1,3 +1,4 @@
+import BackButton from '../components/BackButton'
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, Flame, MapPin, MoonStar, Mountain, ShieldCheck, TriangleAlert, Trees, Users } from 'lucide-react'
@@ -132,7 +133,7 @@ export default function LocalTripsPage() {
     {receipt && <SubmissionSuccess title="Enquiry saved"><p>Enquiry ID: <strong>{receipt.reference}</strong></p><p>We will get in touch to discuss the details. This is not a confirmed booking.</p></SubmissionSuccess>}
     <section className="local-trips-hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(15, 42, 30, .88), rgba(15, 42, 30, .35)), url("${providedDestinationPhotos.yusmarg}")` }}>
       <div className="page-width">
-        <div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>Local Trips</span></div>
+        <div className="breadcrumb"><BackButton /><Link to="/">Home</Link><span>/</span><span>Local Trips</span></div>
         <p className="eyebrow">Born in Kashmir, built for Kashmir</p>
         <h1>Our home. Your next adventure.</h1>
         <p>Made for local families and friends who want to experience more of Kashmir, together.</p>

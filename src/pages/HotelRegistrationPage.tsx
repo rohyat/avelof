@@ -1,3 +1,4 @@
+import BackButton from '../components/BackButton'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
@@ -196,7 +197,7 @@ export function HotelStatusPage() {
   if (editing && hotel) return <HotelRegistrationPage key={`${hotel.id}-${hotel.version}`} editing={hotel} accessCode={accessCode} onCancel={() => { setEditing(false); setHotel(null); setAccessCode('') }} />
   return <section className="enquiry-access-page page-width">
     <Link className="text-link" to="/register-hotel"><ArrowLeft size={16} /> Hotel registration</Link>
-    <div className="enquiry-access-heading"><div><p className="eyebrow">Already registered?</p><h1>Edit your hotel details</h1><p>Enter your hotel ID or registered phone and the status access code received after submission to check your status and edit your details.</p></div></div>
+    <div className="enquiry-access-heading"><BackButton /><div><p className="eyebrow">Already registered?</p><h1>Edit your hotel details</h1><p>Enter your hotel ID or registered phone and the status access code received after submission to check your status and edit your details.</p></div></div>
     <form className="review-submission-form" onSubmit={submit}>
       <label>Hotel ID or phone number<input name="identifier" maxLength={80} required autoComplete="off" /></label>
       <label>Status access code<input name="accessCode" maxLength={12} minLength={5} required autoComplete="off" /></label>
@@ -304,7 +305,7 @@ export function AdminHotelsPage() {
   }
   return <section className="enquiry-access-page page-width">
     <Link className="text-link" to="/admin/panel"><ArrowLeft size={16} /> Owner dashboard</Link>
-    <div className="enquiry-access-heading"><div><p className="eyebrow">AVELOF owner access</p><h1>Hotel registrations</h1></div></div>
+    <div className="enquiry-access-heading"><BackButton /><div><p className="eyebrow">AVELOF owner access</p><h1>Hotel registrations</h1></div></div>
     {signedOut ? <p>Please <Link to="/admin/panel">sign in to the owner dashboard</Link> to manage hotels.</p> : <>
       <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><Link to="/admin/panel/reviews">Reviews</Link><span aria-current="page">Hotels</span><Link to="/admin/panel/drivers">Drivers</Link><Link to="/admin/panel/businesses">Food & Shopping</Link></nav>
       <OwnerPushNotifications />

@@ -1,3 +1,4 @@
+import BackButton from '../components/BackButton'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ArrowLeft, ArrowRight, Backpack, CalendarDays, CloudSun, CreditCard, HeartHandshake, IdCard, Leaf, MapPin, Pill, Route, Shirt, ShoppingBag, Smartphone, Snowflake, Sparkles, Sun, TicketCheck, Timer, Utensils, Wine } from 'lucide-react'
@@ -18,7 +19,7 @@ function DiscoveryLayout({ title, eyebrow, copy, children }: { title: string; ey
   return <>
     <section className="page-hero">
       <div className="page-width">
-        <div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>{title}</span></div>
+        <div className="breadcrumb"><BackButton /><Link to="/">Home</Link><span>/</span><span>{title}</span></div>
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
         <p>{copy}</p>

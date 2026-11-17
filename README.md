@@ -14,8 +14,9 @@ Create a production build with `npm run build`. Run the configured linter with `
 The Dark mode switch sits beside the header logo. Dark mode is the default for new visitors;
 the chosen theme is stored in the browser and shared across open tabs.
 
-A simple back arrow appears just below the header on every page except Home,
-aligned with the left content edge and above the first page text.
+A simple back arrow appears inline beside Home in each page's existing breadcrumb.
+Pages without breadcrumbs place it alongside their existing opening heading or
+partner link. It adds no separate row or gap below the header and is absent on Home.
 It returns to the previous in-site history entry, or Home when opened directly.
 The header logo remains visible on small screens; the AVELOF name remains a Home link.
 Both header and footer AVELOF logos

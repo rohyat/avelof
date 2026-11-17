@@ -1,3 +1,4 @@
+import BackButton from '../components/BackButton'
 import { Link } from 'react-router-dom'
 import { ArrowRight, CircleCheck, MapPin, Users } from 'lucide-react'
 import ReviewStars from '../components/ReviewStars'
@@ -7,7 +8,7 @@ export default function DriversPage() {
   const drivers = useRegisteredDrivers(true)
   return <>
     <section className="page-hero"><div className="page-width">
-      <div className="breadcrumb"><Link to="/">Home</Link><span>/</span><Link to="/car-rentals">Car rentals</Link><span>/</span><span>Our drivers</span></div>
+      <div className="breadcrumb"><BackButton /><Link to="/">Home</Link><span>/</span><Link to="/car-rentals">Car rentals</Link><span>/</span><span>Our drivers</span></div>
       <p className="eyebrow">Local driver partners</p><h1>Meet your driver.</h1>
       <p>Browse drivers approved by AVELOF. Phone and driving-licence numbers are masked for privacy.</p>
     </div></section>

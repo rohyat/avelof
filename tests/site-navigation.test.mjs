@@ -21,10 +21,10 @@ for (const width of [320, 390, 600, 768, 820, 821, 900, 1024, 1440]) {
       assert.ok(bounds.y >= headerBounds.y + headerBounds.height, 'Back is below the header')
       assert.equal(await page.locator('.site-header .page-back-button').count(), 0)
       assert.equal(await page.locator('header .brand-logo').isVisible(), true)
-      const contentBounds = await page.locator('main > :nth-child(2)').boundingBox()
-      assert.ok(contentBounds.y >= bounds.y + bounds.height, 'Back is above the first page content')
-      const rowBounds = await page.locator('.page-back-row').boundingBox()
-      assert.ok(Math.abs(bounds.x - rowBounds.x) < 1, 'Back is aligned to the left content edge')
+      assert.equal(await page.locator('.page-back-row').count(), 0, 'No additional row below the header')
+      const homeCrumb = await page.locator('.breadcrumb').getByRole('link', { name: 'Home', exact: true }).boundingBox()
+      assert.ok(bounds.x + bounds.width <= homeCrumb.x, 'Back is beside Home')
+      assert.ok(Math.abs(bounds.y + bounds.height / 2 - homeCrumb.y - homeCrumb.height / 2) < 1, 'Back and Home share the same line')
       const controls = await page.locator('.site-header').evaluate((header) => {
         const theme = header.querySelector('.theme-toggle').getBoundingClientRect()
         const menu = header.querySelector('.menu-toggle')
@@ -33,6 +33,10 @@ for (const width of [320, 390, 600, 768, 820, 821, 900, 1024, 1440]) {
       })
       assert.equal(controls.overlap, false, 'Back and theme controls do not overlap navigation')
       assert.ok(controls.right <= width)
+      const originalHeight = await page.locator('.about-welcome').evaluate((element) => element.getBoundingClientRect().height)
+      await page.locator('.page-back-inline').evaluate((element) => { element.style.display = 'none' })
+      assert.equal(await page.locator('.about-welcome').evaluate((element) => element.getBoundingClientRect().height), originalHeight, 'Inline Back adds no content height')
+      await page.locator('.page-back-inline').evaluate((element) => { element.style.display = '' })
 
       // A direct visit has no in-app predecessor.
       await back.click()
@@ -80,6 +84,18 @@ for (const width of [320, 390, 600, 768, 820, 821, 900, 1024, 1440]) {
       await home.route('**/api/**', (route) => route.fulfill({ status: 503, json: { error: 'Offline navigation test' } }))
       await home.goto(`${origin}/`)
       assert.equal(await home.getByRole('button', { name: 'Go back', exact: true }).count(), 0)
+      await page.goto(`${origin}/hotels`)
+      const hotelLayout = await page.locator('.page-hero').evaluate((hero) => {
+        const header = document.querySelector('.site-header').getBoundingClientRect()
+        const before = hero.getBoundingClientRect()
+        const back = hero.querySelector('.page-back-inline')
+        back.style.display = 'none'
+        const without = hero.getBoundingClientRect()
+        back.style.display = ''
+        return { gap: before.top - header.bottom, height: before.height, withoutHeight: without.height }
+      })
+      assert.equal(hotelLayout.gap, 0, 'Hotels has no additional gap after the header')
+      assert.equal(hotelLayout.height, hotelLayout.withoutHeight, 'Back does not increase the Hotels intro height')
     } finally {
       await browser.close()
     }
