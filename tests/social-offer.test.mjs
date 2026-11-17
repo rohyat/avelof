@@ -12,7 +12,7 @@ test('extra package offer opens both social links and requires manual verificati
   await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
   await page.emulateMedia({ reducedMotion: 'reduce' })
   try {
-    for (const width of [320, 390, 768, 1440]) {
+    for (const width of [320, 390, 600, 768, 800, 820, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       await page.goto(`${origin}/tour-packages`)
       const offer = page.locator('.offer-social')
@@ -23,6 +23,22 @@ test('extra package offer opens both social links and requires manual verificati
       assert.match(await trigger.textContent(), /Get extra 3% offFollow us on .*Instagram.*Facebook/)
       assert.equal(await trigger.locator('.offer-social-icon').count(), 2)
       assert.equal(await trigger.locator('.offer-social-follow').isVisible(), true)
+      const carousel = await page.locator('.offer-carousel').boundingBox()
+      const triggerBox = await trigger.boundingBox()
+      const dots = await page.locator('.offer-controls').boundingBox()
+      if (width <= 800) {
+        const heading = await page.locator('.offer-heading-line').boundingBox()
+        const subtitles = await page.locator('.offer-heading-subtitle').all()
+        assert.ok(heading.y + heading.height <= carousel.y)
+        for (const subtitle of subtitles) {
+          const box = await subtitle.boundingBox()
+          assert.ok(box.y + box.height <= carousel.y)
+        }
+        assert.ok(triggerBox.y >= dots.y + dots.height)
+        assert.ok(Math.abs(triggerBox.x + triggerBox.width / 2 - width / 2) < 1, 'Extra offer is centred below the carousel')
+      } else {
+        assert.ok(triggerBox.x + triggerBox.width <= carousel.x, 'Desktop extra offer stays beside the carousel')
+      }
       await trigger.focus()
       await page.keyboard.press('Enter')
       assert.equal(await panel.isVisible(), true)

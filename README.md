@@ -299,6 +299,9 @@ until changed or browser site data is cleared.
 
 The winter-offer banner includes “Get extra 3% off” for tour packages, with a
 visible “Follow us on Instagram + Facebook” prompt and both platform icons. Its
+mobile/small-tablet layout (up to 800px) places the centred social offer below the
+offer carousel and dots, with the heading and price-inclusion lines above.
+The large-screen layout keeps the social offer alongside the carousel. Its
 expandable panel links to the Instagram and Facebook pages in `src/config.ts`.
 Customers must follow both; AVELOF manually verifies eligibility and confirms the
 extra discount in the final quote. This promotion does not automatically change
