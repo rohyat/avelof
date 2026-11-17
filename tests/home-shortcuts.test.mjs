@@ -44,7 +44,7 @@ test('homepage shortcuts place local trips after cabs and offer a full-width dir
         const icon = await call.locator('.home-call-icon').boundingBox()
         const headline = await call.locator('.home-call-copy > span:last-child').boundingBox()
         assert.ok(Math.abs(icon.y + icon.height / 2 - headline.y - headline.height / 2) < 1, 'Mobile phone icon is centred on the headline')
-        assert.ok(callBox.height <= 300, `Mobile call tile stays compact at ${width}px: ${callBox.height}`)
+        assert.ok(callBox.height <= 200, `Mobile call tile stays under 200px at ${width}px: ${callBox.height}`)
       }
     }
     await page.emulateMedia({ reducedMotion: 'reduce' })

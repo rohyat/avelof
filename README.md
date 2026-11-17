@@ -275,6 +275,8 @@ call tile below says “We’ll help you plan your trip based on your requiremen
 the business phone number in a prominent Call AVELOF directly panel, with
 no additional large headline, keeping the mobile tile compact. The entire tile
 remains a single tap-to-call link, with a stacked layout on mobile.
+Mobile padding, row spacing and the call panel are reduced to keep the tile
+under 200px tall at tested 320px and 390px widths with standard motion enabled.
 The same four hero commitments rotate inside the call tile above its planning message,
 replacing the introductory label rather than adding a separate strip; reduced-motion
 preferences show all four without animation. On mobile the phone icon is

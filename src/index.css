@@ -225,13 +225,14 @@ h1 em, h2 em { color: inherit; font-weight: 500; }
 .home-call-tile:hover { border-color: #b6cfc0; background: #123e39; }
 .home-call-tile:focus-visible { outline: 3px solid var(--copper); outline-offset: 3px; }
 @media (max-width: 600px) {
-  .home-call-tile { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 16px; }
+  .home-call-tile { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px 12px; padding: 14px 16px; }
   .home-call-copy { display: contents; }
   .home-call-copy .hero-trust { grid-column: 1 / -1; grid-row: 1; max-width: 100%; }
-  .home-call-copy > span:last-child { grid-column: 2; grid-row: 2; }
-  .home-call-icon { width: 42px; height: 42px; grid-column: 1; grid-row: 2; align-self: center; }
-  .home-call-icon svg { width: 21px; height: 21px; }
-  .home-call-action { grid-column: 1 / -1; margin: 0; padding: 14px 18px; }
+  .home-call-copy > span:last-child { grid-column: 2; grid-row: 2; font-size: 14px; line-height: 1.4; }
+  .home-call-icon { width: 34px; height: 34px; grid-column: 1; grid-row: 2; align-self: center; }
+  .home-call-icon svg { width: 18px; height: 18px; }
+  .home-call-action { grid-column: 1 / -1; margin: 0; padding: 10px 12px; gap: 4px; }
+  .home-call-action b { font-size: 18px; }
 }
 .home-shortcut-link { position: relative; min-width: 0; min-height: 112px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; overflow: hidden; padding: 12px 8px; border: 1px solid #e0e9e2; border-radius: 15px; color: var(--forest-deep); background: linear-gradient(145deg, #fff 15%, #f9fbf8 100%); box-shadow: 0 4px 12px rgba(26,61,45,.055), inset 0 1px 0 rgba(255,255,255,.9); font-size: 12px; font-weight: 650; text-decoration: none; transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease, background .22s ease; }
 .home-shortcut-link::before { position: absolute; top: 0; right: 18%; left: 18%; height: 2px; border-radius: 0 0 4px 4px; background: linear-gradient(90deg, transparent, #9bbbab, transparent); content: ""; opacity: .7; transition: right .22s ease, left .22s ease, opacity .22s ease; }
