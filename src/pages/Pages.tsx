@@ -1,6 +1,6 @@
 import BackButton from '../components/BackButton'
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, ArrowUpRight, BedDouble, BookOpen, CalendarDays, CarFront, Check, CircleCheck, CircleMinus, ClipboardList, Compass, Mail, MapPin, MountainSnow, Package, Phone, PlaneLanding, PlaneTakeoff, Plus, Route, Sailboat, ShieldCheck, ShoppingBag, Sparkles, Trees, UserRound, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, BedDouble, BookOpen, CalendarDays, CarFront, Check, CircleCheck, CircleMinus, ClipboardList, Compass, Mail, MapPin, MountainSnow, Package, Phone, PlaneLanding, PlaneTakeoff, Plus, Route, Sailboat, Scissors, ShieldCheck, ShoppingBag, Sparkles, Trees, UserRound, Users } from 'lucide-react'
 import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import { business } from '../config'
 import { rentalCars } from '../data/catalog'
@@ -116,7 +116,7 @@ export function HomePage() {
         <Link className="home-shortcut-link" to="/activities"><span className="home-shortcut-icon"><Sparkles size={20} aria-hidden="true" /></span><span>Activities</span></Link>
         <Link className="home-shortcut-link" to="/food-and-shopping"><span className="home-shortcut-icon"><ShoppingBag size={20} aria-hidden="true" /></span><span>Food &amp; Shopping</span></Link>
         <Link className="home-shortcut-link" to="/travel-guide"><span className="home-shortcut-icon"><BookOpen size={20} aria-hidden="true" /></span><span>Travel Guide</span></Link>
-        <Link className="home-shortcut-link" to="/partners"><span className="home-shortcut-icon"><Users size={20} aria-hidden="true" /></span><span>Partner</span></Link>
+        <Link className="home-shortcut-link" to="/food-and-shopping#handicrafts"><span className="home-shortcut-icon"><Scissors size={20} aria-hidden="true" /></span><span>Handicrafts</span></Link>
       </nav>
       <div className="page-width"><CallAssistance /></div>
     </section>

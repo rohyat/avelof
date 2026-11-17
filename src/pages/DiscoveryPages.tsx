@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { ArrowLeft, ArrowRight, Backpack, CalendarDays, CloudSun, CreditCard, HeartHandshake, IdCard, Leaf, MapPin, Pill, Route, Shirt, ShoppingBag, Smartphone, Snowflake, Sparkles, Sun, TicketCheck, Timer, Utensils, Wine } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { travelGuideSections } from '../data/travelGuide'
+import { kashmirHandicrafts } from '../data/handicrafts'
 import MapLocationLink from '../components/MapLocationLink'
 import ActivityIcon from '../components/ActivityIcon'
 import WhatsAppIcon from '../components/WhatsAppIcon'
@@ -81,6 +82,11 @@ export function FoodAndShoppingPage() {
     return () => controller.abort()
   }, [kind, location])
   return <DiscoveryLayout title="Food & Shopping" eyebrow="Discover a taste of Kashmir" copy="Find approved restaurants and local shops by destination. Listings are for discovery and in-person visits only.">
+    <section id="handicrafts" aria-labelledby="handicrafts-title">
+      <p className="eyebrow">Made with Kashmiri skill</p><h2 id="handicrafts-title">Kashmir's handicraft heritage</h2>
+      <p>Explore the craft traditions Kashmir is known for. This is a discovery guide, not a product catalogue or a guarantee of authenticity; participating shops appear separately after review.</p>
+      <div className="discovery-grid">{kashmirHandicrafts.map((craft) => <article className="discovery-card" key={craft.name}><h3>{craft.name}</h3><p>{craft.description}</p></article>)}</div>
+    </section>
     <div className="discovery-notice"><h2><MapPin size={26} aria-hidden="true" /><span>Discover here. Visit in person.</span></h2><p>AVELOF publishes participating businesses only after review. This directory does not provide food orders, online purchases, checkout or payments. Business hours and availability may change; confirm directly with the business. No discounts are promised.</p><Link className="button button-outline" to="/register-business">Register a restaurant or shop <ArrowRight size={16} aria-hidden="true" /></Link></div>
     <div className="activity-filters" aria-label="Food and shopping filters">
       <label>Business type<select value={kind} onChange={(event) => { setBusinesses([]); setLoading(true); setError(''); setKind(event.target.value as BusinessKind | '') }}><option value="">All businesses</option>{businessKinds.map((value) => <option key={value} value={value}>{businessKindLabels[value]}</option>)}</select></label>

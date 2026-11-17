@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
-import { ArrowRight, BedDouble, BookOpen, CalendarDays, CarFront, ChevronDown, ClipboardList, Landmark, MapPin, Motorbike, Package, Phone, Route, ShieldCheck, Users } from 'lucide-react'
+import { ArrowRight, BedDouble, BookOpen, CalendarDays, CarFront, ChevronDown, ClipboardList, Landmark, MapPin, Motorbike, Package, Phone, Route, ShieldCheck } from 'lucide-react'
 import BackButton from '../components/BackButton'
 import HolidayDestinations from '../components/HolidayDestinations'
 import CallAssistance from '../components/CallAssistance'
@@ -18,11 +18,9 @@ const shortcuts = [
   { label: 'Cabs & Transfers', path: 'car-rentals', icon: CarFront },
   { label: 'Bike Trips', path: 'bike-trips', icon: Motorbike },
   { label: 'Places', path: 'places', icon: MapPin },
-  { label: 'Experiences', path: 'experiences', icon: Landmark },
   { label: 'Travel Guide', path: 'travel-guide', icon: BookOpen },
   { label: 'Talk to AVELOF', path: 'contact', icon: Phone },
   { label: 'Drivers', path: 'drivers', icon: CarFront },
-  { label: 'Partner', path: 'partners', icon: Users },
 ]
 
 function PackageRoutes({ preview = false }: { preview?: boolean }) {

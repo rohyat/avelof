@@ -17,7 +17,9 @@ for (const width of [320, 390, 768, 820, 1024, 1440]) {
       assert.match(await page.locator('.ladakh-season').innerText(), /Summer 2027 planning preview/)
       assert.equal(await page.locator('.offer-banner, #custom-trip').count(), 0)
       const shortcuts = page.getByRole('navigation', { name: 'Explore Ladakh' })
-      assert.equal(await shortcuts.getByRole('link').count(), 11)
+      assert.equal(await shortcuts.getByRole('link').count(), 9)
+      assert.equal(await shortcuts.getByRole('link', { name: /Partner|Experiences/ }).count(), 0)
+      assert.equal(await page.locator('footer').getByRole('link', { name: 'Partner with AVELOF', exact: true }).getAttribute('href'), '/ladakh/partners')
       for (const link of await shortcuts.getByRole('link').all()) {
         assert.match(await link.getAttribute('href'), /^\/ladakh\/[\w-]+$/)
         assert.equal(await link.locator('svg').count(), 1)

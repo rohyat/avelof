@@ -474,6 +474,7 @@ body.enquiry-open { overflow: hidden; }
 .destination-photo-frame { position: relative; overflow: hidden; }
 .destination-hero-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
 #contact { scroll-margin-top: 100px; }
+#handicrafts { scroll-margin-top: 100px; }
 .places-hero .destination-hero-actions .button { max-width: 100%; margin-top: 0; }
 .planner-place-card .destination-photo-frame { margin-bottom: 7px; }
 .destination-photo-credit { position: absolute; right: 3px; bottom: 3px; left: 3px; width: fit-content; max-width: calc(100% - 6px); padding: 2px 4px; background: rgba(0,0,0,.72); color: #fff; font-size: 8px; line-height: 1.5; overflow-wrap: anywhere; }

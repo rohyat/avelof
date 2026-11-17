@@ -15,6 +15,11 @@ The Dark mode switch sits beside the header logo. Dark mode is the default for n
 the chosen theme is stored in the browser and shared across open tabs.
 
 The homepage destination selector links Kashmir (`/`) and Ladakh (`/ladakh`).
+Partner access stays in each region's footer rather than the homepage shortcut grid.
+Ladakh has nine shortcuts, excluding Partner and Experiences (the experience page
+remains accessible from the footer). Kashmir replaces Partner with Handicrafts,
+linking to the craft guide at `/food-and-shopping#handicrafts`. Guide content lives
+in `src/data/handicrafts.ts`; it does not claim verified sellers or online purchases.
 Ladakh has its own service icons and separate pages for packages, bike trips,
 cabs, hotels, drivers, places, experiences, travel guidance and contact.
 Its header/footer links stay within Ladakh,

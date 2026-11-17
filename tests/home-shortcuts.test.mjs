@@ -14,7 +14,9 @@ test('homepage shortcuts place local trips after cabs and offer a full-width dir
   try {
     await page.goto(origin)
     const nav = page.getByRole('navigation', { name: 'Explore AVELOF' })
-    assert.deepEqual(await nav.getByRole('link').allTextContents(), ['Plan a trip', 'Packages', 'Hotels', 'Cabs', 'Local Trips', 'Drivers', 'Bookings', 'Places', 'Activities', 'Food & Shopping', 'Travel Guide', 'Partner'])
+    assert.deepEqual(await nav.getByRole('link').allTextContents(), ['Plan a trip', 'Packages', 'Hotels', 'Cabs', 'Local Trips', 'Drivers', 'Bookings', 'Places', 'Activities', 'Food & Shopping', 'Travel Guide', 'Handicrafts'])
+    assert.equal(await nav.getByRole('link', { name: 'Partner', exact: true }).count(), 0)
+    assert.equal(await page.locator('footer').getByRole('link', { name: 'Partner with AVELOF', exact: true }).getAttribute('href'), '/partners')
     assert.equal(await nav.getByRole('link', { name: 'Reviews', exact: true }).count(), 0)
     const call = page.locator('.home-shortcuts .home-call-tile')
     assert.equal(await call.getAttribute('href'), `tel:${business.phone.replace(/[^\d+]/g, '')}`)
@@ -54,6 +56,21 @@ test('homepage shortcuts place local trips after cabs and offer a full-width dir
     }
     await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
     assert.equal(await call.evaluate((el) => getComputedStyle(el).color), 'rgb(255, 255, 255)')
+  } finally { await browser.close() }
+})
+
+test('Kashmir Handicrafts shortcut opens the craft guide without an unsupported shop endorsement', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  await page.route('**/api/businesses*', (route) => route.fulfill({ json: { businesses: [], total: 0, page: 1, pageSize: 25 } }))
+  try {
+    await page.goto(origin)
+    await page.getByRole('navigation', { name: 'Explore AVELOF' }).getByRole('link', { name: 'Handicrafts', exact: true }).click()
+    await page.waitForURL(`${origin}/food-and-shopping#handicrafts`)
+    await page.getByRole('heading', { name: "Kashmir's handicraft heritage", exact: true }).waitFor()
+    assert.equal(await page.locator('#handicrafts .discovery-card').count(), 4)
+    assert.match(await page.locator('#handicrafts').innerText(), /not a product catalogue or a guarantee of authenticity/)
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
   } finally { await browser.close() }
 })
 
