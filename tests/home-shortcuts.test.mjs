@@ -6,6 +6,32 @@ import { brandPromises } from '../src/data/brandPromises.ts'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://127.0.0.1:8792'
 
+test('Kashmir and Ladakh shortcuts sit one text-sized gap below the hero promises', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage()
+  await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
+  await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
+  try {
+    for (const path of ['/', '/ladakh']) {
+      await page.goto(`${origin}${path}`)
+      for (const reducedMotion of ['no-preference', 'reduce']) {
+        await page.emulateMedia({ reducedMotion })
+        for (const width of [320, 390, 768, 1024, 1440]) {
+          await page.setViewportSize({ width, height: 900 })
+          await page.locator('.home-hero').evaluate((hero) => Promise.all(hero.getAnimations({ subtree: true }).filter((animation) => animation.effect.getTiming().iterations !== Infinity).map((animation) => animation.finished)))
+          const gap = await page.locator('.home-hero').evaluate((hero) => {
+            const promises = hero.querySelector('.hero-trust').getBoundingClientRect()
+            const shortcuts = document.querySelector('.home-shortcut-grid').getBoundingClientRect()
+            return { actual: shortcuts.top - promises.bottom, expected: parseFloat(getComputedStyle(hero.querySelector('h1')).marginBottom) }
+          })
+          assert.ok(Math.abs(gap.actual - gap.expected) < 1, `${path} at ${width}px (${reducedMotion}): ${gap.actual}px gap should match ${gap.expected}px text spacing`)
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+        }
+      }
+    }
+  } finally { await browser.close() }
+})
+
 test('homepage shortcuts place local trips after cabs and offer a full-width direct call', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage()

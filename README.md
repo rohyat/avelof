@@ -478,6 +478,10 @@ submission and persist as `unionCabRequests` for the private admin enquiry.
 Union-cab charges are separate from the estimate and require confirmation.
 Saved planner version 3 maps older vehicle/hotel steps to the six-step flow.
 
+Kashmir and Ladakh homepage service shortcuts sit 12px below the hero promises
+on mobile and 18px on larger screens, matching the headline-to-description gap.
+Hero height follows its content so fixed minimum heights do not add empty space.
+
 Food & Shopping is discovery-only: there is no ordering, checkout or payment.
 Restaurant, shop and handicraft business owners can register at `/register-business`, also linked from
 Partners. Public business information and photos require explicit publication
