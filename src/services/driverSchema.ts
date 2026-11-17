@@ -3,10 +3,11 @@ import { driverDistricts, driverVehicleIds, driverVehicleNumberPattern, normaliz
 import { hotelLookupSchema, hotelStatusSchema } from './hotelSchema.ts'
 import { indianPhoneNumber } from './phoneNumbers.ts'
 import { partnerStatusAccessCodePattern } from './partnerAccessCode.ts'
+import { driverLocationsByRegion, listingRegion, regions } from '../data/regions.ts'
 const text = (max: number) => z.string().trim().min(1).max(max)
 export const driverDetailsSchema = z.object({
   fullName: text(100), vehicleId: z.enum(driverVehicleIds),
-  location: text(80), seats: z.number().int().min(1).max(60),
+  location: text(80), region: z.enum(regions).optional(), seats: z.number().int().min(1).max(60),
 }).strict()
 export const driverPrivateSchema = z.object({
   age: z.number().int().min(18).max(100),
@@ -16,11 +17,14 @@ export const driverPrivateSchema = z.object({
 })
 export const driverVehicleNumberSchema = z.string().trim().transform(normalizeDriverVehicleNumber)
   .refine((value) => driverVehicleNumberPattern.test(value), 'Use two letters, two digits, one to three letters and four final digits, for example PB01B-3302 or DL01ABC-1234.')
-export const driverSubmissionSchema = driverDetailsSchema.extend({
+const driverSubmissionObject = driverDetailsSchema.extend({
   ...driverPrivateSchema.shape, location: z.enum(driverDistricts), vehicleNumber: driverVehicleNumberSchema, id: z.uuidv4().toLowerCase(),
   publicationConsent: z.literal(true), website: z.string().max(200).default(''),
 }).strict()
-export const driverEditDetailsSchema = driverSubmissionSchema.omit({ id: true })
+const validDriverRegion = (driver: { region?: (typeof regions)[number]; location: string }) => driverLocationsByRegion[listingRegion(driver)].some((place) => place === driver.location)
+const regionError = { message: 'Choose a district in the selected region.', path: ['location'] }
+export const driverSubmissionSchema = driverSubmissionObject.refine(validDriverRegion, regionError)
+export const driverEditDetailsSchema = driverSubmissionObject.omit({ id: true }).refine(validDriverRegion, regionError)
 export const driverEditAuthSchema = hotelLookupSchema.extend({
   version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
 }).strict()

@@ -12,7 +12,9 @@ import PartnerRegistrationLayout from '../components/PartnerRegistrationLayout'
 import HotelFeature from '../components/HotelFeature'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import NumberStepper from '../components/NumberStepper'
-import { heatingOptions, hotelAmenities, hotelCategories, hotelCategoryLabels, hotelHighlightOptions, hotelMealPlans, hotelPhotoCount, hotelRoomRateBasis, hotelRoomTypes, hotelStatusLabels, registrationLocations } from '../data/hotelRegistration'
+import { heatingOptions, hotelAmenities, hotelCategories, hotelCategoryLabels, hotelHighlightOptions, hotelMealPlans, hotelPhotoCount, hotelRoomRateBasis, hotelRoomTypes, hotelStatusLabels } from '../data/hotelRegistration'
+import { hotelLocationsByRegion, listingRegion, regionBasePath, regions } from '../data/regions'
+import type { Region } from '../data/regions'
 import { hotelPriceSchema, hotelStatusSchema, hotelSubmissionSchema } from '../services/hotelSchema'
 import type { AdminHotel, HotelRoomRate, HotelStatus } from '../services/hotelSchema'
 import { compressHotelPhotos, deleteHotel, hotelErrorText, HotelError, loadAdminHotels, lookupHotel, moderateHotel, saveHotel, selectedHotelRoom, updateHotel } from '../services/hotelService'
@@ -40,6 +42,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
   const [photoNotice, setPhotoNotice] = useState('')
   const [receipt, setReceipt] = useState<HotelReceipt | null>(null)
   const [destination, setDestination] = useState(editing?.location ?? '')
+  const [region, setRegion] = useState<Region>(editing ? listingRegion(editing) : 'Kashmir')
   const [area, setArea] = useState(() => editing?.exactLocation ? hotelAreaOptions(editing.location).includes(editing.exactLocation) ? editing.exactLocation : 'custom' : '')
   const [customArea, setCustomArea] = useState(() => editing?.exactLocation && !hotelAreaOptions(editing.location).includes(editing.exactLocation) ? editing.exactLocation : '')
   const coordinates = mapCoordinates(editing ?? {})
@@ -75,7 +78,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
     if (!legacyRooms && !roomCounts.length) { setError('Add at least one room to a room type you offer.'); return }
     const details = {
       name: fields.get('name'), contactName: fields.get('contactName'), phone: fields.get('phone'),
-      category: fields.get('category'), location: fields.get('location'),
+      category: fields.get('category'), location: fields.get('location'), region,
       exactLocation: area === 'custom' ? customArea.trim() : area || undefined,
       ...locationFields(coordinates),
       description: editing ? fields.get('description') : `${String(fields.get('category'))} accommodation in ${String(fields.get('location'))}.`,
@@ -120,7 +123,8 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
         <label>Hotel name<input name="name" maxLength={120} required defaultValue={editing?.name} /></label>
         <label>Contact person's name (private)<input name="contactName" maxLength={80} autoComplete="name" required defaultValue={editing?.contactName} /></label>
         <label>Phone number (private)<input name="phone" type="tel" autoComplete="tel" maxLength={30} required placeholder="10-digit Indian phone number" defaultValue={editing?.phone} /><small>One hotel per phone number. You can use this number for private status lookup.</small></label>
-        <label>Location<select name="location" required value={destination} onChange={(event) => { setDestination(event.target.value); setArea(''); setCustomArea('') }}><option value="" disabled>Select location</option>{registrationLocations.map((location) => <option key={location}>{location}</option>)}</select></label>
+        <label>Region<select name="region" value={region} onChange={(event) => { const selected = regions.find((value) => value === event.target.value); if (selected) { setRegion(selected); setDestination(''); setArea(''); setCustomArea('') } }}>{regions.map((value) => <option key={value}>{value}</option>)}</select></label>
+        <label>Location<select name="location" required value={destination} onChange={(event) => { setDestination(event.target.value); setArea(''); setCustomArea('') }}><option value="" disabled>Select location</option>{hotelLocationsByRegion[region].map((location) => <option key={location}>{location}</option>)}</select></label>
         <label>Exact area<select aria-label="Exact area" aria-describedby="hotel-area-help" name="areaChoice" required={!editing || Boolean(editing.exactLocation)} disabled={!destination} value={area} onChange={(event) => { setArea(event.target.value); setCustomArea('') }}><option value="" disabled>Select exact area</option>{hotelAreaOptions(destination).map((value) => <option key={value}>{value}</option>)}<option value="custom">Specify location</option></select><small id="hotel-area-help">Shown publicly to help guests understand where your hotel is situated.</small></label>
         {area === 'custom' && <label>Specify exact location<input name="customArea" required maxLength={120} value={customArea} onChange={(event) => setCustomArea(event.target.value)} placeholder="Enter the area or nearby landmark" /></label>}
         <label>AVELOF category<select name="category" required defaultValue={editing?.category ?? ''}><option value="" disabled>Select category</option>{hotelCategories.map((category) => <option key={category} value={category}>{hotelCategoryLabels[category]}</option>)}</select><small>Our accommodation categories are not official star certifications.</small></label>
@@ -130,7 +134,7 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
         <div className="registration-section-heading"><span>02</span><div><h2 id="hotel-rooms-title">Rooms & rates</h2><p>Tell us what you offer. Meals are optional add-ons.</p></div></div>
         <div className="privacy-note review-text-field hotel-partnership-note">
           <strong>AVELOF</strong>
-          <p>Born in Kashmir, built for Kashmir</p>
+          <p>Born in Kashmir, welcoming partners across Jammu, Kashmir and Ladakh</p>
           <strong>Let's grow together</strong>
           <ul>
             <li><Heart size={16} aria-hidden="true" /><span>AVELOF is a new local Kashmiri brand, created to help local businesses reach more travellers.</span></li>
@@ -206,14 +210,14 @@ export function HotelStatusPage() {
     {error && <p className="enquiry-error" role="alert">{error}</p>}
     {hotel && <section className="admin-review-record hotel-owner-status" aria-label="Hotel submission status">
       <h2>{hotel.name}</h2><p className="hotel-identifier">{hotel.hotelId}</p><p role="status">{hotelStatusLabels[hotel.status]}</p>
-      <p>{hotelLocationLabel(hotel)} · {hotelCategoryLabels[hotel.category]}</p><p>{hotel.description}</p>
+      <p>{listingRegion(hotel)} · {hotelLocationLabel(hotel)} · {hotelCategoryLabels[hotel.category]}</p><p>{hotel.description}</p>
       <p>{hotel.status === 'approved' ? 'Published' : 'Current'} rate: INR {hotel.price.toLocaleString('en-IN')} {hotelRoomRateBasis(selectedHotelRoom(hotel)?.roomType)}.</p>
       <p>{hotel.mealPlan}</p>
       {hotel.roomRates && <ul>{hotel.roomRates.map((room) => <li key={room.roomType}>{room.roomType}: INR {room.price.toLocaleString('en-IN')} {hotelRoomRateBasis(room.roomType)}</li>)}</ul>}
       {hotel.breakfastPrice !== undefined && <p>Base optional breakfast: INR {hotel.breakfastPrice}; dinner: INR {hotel.dinnerPrice}, for 2 people. Family rooms cover 4 people and use twice each meal charge.</p>}
       <p>Heating: {hotel.heating}. Hot &amp; cold AC: {hotel.hotColdAc ? 'Yes' : 'No'}. Amenities: {hotel.amenities.join(', ') || 'None selected'}.</p>
       <ul>{hotel.highlights.map((point) => <li key={point}>{point}</li>)}</ul>
-      {hotel.status === 'approved' ? <Link className="text-link" to={`/hotels/${hotel.id}`}>View approved listing <ArrowRight size={16} /></Link> : <p>This property is not publicly listed.</p>}
+      {hotel.status === 'approved' ? <Link className="text-link" to={`${regionBasePath(listingRegion(hotel))}/hotels/${hotel.id}`}>View approved listing <ArrowRight size={16} /></Link> : <p>This property is not publicly listed.</p>}
       <p>Saving edits returns your registration to awaiting approval and hides it publicly until AVELOF approves it again.</p>
       <button className="button button-dark" type="button" onClick={() => setEditing(true)}>Edit hotel details</button>
     </section>}
@@ -236,7 +240,7 @@ function AdminHotelRecord({ hotel, disabled, onSave, onDelete }: { hotel: AdminH
   }
   return <article className="admin-review-record">
     <div className="admin-review-heading"><h2>{hotel.name}</h2><span className="enquiry-status">{hotelStatusLabels[hotel.status]}</span></div>
-    <p className="hotel-identifier">{hotel.hotelId}</p><p>{hotelLocationLabel(hotel)} · {hotelCategoryLabels[hotel.category]}</p>
+    <p className="hotel-identifier">{hotel.hotelId}</p><p>{listingRegion(hotel)} · {hotelLocationLabel(hotel)} · {hotelCategoryLabels[hotel.category]}</p>
     <MapLocationLink location={hotel} />
     <p>Private contact: {hotel.contactName} · {hotel.phone}</p><p>{hotel.description}</p>
     <div className="hotel-photo-grid">{hotel.photos.map((photo, index) => <a href={photo} key={photo} target="_blank" rel="noreferrer"><img src={photo} alt={`${hotel.name}, submitted photo ${index + 1}`} loading="lazy" /></a>)}</div>

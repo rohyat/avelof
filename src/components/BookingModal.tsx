@@ -18,12 +18,15 @@ import { usePricing, useTourPackages } from '../services/pricingContext'
 import { PricingNotice } from './PricingProvider'
 import { hotelCategoryLabel, hotelLocationLabel, hotelRoomOccupancy, hotelRoomRateBasis, minimumHotelRooms } from '../data/hotelRegistration'
 import type { BookingKind, BookingPayload, PreparedRequest } from '../types'
+import { regionBasePath, regionHomePath } from '../data/regions'
+import type { Region } from '../data/regions'
 
 interface BookingModalProps {
   kind: BookingKind
   selectedItem?: string
   initialRequest?: PreparedRequest
   onClose: () => void
+  region?: Region
 }
 
 function catalogCarSelection(value?: string) {
@@ -31,7 +34,7 @@ function catalogCarSelection(value?: string) {
   return rentalCars.find((car) => value === car.name || value?.startsWith(`${car.name} (AVELOF-DRV-`))?.name ?? rentalCars[0].name
 }
 
-export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additionalFields = {}, children, submitDisabled = false, onSubmittingChange }: {
+export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additionalFields = {}, children, submitDisabled = false, onSubmittingChange, region = 'Kashmir' }: {
   kind?: BookingKind
   selectedItem?: string
   onPrepared: (request: PreparedRequest) => void
@@ -39,8 +42,9 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   children?: ReactNode
   submitDisabled?: boolean
   onSubmittingChange?: (submitting: boolean) => void
+  region?: Region
 }) {
-  const registered = useRegisteredHotels(kind === 'hotel')
+  const registered = useRegisteredHotels(kind === 'hotel', undefined, region)
   const pricing = usePricing()
   const pricedPackages = useTourPackages()
   const availableHotels = registered.hotels
@@ -122,7 +126,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       fields.mealCoverage = includedMeals.breakfast || includedMeals.dinner ? `Selected meals cover ${hotelRoomOccupancy(room?.roomType)} people per room per day; ${roomQuantity} rooms cover ${hotelRoomOccupancy(room?.roomType) * roomQuantity} people.` : 'No meals selected.'
     }
     if (kind === 'hotel' && room) fields.roomType = room.roomType
-    const payload: BookingPayload = { kind, fields: { ...additionalFields, ...fields, ...(plannerDates ? { customDetails: formatEnquiryDetails(additionalFields) } : {}), ...(kind === 'package' ? { arrivalDate: checkInDate, departureDate: checkOutDate, tripDays: String(nights + 1), tripNights: String(nights) } : {}), ...(kind === 'car' ? { rentalDays: String(rentalDays) } : {}), ...(kind === 'hotel' ? { stayDuration, breakfast: includedMeals.breakfast ? 'Included' : 'Not included', dinner: includedMeals.dinner ? 'Included' : 'Not included', nightlyRate: `${nightlyRange} ${hotelRoomRateBasis(room?.roomType)}; breakfast ${includedMeals.breakfast ? 'included' : 'excluded'}, dinner ${includedMeals.dinner ? 'included' : 'excluded'}` } : {}) } }
+    const payload: BookingPayload = { kind, fields: { ...additionalFields, ...fields, region, ...(plannerDates ? { customDetails: formatEnquiryDetails(additionalFields) } : {}), ...(kind === 'package' ? { arrivalDate: checkInDate, departureDate: checkOutDate, tripDays: String(nights + 1), tripNights: String(nights) } : {}), ...(kind === 'car' ? { rentalDays: String(rentalDays) } : {}), ...(kind === 'hotel' ? { stayDuration, breakfast: includedMeals.breakfast ? 'Included' : 'Not included', dinner: includedMeals.dinner ? 'Included' : 'Not included', nightlyRate: `${nightlyRange} ${hotelRoomRateBasis(room?.roomType)}; breakfast ${includedMeals.breakfast ? 'included' : 'excluded'}, dinner ${includedMeals.dinner ? 'included' : 'excluded'}` } : {}) } }
     const fingerprint = JSON.stringify(payload)
     if (pendingRequest.current?.fingerprint !== fingerprint) pendingRequest.current = { fingerprint, request: prepareRequest(payload) }
     const request = pendingRequest.current.request
@@ -204,13 +208,13 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     <p className="privacy-note" aria-live="polite">{submitting ? 'Saving your enquiry. Please wait.' : 'By submitting, you agree that AVELOF may store these details, show your selected service and dates with masked contact details in booking lookup, and contact you about your enquiry. This is not a confirmed booking.'}</p>
     <div className="enquiry-help-links">
       <a className="text-link enquiry-help" href={createWhatsAppUrl('Hello AVELOF, I need help with an enquiry.')} target="_blank" rel="noreferrer"><MessageCircle size={17} /> Need help?</a>
-      <a className="text-link enquiry-help" href="/#custom-trip">Customize your trip <ArrowRight size={16} /></a>
-      {lockedHotel && <a className="text-link enquiry-help" href="/hotels">View other options <ArrowRight size={16} /></a>}
+      <a className="text-link enquiry-help" href={region === 'Kashmir' ? '/#custom-trip' : regionHomePath(region)}>Customize your trip <ArrowRight size={16} /></a>
+      {lockedHotel && <a className="text-link enquiry-help" href={`${regionBasePath(region)}/hotels`}>View other options <ArrowRight size={16} /></a>}
     </div>
   </form>
 }
 
-export default function BookingModal({ kind, selectedItem, initialRequest, onClose }: BookingModalProps) {
+export default function BookingModal({ kind, selectedItem, initialRequest, onClose, region = 'Kashmir' }: BookingModalProps) {
   const dialogRef = useRef<HTMLElement>(null)
   const [request, setRequest] = useState<PreparedRequest | null>(initialRequest ?? null)
   const [copyStatus, setCopyStatus] = useState<'copied' | 'failed' | ''>('')
@@ -285,7 +289,7 @@ export default function BookingModal({ kind, selectedItem, initialRequest, onClo
         <p className="eyebrow">Book Now</p>
         <h2 id="booking-title">{kind === 'hotel' ? 'Send us your hotel enquiry.' : kind === 'car' ? 'Send us your car rental enquiry.' : 'Send us your trip enquiry.'}</h2>
         <p id="booking-description" className="modal-intro">Share a few details and we’ll help plan the next steps.</p>
-        <EnquiryForm kind={kind} selectedItem={selectedItem} onPrepared={prepared}>
+        <EnquiryForm kind={kind} selectedItem={selectedItem} onPrepared={prepared} region={region}>
         </EnquiryForm>
       </>}
     </section>

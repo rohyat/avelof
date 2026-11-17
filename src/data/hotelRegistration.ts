@@ -1,8 +1,15 @@
-export const registrationLocations = ['Srinagar', 'Gulmarg', 'Pahalgam', 'Sonamarg', 'Doodhpathri', 'Yusmarg', 'Gurez'] as const
+import { hotelLocationsByRegion } from './regions.ts'
+
+export const registrationLocations = [...hotelLocationsByRegion.Kashmir, ...hotelLocationsByRegion.Ladakh, ...hotelLocationsByRegion.Jammu] as const
 export function hotelAreaOptions(destination: string): string[] {
   if (destination === 'Gulmarg') return ['Main Gulmarg', 'Tangmarg']
   if (destination === 'Pahalgam') return ['Main Pahalgam', 'Rafting Point']
   if (destination === 'Srinagar') return ['Near Dal Lake', 'Near Airport', 'Main Srinagar']
+  if (destination === 'Leh') return ['Main Leh', 'Changspa', 'Choglamsar']
+  if (destination === 'Nubra Valley') return ['Hunder', 'Diskit', 'Sumur', 'Panamik']
+  if (destination === 'Pangong') return ['Spangmik', 'Man', 'Merak']
+  if (destination === 'Jammu') return ['Main Jammu', 'Near Jammu Tawi railway station', 'Near Jammu Airport']
+  if (destination === 'Katra') return ['Katra town (Vaishno Devi base)', 'Near Katra railway station']
   return registrationLocations.some((location) => location === destination) ? [`Main ${destination}`] : []
 }
 export function hotelLocationLabel(hotel: { location: string; exactLocation?: string }) {
@@ -16,6 +23,10 @@ export const hotelLocationCodes: Record<(typeof registrationLocations)[number], 
   Doodhpathri: 'DDP',
   Yusmarg: 'YSM',
   Gurez: 'GRZ',
+  Leh: 'LEH', 'Nubra Valley': 'NBR', Hunder: 'HND', Diskit: 'DSK', Turtuk: 'TRT', Pangong: 'PNG',
+  Kargil: 'KGL', Lamayuru: 'LMY', Hanle: 'HNL', 'Tso Moriri': 'TSM',
+  Jammu: 'JMU', Katra: 'KTR', Patnitop: 'PTP', Udhampur: 'UDH', Reasi: 'RSI', Bhaderwah: 'BHD',
+  Kishtwar: 'KSW', Rajouri: 'RJR', Poonch: 'PNC', Kathua: 'KTH', Samba: 'SMB', Ramban: 'RMB',
 }
 export const hotelIdPattern = /^AVELOF_HTL_[0-9]{5,10}[A-Z]{3}$/
 export const hotelLookupIdPattern = /^(?:AVELOF_HTL_[0-9]{5,10}[A-Z]{3}|AVELOF_HTL_[A-F0-9]{32})$/

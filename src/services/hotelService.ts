@@ -8,6 +8,8 @@ import type { MapCoordinates } from './mapLocation'
 import { locationFields } from './mapLocation'
 import { hotelRoomPriceForDate } from './hotelPricing'
 import { orderHotelsForVisit } from './hotelOrdering'
+import type { Region } from '../data/regions'
+import { listingRegion } from '../data/regions'
 
 const pagination = { total: z.number().int().min(0), page: z.number().int().min(1), pageSize: z.literal(25) }
 const publicList = z.object({ ...pagination, hotels: z.array(publicHotelSchema) })
@@ -71,13 +73,13 @@ export async function moderateHotel(id: string, version: number, status: HotelSt
 export async function deleteHotel(id: string, version: number) {
   return z.object({ deleted: z.literal(true), id: z.uuidv4() }).parse(await requestHotel('/api/hotels', 'DELETE', { id, version }))
 }
-export async function loadPublicHotels(signal?: AbortSignal, id?: string) {
+export async function loadPublicHotels(signal?: AbortSignal, id?: string, region: Region = 'Kashmir') {
   const hotels: PublicHotel[] = []
   let page = 1
   while (true) {
-    const query = new URLSearchParams({ page: String(page), ...(id ? { id } : {}) })
+    const query = new URLSearchParams({ page: String(page), region, ...(id ? { id } : {}) })
     const listing = publicList.parse(await requestHotel(`/api/hotels?${query}`, 'GET', undefined, signal))
-    hotels.push(...listing.hotels)
+    hotels.push(...listing.hotels.filter((hotel) => listingRegion(hotel) === region))
     if (page * listing.pageSize >= listing.total) return hotels
     page++
   }
@@ -101,8 +103,8 @@ export async function loadPublicHotelByDisplayId(hotelId: string, signal?: Abort
   const listing = publicList.parse(await requestHotel(`/api/hotels?${new URLSearchParams({ hotelId })}`, 'GET', undefined, signal))
   return listing.hotels[0] ?? null
 }
-export function useRegisteredHotels(enabled: boolean, id?: string) {
-  const key = enabled ? id ?? 'all' : ''
+export function useRegisteredHotels(enabled: boolean, id?: string, region: Region = 'Kashmir') {
+  const key = enabled ? `${region}:${id ?? 'all'}` : ''
   const [state, setState] = useState<{ key: string; hotels: Hotel[]; loading: boolean; error: string }>({ key: '', hotels: [], loading: enabled, error: '' })
   const [revision, setRevision] = useState(0)
   useEffect(() => {
@@ -114,13 +116,13 @@ export function useRegisteredHotels(enabled: boolean, id?: string) {
   useEffect(() => {
     if (!enabled) return
     const controller = new AbortController()
-    loadPublicHotels(controller.signal, id).then((hotels) => {
+    loadPublicHotels(controller.signal, id, region).then((hotels) => {
       setState({ key, hotels: orderHotelsForVisit(hotels).map(toCatalogHotel), loading: false, error: '' })
     }).catch((error: unknown) => {
       if (!controller.signal.aborted) setState({ key, hotels: [], loading: false, error: hotelErrorText(error) })
     })
     return () => controller.abort()
-  }, [enabled, id, key, revision])
+  }, [enabled, id, key, region, revision])
   const visible = state.key === key ? state : { hotels: [], loading: enabled, error: '' }
   return { ...visible, reload: () => { setState({ key, hotels: [], loading: true, error: '' }); setRevision((current) => current + 1) } }
 }

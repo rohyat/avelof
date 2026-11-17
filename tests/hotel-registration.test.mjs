@@ -763,7 +763,7 @@ test('hotel registration, private lookup and moderation integrate with public st
         const pricingSection = page.getByRole('region', { name: 'Rooms & rates', exact: true })
         assert.ok((await pricingSection.innerText()).includes('local Kashmiri brand'))
         const partnership = pricingSection.locator('.hotel-partnership-note')
-        assert.ok((await partnership.innerText()).includes('Born in Kashmir, built for Kashmir'))
+        assert.ok((await partnership.innerText()).includes('Born in Kashmir, welcoming partners across Jammu, Kashmir and Ladakh'))
         assert.equal(await partnership.locator('li').count(), 3)
         assert.equal(await partnership.locator('li svg').count(), 3)
         assert.equal((await partnership.innerText()).includes('Room rates are adjusted'), false)

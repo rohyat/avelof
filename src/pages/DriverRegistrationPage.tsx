@@ -12,7 +12,9 @@ import SubmissionProgress from '../components/SubmissionFeedback'
 import RegistrationForm from '../components/RegistrationForm'
 import PartnerRegistrationLayout from '../components/PartnerRegistrationLayout'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
-import { driverDistricts, driverVehicleNumberPattern, driverVehicleOptions, normalizeDriverVehicleNumber } from '../data/driverRegistration'
+import { driverVehicleNumberPattern, driverVehicleOptions, normalizeDriverVehicleNumber } from '../data/driverRegistration'
+import { driverLocationsByRegion, listingRegion, regionBasePath, regions } from '../data/regions'
+import type { Region } from '../data/regions'
 import { hotelStatusLabels } from '../data/hotelRegistration'
 import { driverEditDetailsSchema, driverReceiptSchema, driverStatusResultSchema, driverSubmissionSchema } from '../services/driverSchema'
 import type { AdminDriver, OwnerDriver } from '../services/driverSchema'
@@ -26,6 +28,8 @@ export default function DriverRegistrationPage() {
 }
 
 function DriverForm({ editing, onCancel }: { editing?: { driver: OwnerDriver; accessCode: string }; onCancel?: () => void }) {
+  const [region, setRegion] = useState<Region>(editing ? listingRegion(editing.driver) : 'Kashmir')
+  const [district, setDistrict] = useState(editing?.driver.location ?? '')
   const [photos, setPhotos] = useState<Blob[]>([])
   const [processing, setProcessing] = useState(Boolean(editing))
   const [retainedPhotos, setRetainedPhotos] = useState<number[]>([])
@@ -42,7 +46,7 @@ function DriverForm({ editing, onCancel }: { editing?: { driver: OwnerDriver; ac
     const details = {
       fullName: fields.get('fullName'), phone: fields.get('phone'),
       age: Number(fields.get('age')), licenceNumber: fields.get('licenceNumber'), vehicleNumber: fields.get('vehicleNumber'),
-      vehicleId: fields.get('vehicleId'), location: fields.get('location'),
+      vehicleId: fields.get('vehicleId'), location: fields.get('location'), region,
       seats: Number(fields.get('seats')),
       publicationConsent: fields.has('publicationConsent'), website: fields.get('website') ?? '',
     }
@@ -77,7 +81,8 @@ function DriverForm({ editing, onCancel }: { editing?: { driver: OwnerDriver; ac
         <div className="registration-section-heading"><span>02</span><div><h2 id="driver-vehicle-title">Your vehicle</h2><p>Share your vehicle details and where you are based. No rate required.</p></div></div>
         <label>Vehicle registration number<input name="vehicleNumber" defaultValue={editing?.driver.vehicleNumber} maxLength={30} required placeholder="PB01B-3302" aria-describedby="vehicle-number-help" onBlur={(event) => { event.currentTarget.value = normalizeDriverVehicleNumber(event.currentTarget.value) }} /><small id="vehicle-number-help">Two letters, two digits, one to three letters, then four digits. Spaces and dashes are optional; PB 01 B 3302 is saved as PB01B-3302.</small></label>
         <label>Vehicle<select name="vehicleId" required defaultValue={editing?.driver.vehicleId}>{driverVehicleOptions.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.label}</option>)}</select></label>
-        <label>District<select name="location" required defaultValue={editing?.driver.location}>{driverDistricts.map((district) => <option key={district}>{district}</option>)}</select></label>
+        <label>Region<select name="region" value={region} onChange={(event) => { const selected = regions.find((value) => value === event.target.value); if (selected) { setRegion(selected); setDistrict('') } }}>{regions.map((value) => <option key={value}>{value}</option>)}</select></label>
+        <label>District<select name="location" required value={district} onChange={(event) => setDistrict(event.target.value)}><option value="" disabled>Select district</option>{driverLocationsByRegion[region].map((value) => <option key={value}>{value}</option>)}</select></label>
         <NumberStepper label="Passenger seats (excluding driver)" name="seats" min={1} max={60} defaultValue={editing?.driver.seats} />
         </section>
         <section className="hotel-form-fields registration-section" aria-labelledby="driver-portrait-title">
@@ -115,13 +120,13 @@ export function DriverStatusPage() {
   return <section className="enquiry-access-page page-width"><div className="page-back-line"><BackButton /><Link to="/partners">Partner with AVELOF</Link></div><h1>Edit your driver details</h1><p>Enter your driver ID or registered phone and the status access code received after submission to check your status and edit your details.</p>
     <form className="review-submission-form" onSubmit={submit}><label>Driver ID or phone number<input name="identifier" maxLength={80} required autoComplete="off" /></label><label>Status access code<input name="accessCode" minLength={5} maxLength={12} required autoComplete="off" /></label><button className="button button-dark" disabled={busy}>Check status</button></form>
     {error && <p className="enquiry-error" role="alert">{error}</p>}
-    {driver && <section className="admin-review-record hotel-owner-status"><h2>{driver.fullName}</h2><p>{driver.vehicleName} · {driver.location} · {driver.seats} seats</p><p className="hotel-identifier">{driver.driverId}</p><p role="status">{hotelStatusLabels[driver.status]}</p>{driver.status === 'approved' ? <Link to="/drivers">View driver listing</Link> : <p>Not publicly listed.</p>}<p>Saving changes hides your listing until it is approved again.</p><button type="button" className="button button-dark" onClick={() => setEditing(true)}>Edit registration</button></section>}
+    {driver && <section className="admin-review-record hotel-owner-status"><h2>{driver.fullName}</h2><p>{driver.vehicleName} · {driver.location} · {driver.seats} seats</p><p className="hotel-identifier">{driver.driverId}</p><p role="status">{hotelStatusLabels[driver.status]}</p>{driver.status === 'approved' ? <Link to={`${regionBasePath(listingRegion(driver))}/drivers`}>View driver listing</Link> : <p>Not publicly listed.</p>}<p>Saving changes hides your listing until it is approved again.</p><button type="button" className="button button-dark" onClick={() => setEditing(true)}>Edit registration</button></section>}
   </section>
 }
 function DriverRecord({ driver, disabled, save, remove }: { driver: AdminDriver; disabled: boolean; save: (driver: AdminDriver, status: HotelStatus, note: string, vehicleNumber: string) => Promise<void>; remove: (driver: AdminDriver) => Promise<void> }) {
   const [status, setStatus] = useState<HotelStatus>(driver.status)
   async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const fields = new FormData(event.currentTarget); await save(driver, status, String(fields.get('ownerNote')), String(fields.get('vehicleNumber'))) }
-  return <article className="admin-review-record"><h2>{driver.fullName} · {driver.vehicleName}</h2><p className="hotel-identifier">{driver.driverId} · {hotelStatusLabels[driver.status]}</p><p>Private: age {driver.age}, phone {driver.phone}, licence {driver.licenceNumber}, vehicle registration {driver.vehicleNumber}</p><p>Public listing: {driver.fullName} · {driver.maskedPhone} · {driver.location} · {driver.seats} passenger seats</p><div className="hotel-photo-grid"><a href={driver.photo} target="_blank" rel="noreferrer"><img src={driver.photo} alt={`Portrait of ${driver.fullName}`} /></a></div>
+  return <article className="admin-review-record"><h2>{driver.fullName} · {driver.vehicleName}</h2><p className="hotel-identifier">{driver.driverId} · {hotelStatusLabels[driver.status]}</p><p>Private: age {driver.age}, phone {driver.phone}, licence {driver.licenceNumber}, vehicle registration {driver.vehicleNumber}</p><p>Public listing: {driver.fullName} · {driver.maskedPhone} · {listingRegion(driver)} · {driver.location} · {driver.seats} passenger seats</p><div className="hotel-photo-grid"><a href={driver.photo} target="_blank" rel="noreferrer"><img src={driver.photo} alt={`Portrait of ${driver.fullName}`} /></a></div>
     <form onSubmit={submit} className="review-submission-form"><fieldset className="hotel-form-fields" disabled={disabled}>
       <label>Vehicle registration number<input name="vehicleNumber" required defaultValue={driver.vehicleNumber} pattern={driverVehicleNumberPattern.source} placeholder="PB01B-3302" title="Use two letters, two digits, one to three letters, a hyphen and four digits, for example PB01B-3302 or DL01ABC-1234." onBlur={(event) => { event.currentTarget.value = normalizeDriverVehicleNumber(event.currentTarget.value) }} /></label>
       <label>Driver listing status<select value={status} onChange={(event) => setStatus(hotelStatusSchema.parse(event.target.value))}><option value="pending">Awaiting approval</option><option value="approved">Approve and publish</option><option value="rejected">Reject / hide</option></select></label>

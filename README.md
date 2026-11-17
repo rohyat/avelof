@@ -15,17 +15,36 @@ The Dark mode switch sits beside the header logo. Dark mode is the default for n
 the chosen theme is stored in the browser and shared across open tabs.
 
 The homepage destination selector links Kashmir (`/`) and Ladakh (`/ladakh`).
-Ladakh has its own service icons, route previews, Bike Trips section, stays,
-transport, places and travel guidance. Its header/footer links stay within Ladakh,
+Ladakh has its own service icons and separate pages for packages, bike trips,
+cabs, hotels, drivers, places, experiences, travel guidance and contact.
+Its header/footer links stay within Ladakh,
 and Kashmir discounts and payment promises are not shown there. Ladakh is a
 planning preview: prices, suppliers and departures are not confirmed, and contact
-is by phone rather than the Kashmir booking planner. Content lives in
+can be made by phone or through a regional enquiry form, not the Kashmir
+booking planner. Enquiries save to D1 before showing a receipt; they do not
+confirm availability or a booking. Content lives in
 `src/data/ladakh.ts`. Route cards can be filtered by starting city and have
 expandable proposed journey outlines. The responsive hero uses original,
 explicitly labelled landscape artwork rather than an unverified destination
 photo. FAQs explain the prelaunch status and altitude/transport checks.
 Run `node --test tests/ladakh.test.mjs` against port 8792
-to check destination switching, section links, theme and responsive layout.
+to check destination switching, separate-page links, theme and responsive layout.
+
+Hotel and driver registration supports Jammu, Kashmir and Ladakh, with Kashmir
+selected by default. Region changes reset the destination/district (and hotel
+exact area); private editing restores the saved region. Hotel exact-area choices
+follow the destination and retain the custom-area option. Approved listings are
+shown only in their regional directory: `/hotels` and `/drivers` for Kashmir,
+`/ladakh/hotels` and `/ladakh/drivers`, or `/jammu/hotels` and `/jammu/drivers`.
+Editing an approved listing still requires fresh approval. Registration links
+remain global so partners can register in any of the three regions.
+The optional `region` field is stored in existing `details_json`; no migration is
+required. Legacy listings infer region from their location, otherwise Kashmir.
+Public API `region` filters apply before counts and pagination; admin access and
+private owner credentials are unchanged. Shared choices live in `src/data/regions.ts`.
+Run `node --test functions/api/regional-partners.test.mjs` for regional storage,
+approval, privacy and legacy-record checks, and
+`node --test tests/regional-pages.test.mjs` against port 8792 for regional forms.
 
 A simple back arrow appears inline beside Home in each page's existing breadcrumb.
 Pages without breadcrumbs place it alongside their existing opening heading or

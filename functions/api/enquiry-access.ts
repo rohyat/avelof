@@ -3,6 +3,7 @@ import { accessConfigured, adminCookie, allowAccessAttempt, correctAdminUsername
 import type { AccessEnv } from '../_lib/enquiryAccess.ts'
 import { indianPhoneNumber } from '../../src/services/phoneNumbers.ts'
 import { localTripPreferences } from '../../src/data/localTrips.ts'
+import { ladakhEnquiryPreferences, ladakhPackages } from '../../src/data/ladakh.ts'
 import { requestedBooking } from '../../src/services/bookingDetails.ts'
 import { hotelDetailsSchema } from '../../src/services/hotelSchema.ts'
 import { driverDetailsSchema } from '../../src/services/driverSchema.ts'
@@ -93,6 +94,11 @@ async function publicSummary(row: EnquiryRow, database: D1Database) {
     }
   }
   if (typeof source.packagePreference === 'string' && (tourPackages.some((item) => item.name === source.packagePreference) || ['Custom package', 'Stay or car only', ...localTripPreferences].includes(source.packagePreference))) selected.packagePreference = source.packagePreference
+  if (source.region === 'Ladakh') {
+    const choices: readonly string[] = [...Object.values(ladakhEnquiryPreferences), ...ladakhPackages.map(({ name }) => name)]
+    if (typeof source.packagePreference === 'string' && choices.includes(source.packagePreference)) selected.packagePreference = source.packagePreference
+    if (source.carRental === ladakhEnquiryPreferences.car) selected.carRental = ladakhEnquiryPreferences.car
+  }
   if (row.kind === 'package' && (source.packagePreference === 'Custom package' || typeof source.placesToVisit === 'string' && source.placesToVisit.trim())) selected.packagePreference = 'Custom package'
   for (const key of ['checkInDate', 'checkOutDate', 'startDate', 'endDate', 'arrivalDate', 'departureDate']) {
     const value = z.iso.date().safeParse(source[key])

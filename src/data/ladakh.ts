@@ -1,3 +1,10 @@
+export const ladakhEnquiryPreferences = {
+  package: 'Ladakh package planning',
+  bike: 'Ladakh bike trip planning',
+  car: 'Ladakh cab or transfer',
+  contact: 'General Ladakh travel enquiry',
+} as const
+
 export const ladakhPackages = [
   { name: 'Ladakh Essentials', duration: '6 nights / 7 days', start: 'Leh', label: 'A first look at Ladakh', stops: ['Leh', 'Nubra', 'Pangong', 'Leh'], description: 'A proposed first-time circuit with acclimatisation in Leh before the higher passes and lake.', outline: [
     { days: 'Days 1-2', detail: 'Arrive in Leh and acclimatise for at least 48 hours. Only gentle nearby visits if comfortable.' },
@@ -17,7 +24,7 @@ export const ladakhPackages = [
 ]
 
 export const ladakhFaqs = [
-  { question: 'Can I book a Ladakh departure now?', answer: 'Not yet. This is a summer 2027 planning preview. Speak to AVELOF about your requirements; suppliers, prices and departure availability still need confirmation. No payment or booking is taken on this page.' },
+  { question: 'Can I book a Ladakh departure now?', answer: 'Not yet. This is a summer 2027 planning preview. You can send an enquiry about your requirements; suppliers, prices and departure availability still need confirmation. Enquiries are not bookings, and no payment is taken here.' },
   { question: 'Should I start in Leh or Srinagar?', answer: 'Leh suits a fly-in starting point. Srinagar adds a road approach via Kargil, subject to openings and local arrangements. Both need an appropriate acclimatisation plan; driving in does not remove altitude risk.' },
   { question: 'Are bike rental and riding support included?', answer: 'No. Bike departures are not open yet. Bikes, licences, deposits, insurance, fuel, protective equipment, ride leaders, breakdown support and emergency arrangements must be checked and agreed separately.' },
   { question: 'Can we change the pace or avoid a lake overnight?', answer: 'Discuss a slower private route with our team. A Pangong overnight is not compulsory, and changing the stops may require extra days. Suitability, travel time and accommodation must be checked before confirming an itinerary.' },
@@ -31,3 +38,13 @@ export const ladakhPlaces = [
   { name: 'Sham Valley & Lamayuru', description: 'Monasteries and dramatic landscapes along the western approach to Leh.' },
   { name: 'Kargil', description: 'A possible overnight stop on the Srinagar approach, rather than rushing straight to Leh.' },
 ]
+export const ladakhPages = {
+  packages: { title: 'Find your Ladakh journey.', copy: 'Explore proposed routes from Leh or Srinagar, with room for acclimatisation and a pace that suits you.' },
+  'bike-trips': { title: 'Ladakh Bike Trips', copy: 'Motorcycle journeys with their own planning, rider checks and local operating arrangements.' },
+  'car-rentals': { title: 'Ladakh cabs & transfers.', copy: 'Discuss private circuits, airport pickups and the Srinagar approach with our team.' },
+  places: { title: 'Places to explore in Ladakh.', copy: 'Discover the towns, valleys, monasteries and landscapes along your journey.' },
+  contact: { title: 'Talk to AVELOF.', copy: 'Get help with your Ladakh dates, route, stays and transport. Send an enquiry or give us a call.' },
+  'travel-guide': { title: 'Your Ladakh travel guide.', copy: 'Prepare for altitude, changing mountain roads and remote stays before making plans.' },
+  experiences: { title: 'Ladakh, beyond the road.', copy: 'Cultural visits and outdoor experiences, subject to seasonal and local operator checks.' },
+} as const
+export type LadakhSection = 'home' | keyof typeof ladakhPages

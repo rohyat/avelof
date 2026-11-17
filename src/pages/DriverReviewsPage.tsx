@@ -13,6 +13,7 @@ import { loadPublicHotelByDisplayId } from '../services/hotelService'
 import { reviewSubmissionSchema } from '../services/reviewSchema'
 import type { ReviewStatus } from '../services/reviewSchema'
 import { loadPublicReviews, ReviewError, saveReview } from '../services/reviewService'
+import { listingRegion, regionBasePath, regionFromPath, regionHomePath } from '../data/regions'
 
 function reviewError(error: unknown) {
   return error instanceof ReviewError ? error.message : 'We could not confirm the driver review request. Please try again.'
@@ -21,7 +22,9 @@ function reviewError(error: unknown) {
 export default function DriverReviewsPage() {
   const { driverId = '', hotelId = '' } = useParams()
   const location = useLocation()
-  const reviewKind = location.pathname.startsWith('/hotels/') ? 'hotel' : 'driver'
+  const reviewKind = /\/hotels\//.test(location.pathname) ? 'hotel' : 'driver'
+  const region = regionFromPath(location.pathname)
+  const directoryPath = `${regionBasePath(region)}/${reviewKind === 'hotel' ? 'hotels' : 'drivers'}`
   const subjectId = reviewKind === 'hotel' ? hotelId : driverId
   const [subject, setSubject] = useState<{ name: string; displayId: string; description: string; photo: string } | null>(null)
   const [listing, setListing] = useState<Awaited<ReturnType<typeof loadPublicReviews>> | null>(null)
@@ -40,8 +43,8 @@ export default function DriverReviewsPage() {
   useEffect(() => {
     const controller = new AbortController()
     const subjectRequest = reviewKind === 'hotel'
-      ? loadPublicHotelByDisplayId(subjectId, controller.signal).then((hotel) => hotel && ({ name: hotel.name, displayId: hotel.hotelId, description: `${hotelCategoryLabel(hotel.category)} · ${hotelLocationLabel(hotel)}`, photo: hotel.photos[0] }))
-      : loadPublicDriverByDisplayId(subjectId, controller.signal).then((driver) => driver && ({ name: driver.fullName, displayId: driver.driverId, description: `${driver.vehicleName} · ${driver.location}`, photo: driver.photo }))
+      ? loadPublicHotelByDisplayId(subjectId, controller.signal).then((hotel) => hotel && listingRegion(hotel) === region && ({ name: hotel.name, displayId: hotel.hotelId, description: `${hotelCategoryLabel(hotel.category)} · ${hotelLocationLabel(hotel)}`, photo: hotel.photos[0] }))
+      : loadPublicDriverByDisplayId(subjectId, controller.signal).then((driver) => driver && listingRegion(driver) === region && ({ name: driver.fullName, displayId: driver.driverId, description: `${driver.vehicleName} · ${driver.location}`, photo: driver.photo }))
     Promise.all([
       subjectRequest,
       loadPublicReviews(page, controller.signal, reviewKind === 'hotel' ? { hotelId: subjectId } : { driverId: subjectId }),
@@ -53,7 +56,7 @@ export default function DriverReviewsPage() {
       if (!controller.signal.aborted) { setSubject(null); setListing(null); setLoadError(reviewError(error)) }
     }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
-  }, [page, refreshVersion, reviewKind, subjectId])
+  }, [page, refreshVersion, reviewKind, subjectId, region])
 
   function refresh(nextPage = page) {
     setLoading(true)
@@ -101,12 +104,12 @@ export default function DriverReviewsPage() {
     {submitting && <SubmissionProgress title="Saving your review" />}
     {saved && <SubmissionSuccess title="Your review has been saved">{saved === 'published' ? 'Your rating has been saved and published.' : 'Your submission has been saved but is not currently published.'}</SubmissionSuccess>}
     <section className="page-hero"><div className="page-width">
-      <div className="breadcrumb"><BackButton /><Link to="/">Home</Link><span>/</span><Link to={reviewKind === 'hotel' ? '/hotels' : '/drivers'}>{reviewKind === 'hotel' ? 'Hotels' : 'Our drivers'}</Link><span>/</span><span>{reviewKind === 'hotel' ? 'Hotel' : 'Driver'} reviews</span></div>
+      <div className="breadcrumb"><BackButton /><Link to={regionHomePath(region)}>Home</Link><span>/</span><Link to={directoryPath}>{reviewKind === 'hotel' ? 'Hotels' : 'Our drivers'}</Link><span>/</span><span>{reviewKind === 'hotel' ? 'Hotel' : 'Driver'} reviews</span></div>
       <p className="eyebrow">AVELOF {reviewKind} feedback</p><h1>{subject?.name ?? `${reviewKind === 'hotel' ? 'Hotel' : 'Driver'} reviews`}</h1>
       {subject && <p className="driver-review-identity">{subject.displayId} · {subject.description}</p>}
     </div></section>
     <section className="reviews-page page-width">
-      <Link className="text-link" to={reviewKind === 'hotel' ? '/hotels' : '/drivers'}><ArrowLeft size={16} /> Back to all {reviewKind === 'hotel' ? 'hotels' : 'drivers'}</Link>
+      <Link className="text-link" to={directoryPath}><ArrowLeft size={16} /> Back to all {reviewKind === 'hotel' ? 'hotels' : 'drivers'}</Link>
       {loading && <p role="status">Loading {reviewKind} reviews...</p>}
       {loadError && <p className="enquiry-error" role="alert">{loadError}</p>}
       {subject && listing && <>

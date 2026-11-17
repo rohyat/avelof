@@ -1,7 +1,7 @@
-import { registrationLocations } from './hotelRegistration.ts'
+import { hotelLocationsByRegion } from './regions.ts'
 
 export const businessKinds = ['restaurant', 'shop'] as const
-export const businessLocations = registrationLocations
+export const businessLocations = hotelLocationsByRegion.Kashmir
 export const businessPhotoLimit = 1000000
 export const businessUploadLimit = businessPhotoLimit * 5 + 16000
 

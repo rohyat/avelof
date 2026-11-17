@@ -14,6 +14,8 @@ import BusinessRegistrationPage, { AdminBusinessesPage, BusinessStatusPage } fro
 import LocalTripsPage from './pages/LocalTripsPage'
 import PricingProvider from './components/PricingProvider'
 import LadakhPage from './pages/LadakhPage'
+import RegionalHotelsPage from './pages/RegionalHotelsPage'
+import { ladakhPages } from './data/ladakh'
 
 export default function App() {
   return (
@@ -21,6 +23,18 @@ export default function App() {
       <Route element={<SiteLayout />}>
         <Route index element={<HomePage />} />
         <Route path="ladakh" element={<LadakhPage />} />
+        {Object.keys(ladakhPages).map((section) => <Route key={section} path={`ladakh/${section}`} element={<LadakhPage section={section as keyof typeof ladakhPages} />} />)}
+        <Route path="ladakh/hotels" element={<RegionalHotelsPage region="Ladakh" />} />
+        <Route path="ladakh/hotels/:hotelId/reviews" element={<DriverReviewsPage />} />
+        <Route path="ladakh/hotels/:slug" element={<DetailPage />} />
+        <Route path="ladakh/drivers" element={<DriversPage region="Ladakh" />} />
+        <Route path="ladakh/drivers/:driverId/reviews" element={<DriverReviewsPage />} />
+        <Route path="ladakh/partners" element={<PartnersPage region="Ladakh" />} />
+        <Route path="jammu/hotels" element={<RegionalHotelsPage region="Jammu" />} />
+        <Route path="jammu/hotels/:hotelId/reviews" element={<DriverReviewsPage />} />
+        <Route path="jammu/hotels/:slug" element={<DetailPage />} />
+        <Route path="jammu/drivers" element={<DriversPage region="Jammu" />} />
+        <Route path="jammu/drivers/:driverId/reviews" element={<DriverReviewsPage />} />
         <Route path="tour-packages" element={<CollectionPage />} />
         <Route path="tour-packages/:slug" element={<DetailPage />} />
         <Route path="car-rentals" element={<CollectionPage />} />

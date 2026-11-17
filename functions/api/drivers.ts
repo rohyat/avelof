@@ -10,8 +10,10 @@ import { deleteRegistrationPhotos, limitedBody, saveRegistrationPhoto, validHote
 import type { HotelEnv } from '../_lib/hotelRegistration.ts'
 import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 import { readRetainedPhotos, retainedPhotoKeys } from '../_lib/partnerPhotos.ts'
+import { regions } from '../../src/data/regions.ts'
+import { listingRegionSql } from '../_lib/regionalListings.ts'
 
-const listSchema = z.object({ scope: z.enum(['public', 'admin']).default('public'), page: z.coerce.number().int().min(1).max(10000).default(1), id: z.uuidv4().optional(), driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/).optional(), status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all') }).strict()
+const listSchema = z.object({ scope: z.enum(['public', 'admin']).default('public'), page: z.coerce.number().int().min(1).max(10000).default(1), id: z.uuidv4().optional(), driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/).optional(), status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all'), region: z.enum(regions).optional() }).strict()
 const moderationSchema = hotelModerationObject.omit({ price: true, breakfastPrice: true, dinnerPrice: true, roomRates: true, latitude: true, longitude: true }).extend({ vehicleNumber: driverVehicleNumberSchema })
 const deletionSchema = z.object({ id: z.uuidv4(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
 const legacyDriverId = (id: string) => `AVELOF_DRV_${id.replaceAll('-', '').toUpperCase()}`
@@ -51,11 +53,12 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
     if (request.method === 'GET') {
       const parsed = listSchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
       if (!parsed.success) return privateReply({ error: 'Invalid driver filters.' }, 400)
-      const { scope, page, status, id, driverId } = parsed.data
+      const { scope, page, status, id, driverId, region } = parsed.data
       const admin = scope === 'admin'
       if (admin && !await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
-      const where = admin ? "WHERE (? = 'all' OR status = ?) AND (? IS NULL OR id = ?) AND (? IS NULL OR driver_id = ?)" : "WHERE status = 'approved' AND (? IS NULL OR id = ?) AND (? IS NULL OR driver_id = ?)"
+      const where = (admin ? "WHERE (? = 'all' OR status = ?) AND (? IS NULL OR id = ?) AND (? IS NULL OR driver_id = ?)" : "WHERE status = 'approved' AND (? IS NULL OR id = ?) AND (? IS NULL OR driver_id = ?)") + ` AND (? IS NULL OR ${listingRegionSql} = ?)`
       const values = admin ? [status, status, id ?? null, id ?? null, driverId ?? null, driverId ?? null] : [id ?? null, id ?? null, driverId ?? null, driverId ?? null]
+      values.push(region ?? null, region ?? null)
       const total = await DB.prepare(`SELECT count(*) AS total FROM driver_registrations ${where}`).bind(...values).first<{ total: number }>()
       const listingColumns = admin ? driverColumns : `${driverColumns}, (SELECT avg(rating) FROM reviews WHERE reviews.driver_id = driver_registrations.driver_id AND reviews.status = 'published') AS average_rating, (SELECT count(*) FROM reviews WHERE reviews.driver_id = driver_registrations.driver_id AND reviews.status = 'published') AS review_count`
       const rows = await DB.prepare(`SELECT ${listingColumns} FROM driver_registrations ${where} ORDER BY created_at DESC, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<DriverRow>()

@@ -2,10 +2,12 @@ import BackButton from '../components/BackButton'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Car, Hotel, Store } from 'lucide-react'
 import CallAssistance from '../components/CallAssistance'
-export default function PartnersPage() {
+import type { Region } from '../data/regions'
+export default function PartnersPage({ region = 'Kashmir' }: { region?: Region }) {
   return <section className="enquiry-access-page page-width">
     <div className="enquiry-access-heading"><BackButton /><div><p className="eyebrow">Work with our local team</p><h1>Partner with AVELOF</h1><p>A dedicated space for hotel owners and drivers. Customer bookings remain in Check Bookings.</p></div></div>
     <CallAssistance registration />
+    <p>Hotel and driver registration is open for Jammu, Kashmir and Ladakh. Choose your region in the form; approved listings appear in that region only. You are browsing {region}.</p>
     <div className="partner-options">
       <article className="admin-review-record"><Hotel size={28} /><h2>Hotel owners</h2><p>Share your rooms, amenities, photos and room-only rates with optional meal charges.</p><div className="partner-edit-action"><Link className="button button-dark" to="/register-hotel">Register your hotel <ArrowRight size={16} /></Link><Link className="button button-outline" to="/hotel-status">Edit your details <ArrowRight size={16} /></Link></div></article>
       <article className="admin-review-record"><Car size={28} /><h2>Drivers & vehicle owners</h2><p>Register your vehicle. AVELOF reviews your private driver details before publishing.</p><div className="partner-edit-action"><Link className="button button-dark" to="/register-driver">Register as a driver <ArrowRight size={16} /></Link><Link className="button button-outline" to="/driver-status">Edit your details <ArrowRight size={16} /></Link></div></article>

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { indianPhoneNumber } from './phoneNumbers.ts'
 import { hotelRoomTypes, minimumHotelRooms } from '../data/hotelRegistration.ts'
+import { regions } from '../data/regions.ts'
 
 const shortText = z.string().trim().max(300)
 const dateText = z.iso.date()
@@ -12,6 +13,7 @@ export const enquirySchema = z.object({
   website: z.string().max(200).default(''),
   fields: z.object({
     fullName: z.string().trim().min(1).max(100),
+    region: z.enum(regions).optional(),
     phoneNumber: z.string().trim().regex(/^[+0-9\s()-]{7,25}$/).refine((value) => Boolean(indianPhoneNumber(value))),
     adults: guestCount.refine((value) => Number(value) >= 1).optional(),
     children: guestCount.optional(),

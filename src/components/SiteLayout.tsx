@@ -9,6 +9,8 @@ import { createWhatsAppUrl } from '../services/bookingService'
 import WhatsAppIcon from './WhatsAppIcon'
 import InstallApp from './InstallApp'
 import type { BookingKind } from '../types'
+import { regionFromPath, regionHomePath } from '../data/regions'
+import { ladakhPages } from '../data/ladakh'
 
 export interface SiteContext {
   openBooking: (kind: BookingKind, selectedItem?: string) => void
@@ -61,15 +63,16 @@ export default function SiteLayout() {
   const menuToggleRef = useRef<HTMLButtonElement>(null)
   const [booking, setBooking] = useState<{ kind: BookingKind; item?: string } | null>(null)
   const location = useLocation()
-  const isLadakh = location.pathname === '/ladakh'
-  const homePath = isLadakh ? '/ladakh' : '/'
-  const destinationName = isLadakh ? 'Ladakh' : 'Kashmir'
+  const region = regionFromPath(location.pathname)
+  const isLadakh = region === 'Ladakh'
+  const homePath = regionHomePath(region)
+  const destinationName = region
   const visibleNavItems = isLadakh ? [
-    ['Packages', '/ladakh#packages'], ['Bike Trips', '/ladakh#bike-trips'],
-    ['Stays', '/ladakh#stays'], ['Cabs', '/ladakh#transport'],
-    ['Places', '/ladakh#places'], ['Travel Guide', '/ladakh#travel-guide'],
-    ['Contact', '/ladakh#contact'],
-  ] : navItems
+    ['Packages', '/ladakh/packages'], ['Bike Trips', '/ladakh/bike-trips'],
+    ['Hotels', '/ladakh/hotels'], ['Cabs', '/ladakh/car-rentals'],
+    ['Drivers', '/ladakh/drivers'], ['Places', '/ladakh/places'],
+    ['Contact', '/ladakh/contact'],
+  ] : region === 'Jammu' ? [['Hotels', '/jammu/hotels'], ['Drivers', '/jammu/drivers'], ['Register your hotel', '/register-hotel'], ['Register as a driver', '/register-driver'], ['Explore Kashmir', '/']] : navItems
   const navigationType = useNavigationType()
   const previousLocation = useRef({ pathname: location.pathname, hash: location.hash })
 
@@ -173,9 +176,18 @@ export default function SiteLayout() {
       '/driver-status': { title: 'Private Driver Status | AVELOF', description: 'Check your driver registration with a private access code.' },
       '/admin/panel/drivers': { title: 'Driver Registrations | AVELOF', description: 'Private AVELOF driver approval dashboard.' },
     }
-    const details = catalogItem
+    const section = location.pathname.split('/')[2]
+    const ladakhDetails = regionFromPath(location.pathname) === 'Ladakh' && section
+      ? Object.entries(ladakhPages).find(([key]) => key === section)?.[1]
+      : undefined
+    const regionalDirectory = regionFromPath(location.pathname) !== 'Kashmir' && (section === 'hotels' || section === 'drivers')
+    const details = ladakhDetails
+      ? { title: `${ladakhDetails.title} | AVELOF`, description: ladakhDetails.copy }
+      : regionalDirectory
+      ? { title: `${regionFromPath(location.pathname)} ${section === 'hotels' ? 'Hotels' : 'Drivers'} | AVELOF`, description: `Explore approved ${section} in ${regionFromPath(location.pathname)} with AVELOF.` }
+      : catalogItem
       ? { title: `${catalogItem.name} | AVELOF Kashmir`, description: catalogItem.description }
-      : pageDetails[location.pathname] ?? { title: 'AVELOF | Kashmir Travel', description: 'Discover thoughtful travel experiences in Kashmir with AVELOF.' }
+      : pageDetails[location.pathname] ?? { title: `AVELOF | ${regionFromPath(location.pathname)} Travel`, description: `Discover thoughtful travel experiences in ${regionFromPath(location.pathname)} with AVELOF.` }
     document.title = details.title
     document.querySelector('meta[name="description"]')?.setAttribute('content', details.description)
   }, [location.pathname])
@@ -191,7 +203,7 @@ export default function SiteLayout() {
 
   return (
     <>
-      {!isLadakh && <OfferBanner />}
+      {region === 'Kashmir' && <OfferBanner />}
       <header className="site-header">
         <div className="header-brand-group">
           <Link className="brand" to={homePath} aria-label="AVELOF home" onClick={returnHome}><img className="brand-logo" src="/app-icon-512.png?v=chinar-1" alt="" width={44} height={44} /><span>AVELOF<small>BEYOND EXPECTATIONS</small></span></Link>
@@ -199,7 +211,7 @@ export default function SiteLayout() {
         </div>
         <button ref={menuToggleRef} className="icon-button menu-toggle" aria-expanded={menuOpen} aria-controls="main-navigation" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => { const next = !menuOpen; setMenuOpen(next); if (next) window.dispatchEvent(new Event('avelof:pause-review-carousel')) }}>{menuOpen ? <X /> : <Menu />}</button>
         <nav ref={menuRef} id="main-navigation" className={menuOpen ? 'main-nav is-open' : 'main-nav'} aria-label="Main navigation">
-          {visibleNavItems.map(([label, href]) => isLadakh ? <Link key={href} to={href} onClick={closeMenu}>{label}</Link> : <NavLink key={href} to={href} onClick={closeMenu}>{label}</NavLink>)}
+          {visibleNavItems.map(([label, href]) => <NavLink key={href} to={href} onClick={closeMenu}>{label}</NavLink>)}
         </nav>
       </header>
       <main>
@@ -209,13 +221,13 @@ export default function SiteLayout() {
       <footer className="site-footer">
         <div className="footer-main">
           <div className="footer-brand"><Link className="brand brand-light" to={homePath} aria-label="AVELOF home" onClick={returnHome}><img className="brand-logo" src="/app-icon-512.png?v=chinar-1" alt="" width={44} height={44} /><span>AVELOF<small>YOUR {destinationName.toUpperCase()} EXPERIENCE</small></span></Link><p>Your stay. Your journey.<br />Your {destinationName} experience.</p></div>
-          <div><h3>Explore</h3>{isLadakh ? <>{visibleNavItems.map(([label, href]) => <Link key={href} to={href}>{label}</Link>)}<Link to="/">Explore Kashmir</Link></> : <><Link to="/tour-packages">Tour packages</Link><Link to="/local-trips">Local Trips</Link><Link to="/car-rentals">Car rentals</Link><Link to="/drivers">Our drivers</Link><Link to="/hotels">Hotels & stays</Link><Link to="/destinations">Destinations</Link><Link to="/partners">Partner with AVELOF</Link></>}</div>
+          <div><h3>Explore</h3>{region !== 'Kashmir' ? <>{visibleNavItems.map(([label, href]) => <Link key={href} to={href}>{label}</Link>)}{isLadakh && <><Link to="/ladakh/travel-guide">Travel guide</Link><Link to="/ladakh/experiences">Experiences</Link><Link to="/ladakh/partners">Partner with AVELOF</Link></>}<Link to="/">Explore Kashmir</Link></> : <><Link to="/tour-packages">Tour packages</Link><Link to="/local-trips">Local Trips</Link><Link to="/car-rentals">Car rentals</Link><Link to="/drivers">Our drivers</Link><Link to="/hotels">Hotels & stays</Link><Link to="/destinations">Destinations</Link><Link to="/jammu/hotels">Jammu hotels</Link><Link to="/jammu/drivers">Jammu drivers</Link><Link to="/partners">Partner with AVELOF</Link></>}</div>
           <div><h3>AVELOF</h3><Link to="/about">About & Contact</Link><Link to="/reviews">Reviews</Link><Link to="/my-enquiries">Check bookings</Link><a href={business.instagram} target="_blank" rel="noreferrer">Instagram</a><InstallApp /><Link to="/admin/panel">Admin sign-in</Link></div>
           <div><h3>Email our team</h3><a href={`mailto:${business.email}`}>{business.email}</a><span>Kashmir, India</span></div>
         </div>
         <div className="footer-bottom"><span>© {currentYear} AVELOF. All journeys begin with a conversation.</span><a href={business.website}>avelof.in</a></div>
       </footer>
-      {booking && <BookingModal kind={booking.kind} selectedItem={booking.item} onClose={() => setBooking(null)} />}
+      {booking && <BookingModal kind={booking.kind} selectedItem={booking.item} region={region} onClose={() => setBooking(null)} />}
     </>
   )
 }

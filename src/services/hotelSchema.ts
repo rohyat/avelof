@@ -3,6 +3,7 @@ import { heatingOptions, hotelAmenities, hotelCategories, hotelIdPattern, hotelM
 import { indianPhoneNumber } from './phoneNumbers.ts'
 import { partnerStatusAccessCodePattern } from './partnerAccessCode.ts'
 import { coordinateFields, coordinatePairError, coordinatesPaired } from './locationSchema.ts'
+import { hotelLocationsByRegion, listingRegion, regions } from '../data/regions.ts'
 
 const text = (max: number) => z.string().trim().min(1).max(max)
 export const hotelStatusSchema = z.enum(['pending', 'approved', 'rejected'])
@@ -22,7 +23,7 @@ export function validHotelRoomRates(details: { roomRates?: HotelRoomRate[]; room
     && rates.every(({ roomType, count }) => details.roomTypes.includes(`${roomType} (${count} ${count === 1 ? 'room' : 'rooms'})`))
 }
 const hotelDetailsObject = z.object({
-  name: text(120), location: z.enum(registrationLocations), category: z.enum(hotelCategories),
+  name: text(120), location: z.enum(registrationLocations), region: z.enum(regions).optional(), category: z.enum(hotelCategories),
   exactLocation: text(120).optional(),
   description: text(1600).min(20), price: hotelPriceSchema,
   mealPlan: z.enum(hotelMealPlans), taxDetails: z.enum(hotelTaxOptions).optional(),
@@ -44,7 +45,7 @@ export const hotelSubmissionSchema = hotelDetailsObject.omit({ gstPercent: true 
   id: z.uuidv4().toLowerCase(), contactName: text(80),
   phone: text(30).transform(indianPhoneNumber).refine(Boolean, 'Enter a valid 10-digit Indian phone number.'),
   publicationConsent: z.literal(true), website: z.string().max(200).default(''),
-}).strict().refine(coordinatesPaired, coordinatePairError)
+}).strict().refine(coordinatesPaired, coordinatePairError).refine((hotel) => hotelLocationsByRegion[listingRegion(hotel)].some((place) => place === hotel.location), { message: 'Choose a location in the selected region.', path: ['location'] })
 const customerPriceSchema = z.number().min(0).max(1500000).refine((price) => Math.abs(price * 100 - Math.round(price * 100)) < 0.00001, 'Use at most two decimal places.')
 const customerRoomRateSchema = hotelRoomRateSchema.extend({ price: customerPriceSchema, originalPrice: customerPriceSchema.optional() })
 const customerRoomRatesSchema = z.array(customerRoomRateSchema).min(1).max(hotelRoomTypes.length)

@@ -6,6 +6,8 @@ import type { HotelStatus } from './hotelSchema'
 import { HotelError, hotelErrorText, requestHotel } from './hotelService'
 import type { RentalCar } from '../types'
 import { rentalCars } from '../data/catalog'
+import { listingRegion } from '../data/regions'
+import type { Region } from '../data/regions'
 const pagination = { total: z.number().int().min(0), page: z.number().int().min(1), pageSize: z.literal(25) }
 const adminList = z.object({ ...pagination, drivers: z.array(adminDriverSchema) })
 const publicList = z.object({ ...pagination, drivers: z.array(publicDriverSchema) })
@@ -39,11 +41,11 @@ export async function moderateDriver(id: string, version: number, status: HotelS
 export async function deleteDriver(id: string, version: number) {
   return z.object({ deleted: z.literal(true), id: z.uuidv4() }).parse(await requestHotel('/api/drivers', 'DELETE', { id, version }))
 }
-export async function loadPublicDrivers(signal?: AbortSignal, id?: string) {
+export async function loadPublicDrivers(signal?: AbortSignal, id?: string, region: Region = 'Kashmir') {
   const drivers: PublicDriver[] = []
   for (let page = 1; ; page++) {
-    const listing = publicList.parse(await requestHotel(`/api/drivers?${new URLSearchParams({ page: String(page), ...(id ? { id } : {}) })}`, 'GET', undefined, signal))
-    drivers.push(...listing.drivers)
+    const listing = publicList.parse(await requestHotel(`/api/drivers?${new URLSearchParams({ page: String(page), region, ...(id ? { id } : {}) })}`, 'GET', undefined, signal))
+    drivers.push(...listing.drivers.filter((driver) => listingRegion(driver) === region))
     if (page * listing.pageSize >= listing.total) return drivers
   }
 }
@@ -63,16 +65,16 @@ export async function loadPublicDriverByDisplayId(driverId: string, signal?: Abo
   const listing = publicList.parse(await requestHotel(`/api/drivers?${new URLSearchParams({ driverId })}`, 'GET', undefined, signal))
   return listing.drivers[0] ?? null
 }
-export function useRegisteredDrivers(enabled: boolean, id?: string) {
-  const key = enabled ? id ?? 'all' : ''
+export function useRegisteredDrivers(enabled: boolean, id?: string, region: Region = 'Kashmir') {
+  const key = enabled ? `${region}:${id ?? 'all'}` : ''
   const [state, setState] = useState<{ key: string; cars: RentalCar[]; loading: boolean; error: string }>({ key: '', cars: [], loading: enabled, error: '' })
   const [revision, setRevision] = useState(0)
   useEffect(() => {
     if (!enabled) return
     const controller = new AbortController()
-    loadPublicDrivers(controller.signal, id).then((drivers) => setState({ key, cars: drivers.map(catalogDriver), loading: false, error: '' })).catch((error: unknown) => { if (!controller.signal.aborted) setState({ key, cars: [], loading: false, error: hotelErrorText(error) }) })
+    loadPublicDrivers(controller.signal, id, region).then((drivers) => setState({ key, cars: drivers.map(catalogDriver), loading: false, error: '' })).catch((error: unknown) => { if (!controller.signal.aborted) setState({ key, cars: [], loading: false, error: hotelErrorText(error) }) })
     return () => controller.abort()
-  }, [enabled, id, key, revision])
+  }, [enabled, id, key, region, revision])
   return { ...(state.key === key ? state : { cars: [], loading: enabled, error: '' }), reload: () => { setState({ key, cars: [], loading: true, error: '' }); setRevision((current) => current + 1) } }
 }
 export const driverSelectionValue = (car: RentalCar) => car.registeredDriverId ? `${car.name} (${car.registeredDriverId})` : car.name

@@ -31,15 +31,15 @@ import { tourPackagePdfData } from '../services/itineraryPdf'
 import PackageComparison from '../components/PackageComparison'
 import CallAssistance from '../components/CallAssistance'
 import HolidayDestinations from '../components/HolidayDestinations'
+import { regionBasePath, regionFromPath, regionHomePath } from '../data/regions'
 
-const routeFor: Record<CatalogKind, string> = { package: '/tour-packages', car: '/car-rentals', hotel: '/hotels' }
 function useBooking() {
   return useOutletContext<SiteContext>().openBooking
 }
 
 function kindFromPath(path: string): CatalogKind {
-  if (path.startsWith('/car-rentals')) return 'car'
-  if (path.startsWith('/hotels')) return 'hotel'
+  if (/(?:^|\/)car-rentals(?:\/|$)/.test(path)) return 'car'
+  if (/(?:^|\/)hotels(?:\/|$)/.test(path)) return 'hotel'
   return 'package'
 }
 
@@ -55,8 +55,10 @@ function SectionHeading({ eyebrow, title, copy, link, to }: { eyebrow: string; t
   return <div className="section-heading"><div><Eyebrow>{eyebrow}</Eyebrow><h2>{title}</h2>{copy && <p>{copy}</p>}</div>{link && to && <Link className="text-link" to={to}>{link}<ArrowRight size={16} /></Link>}</div>
 }
 
-function CatalogCard({ item: initialItem, kind }: { item: CatalogItem; kind: CatalogKind }) {
+export function CatalogCard({ item: initialItem, kind }: { item: CatalogItem; kind: CatalogKind }) {
   const openBooking = useBooking()
+  const region = regionFromPath(useLocation().pathname)
+  const routeFor: Record<CatalogKind, string> = { package: '/tour-packages', car: `${regionBasePath(region)}/car-rentals`, hotel: `${regionBasePath(region)}/hotels` }
   const [searchParams] = useSearchParams()
   const minimumSeats = Number(searchParams.get('seats')) || 0
   const seatingOptions = initialItem.kind === 'car' && !initialItem.registeredDriverId && initialItem.category === 'Tempo Traveller' ? rentalCars.filter((car) => car.category === 'Tempo Traveller' && car.seats >= minimumSeats) : []
@@ -72,7 +74,7 @@ function CatalogCard({ item: initialItem, kind }: { item: CatalogItem; kind: Cat
         {item.kind === 'car' && <VehiclePhotoCaption vehicle={item} />}
         {item.kind === 'car' && item.registeredDriverId && <p className="privacy-note">Driver: {item.driverDisplayName} · {item.maskedPhone}</p>}
         {underDevelopment ? <div className="catalog-title"><h3>{item.name}</h3></div> : <Link to={detailUrl} className="catalog-title"><h3>{seatingOptions.length ? 'Tempo Traveller' : item.name}</h3></Link>}{item.kind !== 'hotel' && <p className="card-copy">{underDevelopment ? 'We’re working on this package. Please explore Deluxe or Premium for now.' : item.description}</p>}
-        {item.kind === 'hotel' && <>{item.registeredHotelId && <div className="hotel-card-rating"><ReviewStars rating={item.hotelAverageRating ?? 0} label={item.hotelAverageRating ? `${item.hotelAverageRating.toFixed(1)} out of 5 stars from ${item.hotelReviewCount} reviews` : 'No hotel ratings yet'} /><span>{item.hotelAverageRating ? `${item.hotelAverageRating.toFixed(1)} · ${item.hotelReviewCount} ${item.hotelReviewCount === 1 ? 'review' : 'reviews'}` : 'No ratings yet'}</span><Link aria-label="View hotel reviews" to={`/hotels/${encodeURIComponent(item.registeredHotelId)}/reviews`}>Reviews <ArrowRight size={14} /></Link></div>}<ul className="hotel-card-highlights hotel-feature-list">{item.highlights.slice(0, 2).map((highlight) => <li key={highlight}><HotelFeature label={highlight} /></li>)}</ul><div className="hotel-feature-chips">{item.facilities.slice(0, 3).map((facility) => <HotelFeature key={facility} label={facility} />)}</div></>}
+        {item.kind === 'hotel' && <>{item.registeredHotelId && <div className="hotel-card-rating"><ReviewStars rating={item.hotelAverageRating ?? 0} label={item.hotelAverageRating ? `${item.hotelAverageRating.toFixed(1)} out of 5 stars from ${item.hotelReviewCount} reviews` : 'No hotel ratings yet'} /><span>{item.hotelAverageRating ? `${item.hotelAverageRating.toFixed(1)} · ${item.hotelReviewCount} ${item.hotelReviewCount === 1 ? 'review' : 'reviews'}` : 'No ratings yet'}</span><Link aria-label="View hotel reviews" to={`${regionBasePath(region)}/hotels/${encodeURIComponent(item.registeredHotelId)}/reviews`}>Reviews <ArrowRight size={14} /></Link></div>}<ul className="hotel-card-highlights hotel-feature-list">{item.highlights.slice(0, 2).map((highlight) => <li key={highlight}><HotelFeature label={highlight} /></li>)}</ul><div className="hotel-feature-chips">{item.facilities.slice(0, 3).map((facility) => <HotelFeature key={facility} label={facility} />)}</div></>}
         {seatingOptions.length > 0 && <fieldset className="vehicle-seat-options"><legend>Seating capacity</legend>{seatingOptions.map((vehicle) => <label key={vehicle.id}><input type="radio" name={`vehicle-seats-${initialItem.id}`} value={vehicle.id} checked={item.id === vehicle.id} onChange={() => setSelectedVehicleId(vehicle.id)} />{vehicle.seats}-seater</label>)}</fieldset>}
         {item.kind === 'hotel' && <div className="hotel-card-rooms"><span>Room types</span><ul aria-label="Available room types">{(item.roomRates ? item.roomRates.map((room) => room.roomType) : item.roomTypes.map((room) => room.replace(/\s*\(\d+ rooms?\)$/, ''))).map((room) => <li key={room}>{room}</li>)}</ul></div>}
         {item.kind === 'hotel' && <MapLocationLink location={item} />}
@@ -217,10 +219,12 @@ export function DetailPage() {
   const pricing = usePricing()
   const { slug = '' } = useParams()
   const location = useLocation()
+  const region = regionFromPath(location.pathname)
+  const routeFor: Record<CatalogKind, string> = { package: '/tour-packages', car: `${regionBasePath(region)}/car-rentals`, hotel: `${regionBasePath(region)}/hotels` }
   const navigate = useNavigate()
   const kind = kindFromPath(location.pathname)
-  const registered = useRegisteredHotels(kind === 'hotel' && /^[a-f0-9-]{36}$/.test(slug), slug)
-  const drivers = useRegisteredDrivers(kind === 'car' && /^[a-f0-9-]{36}$/.test(slug), slug)
+  const registered = useRegisteredHotels(kind === 'hotel' && /^[a-f0-9-]{36}$/.test(slug), slug, region)
+  const drivers = useRegisteredDrivers(kind === 'car' && /^[a-f0-9-]{36}$/.test(slug), slug, region)
   const detailState = location.state as { tripReturn?: { sectionId?: string; returnPath?: string } } | null
   const tripReturn = kind === 'hotel'
     && (detailState?.tripReturn?.sectionId === 'custom-trip' || detailState?.tripReturn?.sectionId === 'package-planner')
@@ -237,7 +241,7 @@ export function DetailPage() {
   if (item.kind === 'package' && item.underDevelopment) return <section className="section page-width"><div className="page-back-line"><BackButton /><Eyebrow>Under development</Eyebrow></div><h1>{item.name}</h1><p>We’re working on this package. Please explore Deluxe or Premium for now.</p><Link className="text-link" to="/tour-packages">Explore other packages <ArrowRight size={16} /></Link></section>
 
   return <>
-    <section className={`detail-top page-width${item.kind === 'package' ? ' package-detail-top' : ''}`}><div className="breadcrumb"><BackButton /><Link to="/">Home</Link><span>/</span><Link to={routeFor[kind]}>{kind === 'package' ? 'Tour packages' : kind === 'car' ? 'Car rentals' : 'Hotels'}</Link><span>/</span><span>{item.name}</span></div><div className="detail-heading"><div><Eyebrow>{item.kind === 'hotel' ? hotelCategoryLabel(item.category) : item.category} · {item.location}</Eyebrow>
+    <section className={`detail-top page-width${item.kind === 'package' ? ' package-detail-top' : ''}`}><div className="breadcrumb"><BackButton /><Link to={regionHomePath(region)}>Home</Link><span>/</span><Link to={routeFor[kind]}>{kind === 'package' ? 'Tour packages' : kind === 'car' ? 'Car rentals' : 'Hotels'}</Link><span>/</span><span>{item.name}</span></div><div className="detail-heading"><div><Eyebrow>{item.kind === 'hotel' ? hotelCategoryLabel(item.category) : item.category} · {item.location}</Eyebrow>
       <div className="detail-title-row"><h1>{item.name}</h1>{item.kind === 'package' && <PackageComparison />}</div>
       {item.kind === 'package' && item.badge && <p className="eyebrow">{item.badge}</p>}
       <p>{item.description}</p>{item.kind === 'package' && <div className="package-hero-facts" role="list" aria-label="Package highlights"><span role="listitem"><CalendarDays size={18} aria-hidden="true" />{item.duration}</span>      <span role="listitem"><BedDouble size={18} aria-hidden="true" />{item.inclusions.some((entry) => /breakfast and dinner/i.test(entry)) ? 'Hotels with breakfast & dinner' : 'Hotels with breakfast'}</span><span role="listitem"><CarFront size={18} aria-hidden="true" />Private vehicle & local driver</span><span role="listitem"><Compass size={18} aria-hidden="true" />Sightseeing included</span></div>}</div>{item.kind === 'car' && <button className="button button-dark" onClick={() => openBooking(kind, item.name)}>Book Now <ArrowRight size={16} /></button>}</div>{item.kind === 'hotel' && <div className="hotel-heading-summary"><HotelSummary item={item} /></div>}{tripReturn && <button className="button button-outline trip-return-button" type="button" onClick={() => navigate(-1)}><ArrowLeft size={16} /> Back to your trip</button>}</section>
@@ -248,7 +252,7 @@ export function DetailPage() {
       {kind === 'hotel' && <HotelDetail item={item as Hotel} />}
       {item.kind === 'hotel' && <div className="hotel-end-booking"><button className="button button-dark" onClick={() => openBooking(kind, item.name)}>Book Now <ArrowRight size={16} aria-hidden="true" /></button></div>}
       {item.kind === 'package' && <div className="package-end-booking"><button className="button button-dark" onClick={() => openBooking(kind, item.name)}>Book Now <ArrowRight size={16} aria-hidden="true" /></button></div>}
-      <section className="detail-related"><Eyebrow>Keep exploring</Eyebrow><h2>More ways to see Kashmir</h2><div className="related-links"><Link to="/tour-packages">Journeys <ArrowRight size={15} /></Link><Link to="/car-rentals">Local transport <ArrowRight size={15} /></Link><Link to="/hotels">Stays <ArrowRight size={15} /></Link></div></section>
+      <section className="detail-related"><Eyebrow>Keep exploring</Eyebrow><h2>More ways to see {region}</h2><div className="related-links"><Link to={region === 'Kashmir' ? '/tour-packages' : regionHomePath(region)}>Journeys <ArrowRight size={15} /></Link><Link to={region === 'Jammu' ? '/jammu/drivers' : routeFor.car}>Local transport <ArrowRight size={15} /></Link><Link to={routeFor.hotel}>Stays <ArrowRight size={15} /></Link></div></section>
     </div><aside className="detail-aside"><Eyebrow>{item.kind === 'hotel' ? 'Room rate' : item.kind === 'car' && item.priceOnEnquiry ? 'Rental fare' : 'From'}</Eyebrow>{item.kind === 'hotel' ? <HotelRates hotel={item} compact /> : item.kind === 'car' && item.priceOnEnquiry ? <strong className="quote-only-price">Price on enquiry</strong> : <>{item.kind === 'car' && !item.registeredDriverId && <OfferPrice price={item.price} />}{item.kind === 'package' && <RegularPrice price={item.price} originalPrice={item.originalPrice} />}<strong>{money(item.price)}</strong><span>{kind === 'package' ? 'per person' : 'per day, estimated'}</span></>}<p>Final price depends on dates, availability and the details of your trip. We’ll confirm everything with you directly.</p><button className="button button-dark" onClick={() => openBooking(kind, item.name)}>Book Now <ArrowRight size={16} /></button></aside></div>
   </>
 }
@@ -290,9 +294,10 @@ function CarDetail({ item }: { item: RentalCar }) {
 }
 
 function HotelSummary({ item }: { item: Hotel }) {
+  const region = regionFromPath(useLocation().pathname)
   return <>
     {item.exactLocation && <p className="hotel-exact-location"><MapPin size={16} aria-hidden="true" /> {hotelLocationLabel(item)}</p>}
-    {item.registeredHotelId && <><p className="hotel-identifier">Hotel ID: {item.registeredHotelId} · {item.totalRooms} rooms</p><div className="hotel-card-rating"><ReviewStars rating={item.hotelAverageRating ?? 0} label={item.hotelAverageRating ? `${item.hotelAverageRating.toFixed(1)} out of 5 stars from ${item.hotelReviewCount} reviews` : 'No hotel ratings yet'} /><span>{item.hotelAverageRating ? `${item.hotelAverageRating.toFixed(1)} · ${item.hotelReviewCount} ${item.hotelReviewCount === 1 ? 'review' : 'reviews'}` : 'No ratings yet'}</span><Link className="text-link" to={`/hotels/${encodeURIComponent(item.registeredHotelId)}/reviews`}>View hotel reviews <ArrowRight size={14} /></Link></div></>}
+    {item.registeredHotelId && <><p className="hotel-identifier">Hotel ID: {item.registeredHotelId} · {item.totalRooms} rooms</p><div className="hotel-card-rating"><ReviewStars rating={item.hotelAverageRating ?? 0} label={item.hotelAverageRating ? `${item.hotelAverageRating.toFixed(1)} out of 5 stars from ${item.hotelReviewCount} reviews` : 'No hotel ratings yet'} /><span>{item.hotelAverageRating ? `${item.hotelAverageRating.toFixed(1)} · ${item.hotelReviewCount} ${item.hotelReviewCount === 1 ? 'review' : 'reviews'}` : 'No ratings yet'}</span><Link className="text-link" to={`${regionBasePath(region)}/hotels/${encodeURIComponent(item.registeredHotelId)}/reviews`}>View hotel reviews <ArrowRight size={14} /></Link></div></>}
   </>
 }
 
@@ -332,5 +337,6 @@ function ContactSection() {
 }
 
 export function NotFoundPage() {
-  return <section className="not-found page-width"><div className="page-back-line"><BackButton /><Eyebrow>Lost in the valley?</Eyebrow></div><h1>We can’t find that page.</h1><p>The link may have changed, but there’s still plenty of Kashmir to explore.</p><Link className="button button-dark" to="/">Back to AVELOF <ArrowRight size={16} /></Link></section>
+  const region = regionFromPath(useLocation().pathname)
+  return <section className="not-found page-width"><div className="page-back-line"><BackButton /><Eyebrow>Lost in the valley?</Eyebrow></div><h1>We can’t find that page.</h1><p>The link may have changed, but there’s still plenty of {region} to explore.</p><Link className="button button-dark" to={regionHomePath(region)}>Back to AVELOF <ArrowRight size={16} /></Link></section>
 }
