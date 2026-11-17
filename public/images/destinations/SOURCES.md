@@ -5,6 +5,10 @@ Names indicate their catalog placement, not the verified location of the photo.
 These are illustrative images, not verified photographs of the named Kashmir
 destinations. Replace them with approved destination photography before launch.
 
+The Wular Lake listing uses `srinagar-preview.webp` as an explicitly illustrative
+lake landscape, distinct from Srinagar and Manasbal's houseboat photo. It is not
+a verified photograph of Wular Lake; the filename records the original placement.
+
 | File | Existing Original Source |
 | --- | --- |
 | srinagar-preview.webp | https://images.unsplash.com/photo-1501785888041-af3ef285b470 |

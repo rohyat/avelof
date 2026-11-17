@@ -235,7 +235,7 @@ export const destinations: Destination[] = [
     attractions: [{ name: 'Manasbal lakefront', detail: 'Water views and relaxed time beside the lake.' }, { name: 'Jharokha Bagh', detail: 'A historic garden beside the lake.' }, { name: 'Seasonal lake vegetation', detail: 'Look for seasonal aquatic plants from permitted lakefront areas; flowering varies through the year.' }, { name: 'Lakeside birdlife', detail: 'Observe birds quietly from the shore without feeding or disturbing them; sightings vary.' }, { name: 'Lake views from the water', detail: 'Ask locally about permitted boat rides, life jackets and separate charges. Operation is not guaranteed.' }],
   },
   {
-    id: 'wular', name: 'Wular Lake', aliases: ['Wullar', 'Bandipora'], image: kashmirPhotoGallery.houseboat.image, count: 'Wetland & birdlife',
+    id: 'wular', name: 'Wular Lake', aliases: ['Wullar', 'Bandipora'], image: '/images/destinations/srinagar-preview.webp', count: 'Wetland & birdlife',
     distance: '55-65 km to the Bandipora side', travelTime: '1.5-2.5 hours', maxDriveHours: 2.5,
     detail: 'Broad wetland landscapes and birdlife, with views that vary with season and water level.',
     suggestedVisit: 'Half to full day', season: 'Spring-autumn; birdlife varies by season',
