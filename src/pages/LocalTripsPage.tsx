@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, Flame, MapPin, MoonStar, Mountain, ShieldCheck, TriangleAlert, Trees, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import DestinationPhotos from '../components/DestinationPhotos'
+import CallAssistance from '../components/CallAssistance'
 import LocalTripCarousel from '../components/LocalTripCarousel'
 import TripPlannerSteps from '../components/TripPlannerSteps'
 import HotelRates from '../components/HotelRates'
@@ -138,6 +139,7 @@ export default function LocalTripsPage() {
       </div>
     </section>
     <div className="section page-width local-trips-content">
+      <CallAssistance />
       <div className="local-discovery-tiles">
       <section id="local-picnics" className="local-discovery-section" aria-labelledby="local-picnics-title">
         <div className="local-discovery-heading"><p className="eyebrow">A day close to home</p><h2 id="local-picnics-title">Picnics & day trips</h2>

@@ -28,6 +28,7 @@ import { createWhatsAppUrl } from '../services/bookingService'
 import DownloadItineraryPdfButton from '../components/DownloadItineraryPdfButton'
 import { tourPackagePdfData } from '../services/itineraryPdf'
 import PackageComparison from '../components/PackageComparison'
+import CallAssistance from '../components/CallAssistance'
 
 const routeFor: Record<CatalogKind, string> = { package: '/tour-packages', car: '/car-rentals', hotel: '/hotels' }
 function useBooking() {
@@ -120,7 +121,7 @@ export function HomePage() {
         <Link className="home-shortcut-link" to="/travel-guide"><span className="home-shortcut-icon"><BookOpen size={20} aria-hidden="true" /></span><span>Travel Guide</span></Link>
         <Link className="home-shortcut-link" to="/partners"><span className="home-shortcut-icon"><Users size={20} aria-hidden="true" /></span><span>Partner</span></Link>
       </nav>
-      <div className="page-width home-call-panel"><a className="home-call-tile" href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}><span className="home-call-icon"><Phone size={26} aria-hidden="true" /></span><div className="home-call-copy"><HeroTrustPoints /><span>We’ll help you plan your trip based on your requirements.</span></div><span className="home-call-action"><span>Call AVELOF directly <ArrowUpRight size={18} aria-hidden="true" /></span><b>{business.phone}</b></span></a></div>
+      <div className="page-width"><CallAssistance /></div>
     </section>
     <section className="section page-width reasons-section">
       <SectionHeading eyebrow="Why choose AVELOF?" title={'Your Kashmir holiday,\nthoughtfully brought together.'} copy="Local knowledge, stays, transportation and personal assistance—all in one place as you plan your journey." />
@@ -199,6 +200,7 @@ export function CollectionPage() {
   return <>
     <section className="page-hero"><div className="page-width"><div className="breadcrumb"><Link to="/">Home</Link><span>/</span><span>{headings[kind].label}</span></div><Eyebrow>{headings[kind].label}</Eyebrow><h1>{headings[kind].title}</h1><p>{headings[kind].copy}</p>{kind === 'car' && <Link className="button button-outline" to="/drivers">Meet our drivers <ArrowRight size={16} /></Link>}{kind === 'hotel' && tripReturn && <button className="button button-outline trip-return-button" type="button" onClick={() => navigate(-1)}><ArrowLeft size={16} /> Back to your trip</button>}</div></section>
     <section className="catalog-page page-width">
+      <CallAssistance />
       {kind === 'package' && <><PricingNotice /><div className="package-comparison-intro"><div><h2>Which package suits you?</h2><p>Deluxe essentials, Premium upgrades, or our most complete Luxury journey.</p></div><PackageComparison /></div></>}
       {kind === 'hotel' && <>{registered.loading && <p role="status">Loading registered hotels...</p>}{registered.error && <p className="enquiry-error" role="alert">{registered.error} <button className="text-link" onClick={registered.reload}>Retry loading hotels</button></p>}</>}
       {kind === 'hotel' && <div className="filters-bar">

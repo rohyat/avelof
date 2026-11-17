@@ -16,13 +16,13 @@ test('homepage shortcuts place local trips after cabs and offer a full-width dir
     const nav = page.getByRole('navigation', { name: 'Explore AVELOF' })
     assert.deepEqual(await nav.getByRole('link').allTextContents(), ['Plan a trip', 'Packages', 'Hotels', 'Cabs', 'Local Trips', 'Drivers', 'Bookings', 'Places', 'Activities', 'Food & Shopping', 'Travel Guide', 'Partner'])
     assert.equal(await nav.getByRole('link', { name: 'Reviews', exact: true }).count(), 0)
-    const call = page.locator('.home-call-tile')
+    const call = page.locator('.home-shortcuts .home-call-tile')
     assert.equal(await call.getAttribute('href'), `tel:${business.phone.replace(/[^\d+]/g, '')}`)
     assert.ok((await call.textContent()).includes(business.phone))
     assert.equal(await call.getByText(/Your Kashmir memories/).count(), 0)
     assert.equal(await call.locator('.home-call-copy > span:last-child').textContent(), 'We’ll help you plan your trip based on your requirements.')
     assert.equal(await call.locator('.home-call-action > span').textContent(), 'Call AVELOF directly ')
-    const reassurance = page.locator('.home-call-panel .hero-trust')
+    const reassurance = call.locator('.hero-trust')
     assert.equal(await call.locator('.hero-trust').count(), 1)
     assert.equal(await page.locator('.home-call-panel > .hero-trust').count(), 0)
     assert.equal(await call.getByText('From Kashmir, with care').count(), 0)
@@ -54,5 +54,33 @@ test('homepage shortcuts place local trips after cabs and offer a full-width dir
     }
     await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
     assert.equal(await call.evaluate((el) => getComputedStyle(el).color), 'rgb(255, 255, 255)')
+  } finally { await browser.close() }
+})
+
+test('listing and planner call assistance shares the compact design while partner help is registration-specific', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage()
+  await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
+  await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
+  try {
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      for (const route of ['/tour-packages', '/hotels', '/car-rentals', '/local-trips', '/partners', '/']) {
+        await page.goto(`${origin}${route}`)
+        const tiles = page.locator('.home-call-tile')
+        await tiles.first().waitFor()
+        assert.equal(await tiles.count(), route === '/' || route === '/tour-packages' ? 2 : 1)
+        for (const tile of await tiles.all()) {
+          assert.equal(await tile.getAttribute('href'), `tel:${business.phone.replace(/[^\d+]/g, '')}`)
+          assert.equal(await tile.evaluate((el) => el.scrollWidth > el.clientWidth), false)
+          assert.equal(await tile.locator('.hero-trust').count(), route === '/partners' ? 0 : 1)
+        }
+        if (route === '/partners') assert.ok((await tiles.textContent()).includes('Need help with registration?'))
+        if (route === '/tour-packages') {
+          assert.ok(await tiles.first().evaluate((el) => Boolean(el.compareDocumentPosition(document.querySelector('.package-comparison-intro')) & Node.DOCUMENT_POSITION_FOLLOWING)))
+        }
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+      }
+    }
   } finally { await browser.close() }
 })

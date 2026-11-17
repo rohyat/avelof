@@ -211,6 +211,8 @@ h1 em, h2 em { color: inherit; font-weight: 500; }
 }
 .home-shortcuts { padding-block: 25px; border-bottom: 1px solid #e1e9e4; background: linear-gradient(180deg, #f7f9f6 0%, #eaf1ec 100%); }
 .home-shortcut-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.home-call-panel { container-type: inline-size; min-width: 0; }
+.catalog-page > .home-call-panel { margin-bottom: 24px; }
 .home-call-copy .hero-trust { max-width: 490px; margin: 0; }
 .home-call-copy .hero-trust-points { padding: 0; border: 0; background: none; }
 .home-call-copy .hero-trust-points li { color: #f4c2b1; font-size: 11px; text-shadow: none; }
@@ -224,7 +226,7 @@ h1 em, h2 em { color: inherit; font-weight: 500; }
 .home-call-action b { color: #f4c2b1; font-size: 20px; white-space: nowrap; }
 .home-call-tile:hover { border-color: #b6cfc0; background: #123e39; }
 .home-call-tile:focus-visible { outline: 3px solid var(--copper); outline-offset: 3px; }
-@media (max-width: 600px) {
+@container (max-width: 600px) {
   .home-call-tile { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px 12px; padding: 14px 16px; }
   .home-call-copy { display: contents; }
   .home-call-copy .hero-trust { grid-column: 1 / -1; grid-row: 1; max-width: 100%; }
@@ -1442,7 +1444,7 @@ dialog.registration-success, dialog.registration-progress { position: fixed; ins
 .custom-trip-intro .eyebrow { color: #a64b3d; }
 .custom-trip-intro h2 { max-width: 430px; margin: 0 0 20px; color: #173d3a; font-size: 48px; line-height: 1.13; }
 .custom-trip-intro h2 em { color: #a64b3d; }
-.custom-trip-intro > p:last-child { max-width: 390px; margin: 0; color: #3e5a5d; font-size: 14px; line-height: 1.85; }
+.custom-trip-intro > p:not(.eyebrow) { max-width: 390px; margin: 0; color: #3e5a5d; font-size: 14px; line-height: 1.85; }
 .trip-planner { min-width: 0; padding: 27px 28px 24px; border: 1px solid #c6d6d8; border-radius: 6px; background: #fff; box-shadow: 0 14px 40px rgba(28,66,67,.08); }
 .planner-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid #dce5e5; }
 .planner-kicker { color: #a64b3d; font-size: 9px; font-weight: 700; letter-spacing: 1.2px; }
@@ -1540,14 +1542,14 @@ dialog.registration-success, dialog.registration-progress { position: fixed; ins
   .custom-trip-inner { grid-template-columns: 1fr; gap: 27px; }
   .custom-trip-intro { position: static; }
   .custom-trip-intro h2 { max-width: 600px; font-size: 43px; }
-  .custom-trip-intro > p:last-child { max-width: 600px; }
+  .custom-trip-intro > p:not(.eyebrow) { max-width: 600px; }
 }
 
 @media (max-width: 560px) {
   .brand small { font-size: 7px; letter-spacing: 0; }
   .custom-trip-section { padding-block: 48px; }
   .custom-trip-intro h2 { font-size: 38px; }
-  .custom-trip-intro > p:last-child { font-size: 13px; }
+  .custom-trip-intro > p:not(.eyebrow) { font-size: 13px; }
   .trip-planner { padding: 20px 15px 17px; }
   .planner-heading { align-items: flex-start; flex-direction: column; gap: 9px; }
   .planner-heading h3 { font-size: 24px; }

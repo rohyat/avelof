@@ -2,6 +2,7 @@ import { Children, useEffect, useRef, useState } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 import { ArrowLeft, ArrowRight, FileDown, MapPin, MoonStar, Sparkles } from 'lucide-react'
 import DateInput from './DateInput'
+import CallAssistance from './CallAssistance'
 import { Link } from 'react-router-dom'
 import { rentalCars } from '../data/catalog'
 import { combinedExcursionId, destinationOptionId, destinationOptions } from '../data/destinationOptions'
@@ -538,6 +539,7 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
         <p className="eyebrow">Customise your trip</p>
         <h2>Plan your trip,<br /><em>your way.</em></h2>
         <p>Choose your dates and places. We’ll shape a thoughtful itinerary around your interests, pace and stay preferences.</p>
+        <CallAssistance />
       </div>
 
       <div ref={plannerRef} tabIndex={-1} className="trip-planner" aria-label="Customise your Kashmir journey">
