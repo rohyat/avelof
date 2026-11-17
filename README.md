@@ -23,18 +23,32 @@ in `src/data/handicrafts.ts`; it does not claim verified sellers or online purch
 Ladakh has its own service icons and separate pages for packages, bike trips,
 cabs, hotels, drivers, places, experiences, travel guidance and contact.
 Its header/footer links stay within Ladakh,
-and Kashmir discounts and payment promises are not shown there. Ladakh is a
+and Kashmir discounts are not shown there. Ladakh is a
 planning preview: prices, suppliers and departures are not confirmed, and contact
 can be made by phone or through a regional enquiry form, not the Kashmir
 booking planner. Enquiries save to D1 before showing a receipt; they do not
 confirm availability or a booking. Content lives in
-`src/data/ladakh.ts`. Route cards can be filtered by starting city and have
-expandable proposed journey outlines. The responsive hero uses the owner-supplied
+`src/data/ladakh.ts` and `src/data/ladakhJourneys.ts`. Packages, bike trips and cabs
+share Kashmir's catalog-card, photo-gallery, itinerary timeline and detail/sidebar
+styles, while keeping Ladakh routes and enquiry-only pricing. Three packages
+(7, 8 and 9 days), two proposed riding journeys and three transport options have
+their own `/ladakh/<service>/<slug>` pages. Cards filter by starting city and link
+to the detail page or its regional enquiry form. All detailed enquiries retain
+the route in editable requirements and use existing allowlisted preferences.
+At least 48 hours' acclimatisation in Leh, optional lake overnights, supplier
+confirmation and the summer 2027 planning-preview status remain explicit.
+Each detail page offers the shared branded itinerary PDF, using Ladakh wording,
+the displayed route and matched Ladakh sightseeing photos. Existing Kashmir PDFs
+retain their default content and photo gallery.
+No Kashmir prices, hotel inclusions, vehicle inventory or confirmed departures
+are copied into Ladakh. The responsive hero uses the owner-supplied
 river-canyon photo, optimised as a local JPEG background with the same text overlay
 and four rotating commitment messages as Kashmir, without hero action links.
 Its exact location is not claimed. FAQs explain the prelaunch status and altitude/transport checks.
 Run `node --test tests/ladakh.test.mjs` against port 8792
 to check destination switching, separate-page links, theme and responsive layout.
+Run `node --test tests/ladakh-journeys.test.mjs tests/regional-pages.test.mjs`
+to check detailed routes, design parity and database-acknowledged enquiry flows.
 
 Hotel and driver registration supports Jammu, Kashmir and Ladakh, with Kashmir
 selected by default. Region changes reset the destination/district (and hotel

@@ -11,6 +11,7 @@ import InstallApp from './InstallApp'
 import type { BookingKind } from '../types'
 import { regionFromPath, regionHomePath } from '../data/regions'
 import { ladakhPages } from '../data/ladakh'
+import { ladakhJourneys } from '../data/ladakhJourneys'
 
 export interface SiteContext {
   openBooking: (kind: BookingKind, selectedItem?: string) => void
@@ -177,11 +178,14 @@ export default function SiteLayout() {
       '/admin/panel/drivers': { title: 'Driver Registrations | AVELOF', description: 'Private AVELOF driver approval dashboard.' },
     }
     const section = location.pathname.split('/')[2]
+    const journey = ladakhJourneys.find((trip) => location.pathname === `/ladakh/${trip.section}/${trip.id}`)
     const ladakhDetails = regionFromPath(location.pathname) === 'Ladakh' && section
       ? Object.entries(ladakhPages).find(([key]) => key === section)?.[1]
       : undefined
     const regionalDirectory = regionFromPath(location.pathname) !== 'Kashmir' && (section === 'hotels' || section === 'drivers')
-    const details = ladakhDetails
+    const details = journey
+      ? { title: `${journey.name} | AVELOF Ladakh`, description: journey.description }
+      : ladakhDetails
       ? { title: `${ladakhDetails.title} | AVELOF`, description: ladakhDetails.copy }
       : regionalDirectory
       ? { title: `${regionFromPath(location.pathname)} ${section === 'hotels' ? 'Hotels' : 'Drivers'} | AVELOF`, description: `Explore approved ${section} in ${regionFromPath(location.pathname)} with AVELOF.` }

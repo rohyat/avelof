@@ -8,7 +8,9 @@ import { brandPromises } from '../src/data/brandPromises.ts'
 import { kashmirPhotosForPdf } from '../src/data/kashmirPhotoGallery.ts'
 import { localTrekPhotos } from '../src/data/localTrips.ts'
 import { discountedHotelPackagePrice } from '../src/services/pricing.ts'
-import { buildBrandedItineraryPdf, tourPackagePdfData } from '../src/services/itineraryPdf.ts'
+import { buildBrandedItineraryPdf, tourPackagePdfData, ladakhJourneyPdfData } from '../src/services/itineraryPdf.ts'
+import { ladakhJourneys } from '../src/data/ladakhJourneys.ts'
+import { ladakhPhotoPreview } from '../src/data/ladakhPhotos.ts'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://127.0.0.1:8792'
 const nativeFetch = globalThis.fetch
@@ -76,6 +78,19 @@ test('all package PDFs use their current package itinerary and union-cab terms',
     assert.deepEqual(data.inclusions, item.inclusions)
     assert.deepEqual(data.exclusions, item.exclusions)
     assert.ok(data.notes?.some((note) => note.includes('AVELOF will refund the amount you paid for that cab')))
+  }
+})
+
+test('Ladakh PDFs match each displayed itinerary without Kashmir routes, rates or photo galleries', async () => {
+  for (const trip of ladakhJourneys) {
+    const data = ladakhJourneyPdfData(trip)
+    assert.equal(data.region, 'Ladakh')
+    assert.deepEqual(data.days.map(({ label, title, detail }) => ({ day: label, title, detail })), trip.itinerary)
+    const pdf = await buildBrandedItineraryPdf(data)
+    const contents = Buffer.from(pdf.output('arraybuffer')).toString('latin1')
+    for (const text of [trip.name, 'Summer 2027 planning preview', 'at least 48 hours', 'Price on enquiry', 'A glimpse of Ladakh', 'No travel service is included by default']) assert.ok(contents.includes(text), text)
+    for (const photo of ladakhPhotoPreview) assert.ok(contents.includes(photo.title))
+    for (const text of ['Your Kashmir journey', 'A glimpse of Kashmir', 'Current displayed package rate', 'Deluxe', 'Premium']) assert.ok(!contents.includes(text), text)
   }
 })
 

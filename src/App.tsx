@@ -14,6 +14,7 @@ import BusinessRegistrationPage, { AdminBusinessesPage, BusinessStatusPage } fro
 import LocalTripsPage from './pages/LocalTripsPage'
 import PricingProvider from './components/PricingProvider'
 import LadakhPage from './pages/LadakhPage'
+import LadakhJourneyPage from './pages/LadakhJourneyPage'
 import RegionalHotelsPage from './pages/RegionalHotelsPage'
 import { ladakhPages } from './data/ladakh'
 
@@ -24,6 +25,9 @@ export default function App() {
         <Route index element={<HomePage />} />
         <Route path="ladakh" element={<LadakhPage />} />
         {Object.keys(ladakhPages).map((section) => <Route key={section} path={`ladakh/${section}`} element={<LadakhPage section={section as keyof typeof ladakhPages} />} />)}
+        <Route path="ladakh/packages/:slug" element={<LadakhJourneyPage section="packages" />} />
+        <Route path="ladakh/bike-trips/:slug" element={<LadakhJourneyPage section="bike-trips" />} />
+        <Route path="ladakh/car-rentals/:slug" element={<LadakhJourneyPage section="car-rentals" />} />
         <Route path="ladakh/hotels" element={<RegionalHotelsPage region="Ladakh" />} />
         <Route path="ladakh/hotels/:hotelId/reviews" element={<DriverReviewsPage />} />
         <Route path="ladakh/hotels/:slug" element={<DetailPage />} />

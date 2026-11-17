@@ -2,6 +2,9 @@ import type { jsPDF as JsPDFDocument } from 'jspdf'
 import { business } from '../config.ts'
 import { brandPromises } from '../data/brandPromises.ts'
 import { kashmirPhotosForPdf } from '../data/kashmirPhotoGallery.ts'
+import { ladakhPhotoPreview } from '../data/ladakhPhotos.ts'
+import { ladakhAltitudeNote, ladakhPlanningNote } from '../data/ladakhJourneys.ts'
+import type { LadakhJourney } from '../data/ladakhJourneys.ts'
 import { unionCabRefundNote } from '../data/unionCabs.ts'
 import type { TourPackage } from '../types.ts'
 
@@ -12,6 +15,7 @@ export interface ItineraryPdfDay {
 }
 
 export interface ItineraryPdfData {
+  region?: 'Kashmir' | 'Ladakh'
   title: string
   subtitle: string
   dates?: string
@@ -123,15 +127,31 @@ export function tourPackagePdfData(item: TourPackage): ItineraryPdfData {
   }
 }
 
+export function ladakhJourneyPdfData(trip: LadakhJourney): ItineraryPdfData {
+  return {
+    region: 'Ladakh',
+    title: `${trip.name} - Ladakh Planning Guide`,
+    subtitle: trip.description,
+    dates: trip.duration,
+    overview: [ladakhPlanningNote, `Proposed route: ${trip.stops.join(' - ')}.`, 'Price on enquiry; no rate or departure is confirmed.'],
+    days: trip.itinerary.map((day) => ({ label: day.day, title: day.title, detail: day.detail })),
+    inclusions: ['No travel service is included by default. All inclusions must be agreed in your written quote.'],
+    exclusions: ['Flights and travel insurance', 'Optional activities, tickets and personal expenses', 'Any stay, meal, vehicle or support service not agreed in writing'],
+    notes: [ladakhAltitudeNote, ...trip.checks.map((check) => `Confirm: ${check}.`), 'Lake overnights are optional and require suitability checks. Extra rest or buffer days may be needed.'],
+  }
+}
+
 export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
   const { jsPDF } = await import('jspdf')
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: false })
-  const photoImages = await Promise.all(kashmirPhotosForPdf.map(async (photo) => {
+  const region = data.region ?? 'Kashmir'
+  const photos = region === 'Ladakh' ? ladakhPhotoPreview.map((photo) => ({ image: photo.src, caption: photo.title })) : kashmirPhotosForPdf
+  const photoImages = await Promise.all(photos.map(async (photo) => {
     const response = await fetch(photo.image)
     if (!response.ok) throw new Error(`Unable to load PDF photo ${photo.image}: ${response.status} ${response.statusText}`)
     return new Uint8Array(await response.arrayBuffer())
   }))
-  pdf.setProperties({ title: `${printable(data.title)} | AVELOF`, author: business.name, subject: 'Kashmir travel itinerary' })
+  pdf.setProperties({ title: `${printable(data.title)} | AVELOF`, author: business.name, subject: `${region} travel itinerary` })
   let y = 0
 
   const writeWrapped = (text: string, x: number, top: number, width: number, fontSize = 10, color: readonly number[] = ink) => {
@@ -259,7 +279,7 @@ export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
     pdf.setCharSpace(0)
     pdf.setTextColor(225, 238, 230)
     pdf.setFontSize(11)
-    pdf.text('Your Kashmir journey, thoughtfully brought together.', margin, 84)
+    pdf.text(`Your ${region} journey, thoughtfully brought together.`, margin, 84)
     pdf.setTextColor(255, 255, 255)
     pdf.setFont('helvetica', 'bold')
     pdf.setFontSize(22)
@@ -360,20 +380,20 @@ export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
     bulletList(data.notes)
   }
 
-  for (let firstPhoto = 0; firstPhoto < kashmirPhotosForPdf.length; firstPhoto += 6) {
+  for (let firstPhoto = 0; firstPhoto < photos.length; firstPhoto += 6) {
     startContentPage()
-    const photosOnPage = Math.min(6, kashmirPhotosForPdf.length - firstPhoto)
+    const photosOnPage = Math.min(6, photos.length - firstPhoto)
     const imageHeight = photosOnPage <= 4 ? 82 : 56
     const rowHeight = photosOnPage <= 4 ? 98 : 70
     pdf.setFont('helvetica', 'bold')
     pdf.setFontSize(15)
     setPdfTextColor(pdf, forest)
-    pdf.text('A glimpse of Kashmir', margin, y)
+    pdf.text(`A glimpse of ${region}`, margin, y)
     pdf.setDrawColor(...copper)
     pdf.setLineWidth(0.8)
     pdf.line(margin, y + 3, margin + 18, y + 3)
     y += 11
-    writeWrapped('Illustrative travel and stay imagery; scenes and accommodation may vary by season and availability.', margin, y, pageWidth - margin * 2, 8, muted)
+    writeWrapped(region === 'Ladakh' ? 'Ladakh sightseeing photographs, not confirmed stops, accommodation or offered vehicles.' : 'Illustrative travel and stay imagery; scenes and accommodation may vary by season and availability.', margin, y, pageWidth - margin * 2, 8, muted)
     const imageWidth = (pageWidth - margin * 2 - 8) / 2
     for (let index = firstPhoto; index < firstPhoto + photosOnPage; index += 1) {
       const position = index - firstPhoto
@@ -392,13 +412,13 @@ export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
         imageTop + (imageHeight - renderedHeight) / 2,
         renderedWidth,
         renderedHeight,
-        `kashmir-photo-${index}`,
+        `${region.toLowerCase()}-photo-${index}`,
         'FAST',
       )
       pdf.setFont('helvetica', 'normal')
       pdf.setFontSize(7.5)
       setPdfTextColor(pdf, ink)
-      pdf.text(printable(kashmirPhotosForPdf[index].caption), x, imageTop + imageHeight + 5)
+      pdf.text(printable(photos[index].caption), x, imageTop + imageHeight + 5)
     }
   }
 
@@ -417,17 +437,17 @@ export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
   setPdfTextColor(pdf, copper)
   pdf.setFont('helvetica', 'bold')
   pdf.setFontSize(11)
-  pdf.text('YOUR KASHMIR JOURNEY STARTS HERE', pageWidth / 2, 112, { align: 'center' })
+  pdf.text(`YOUR ${region.toUpperCase()} JOURNEY STARTS HERE`, pageWidth / 2, 112, { align: 'center' })
   setPdfTextColor(pdf, forest)
   pdf.setFontSize(28)
   pdf.text('Thank you.', pageWidth / 2, 135, { align: 'center' })
   pdf.setFont('helvetica', 'normal')
   pdf.setFontSize(11)
   setPdfTextColor(pdf, ink)
-  pdf.text('We look forward to helping you experience Kashmir.', pageWidth / 2, 148, { align: 'center' })
+  pdf.text(`We look forward to helping you experience ${region}.`, pageWidth / 2, 148, { align: 'center' })
   pdf.setFontSize(9)
   setPdfTextColor(pdf, muted)
-  pdf.text('Your stay. Your journey. Your Kashmir experience.', pageWidth / 2, 164, { align: 'center' })
+  pdf.text(`Your stay. Your journey. Your ${region} experience.`, pageWidth / 2, 164, { align: 'center' })
 
   for (let pageNumber = 2; pageNumber <= pdf.getNumberOfPages(); pageNumber += 1) {
     pdf.setPage(pageNumber)

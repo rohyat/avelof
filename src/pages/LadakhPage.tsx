@@ -1,6 +1,5 @@
-import { useState } from 'react'
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
-import { ArrowRight, BedDouble, BookOpen, CalendarDays, CarFront, ChevronDown, ClipboardList, Landmark, MapPin, Motorbike, Package, Phone, Route, ShieldCheck } from 'lucide-react'
+import { ArrowRight, BedDouble, BookOpen, CalendarDays, CarFront, ChevronDown, Landmark, MapPin, Motorbike, Package, Phone, Route, ShieldCheck } from 'lucide-react'
 import BackButton from '../components/BackButton'
 import HolidayDestinations from '../components/HolidayDestinations'
 import CallAssistance from '../components/CallAssistance'
@@ -8,6 +7,8 @@ import HeroTrustPoints from '../components/HeroTrustPoints'
 import RegionalEnquiryForm from '../components/RegionalEnquiryForm'
 import LadakhPlaces from '../components/LadakhPlaces'
 import LadakhPhotoGallery from '../components/LadakhPhotoGallery'
+import LadakhJourneyCatalog from '../components/LadakhJourneyCatalog'
+import { ladakhAltitudeNote } from '../data/ladakhJourneys'
 import { business } from '../config'
 import { ladakhEnquiryPreferences, ladakhFaqs, ladakhPackages, ladakhPages } from '../data/ladakh'
 import { ladakhPlaces } from '../data/ladakhPlaces'
@@ -26,28 +27,8 @@ const shortcuts = [
   { label: 'Drivers', path: 'drivers', icon: CarFront },
 ]
 
-function PackageRoutes({ preview = false }: { preview?: boolean }) {
-  const [start, setStart] = useState('All routes')
-  const packages = ladakhPackages.filter((trip) => start === 'All routes' || trip.start === start)
-  return <section className="section page-width">
-    <p className="eyebrow">Choose the journey, then the stay</p><h2>Three routes to begin with.</h2>
-    <p>Suggested itineraries only. Final routing, rest days and availability require local partner confirmation.</p>
-    {!preview && <div className="ladakh-route-filters" role="group" aria-label="Filter routes by starting point">{['All routes', 'Leh', 'Srinagar'].map((value) => <button key={value} type="button" aria-pressed={start === value} onClick={() => setStart(value)}>{value === 'All routes' ? value : `From ${value}`}</button>)}</div>}
-    <p className="ladakh-result-count" role="status">{packages.length} proposed {packages.length === 1 ? 'route' : 'routes'}</p>
-    <div className="ladakh-card-grid">{packages.map((trip) => <article className="ladakh-card ladakh-route-card" key={trip.name}>
-      <div className="ladakh-route-top"><span className="ladakh-route-label">{trip.label}</span><Route size={22} aria-hidden="true" /></div>
-      <p className="eyebrow">{trip.duration}</p><h3>{trip.name}</h3>
-      <ol className="ladakh-route-stops" aria-label={`${trip.name} route`}>{trip.stops.map((stop, index) => <li key={`${stop}-${index}`}>{stop}</li>)}</ol>
-      <p>{trip.description}</p>
-      {!preview && <details className="ladakh-outline"><summary>See journey outline <ChevronDown size={16} aria-hidden="true" /></summary><ol>{trip.outline.map((stage) => <li key={stage.days}><strong>{stage.days}</strong><p>{stage.detail}</p></li>)}</ol><p>Proposed outline, not a confirmed itinerary. Timing and stops may change.</p></details>}
-      <Link className="text-link" to={preview ? '/ladakh/packages' : `/ladakh/contact?service=${encodeURIComponent(trip.name)}`} aria-label={`Discuss ${trip.name}`}>{preview ? 'Explore package options' : 'Discuss this route'} <ArrowRight size={16} aria-hidden="true" /></Link>
-    </article>)}</div>
-    {!preview && <RegionalEnquiryForm region="Ladakh" kind="package" preference={ladakhEnquiryPreferences.package} />}
-  </section>
-}
-
 function AltitudeNotice() {
-  return <div className="ladakh-notice"><ShieldCheck size={24} aria-hidden="true" /><p>Allow at least 48 hours in Leh before higher areas such as Khardung La and Pangong. Road arrival does not remove altitude risk. Suitability and current local guidance must be checked before travel.</p></div>
+  return <div className="ladakh-notice"><ShieldCheck size={24} aria-hidden="true" /><p>{ladakhAltitudeNote}</p></div>
 }
 
 export default function LadakhPage({ section = 'home' }: { section?: LadakhSection }) {
@@ -70,7 +51,7 @@ export default function LadakhPage({ section = 'home' }: { section?: LadakhSecti
       </div></section>
       <section className="home-shortcuts"><nav className="home-shortcut-grid page-width" aria-label="Explore Ladakh">{shortcuts.map(({ label, path, icon: Icon }) => <Link className="home-shortcut-link" to={`/ladakh/${path}`} key={label}><span className="home-shortcut-icon"><Icon size={22} aria-hidden="true" /></span><span>{label}</span></Link>)}</nav><div className="page-width"><CallAssistance /></div></section>
       <section className="section page-width"><p className="eyebrow">Plan for the place</p><h2>Your route comes first.</h2><p>Start in Leh or travel from Srinagar via Kargil. Share your dates, group size, preferred pace and stay style before choosing a final itinerary.</p><AltitudeNotice /></section>
-      <PackageRoutes preview />
+      <LadakhJourneyCatalog preview />
       <LadakhPlaces preview />
       <section className="section page-width"><div className="ladakh-card-grid">
         <article className="ladakh-card"><Motorbike size={28} aria-hidden="true" /><h2>For the riders.</h2><p>Explore proposed motorcycle circuits and the checks before a ride.</p><Link className="text-link" to="/ladakh/bike-trips">Explore Bike Trips <ArrowRight size={16} /></Link></article>
@@ -79,19 +60,14 @@ export default function LadakhPage({ section = 'home' }: { section?: LadakhSecti
       </div></section>
     </> : <section className="page-hero"><div className="page-width"><div className="breadcrumb"><BackButton /><Link to="/ladakh">Home</Link><span>/</span><span>Ladakh</span></div><h1>{ladakhPages[section].title}</h1><p>{ladakhPages[section].copy}</p><CallAssistance /></div></section>}
 
-    {section === 'packages' && <PackageRoutes />}
+    {section === 'packages' && <><LadakhJourneyCatalog /><section className="page-width"><AltitudeNotice /><RegionalEnquiryForm region="Ladakh" kind="package" preference={ladakhEnquiryPreferences.package} /></section></>}
+    {section === 'bike-trips' && <LadakhJourneyCatalog section="bike-trips" />}
     {section === 'bike-trips' && <section className="section page-width">
-      <p className="eyebrow">For the riders</p><h2>Open roads, thoughtfully planned.</h2>
-      <div className="ladakh-card-grid">
-        <article className="ladakh-card"><Motorbike size={28} aria-hidden="true" /><h3>Leh-based riding circuit</h3><p>A proposed Leh - Nubra - Pangong - Leh ride, after acclimatisation and rider suitability checks.</p></article>
-        <article className="ladakh-card"><Route size={28} aria-hidden="true" /><h3>Srinagar-entry expedition</h3><p>A longer journey via Kargil. Riding stages, bike collection and drop-off need operator confirmation.</p></article>
-        <article className="ladakh-card"><ClipboardList size={28} aria-hidden="true" /><h3>Confirm before you ride</h3><p>Licence, experience, bike condition, protective gear, fuel, deposits, insurance, breakdown support and emergency arrangements must all be agreed.</p></article>
-      </div>
       <AltitudeNotice /><p className="ladakh-notice">Bike departures are not open for booking yet. Bikes, support vehicles, ride leaders and equipment are not confirmed or included by default.</p>
       <RegionalEnquiryForm region="Ladakh" kind="package" preference={ladakhEnquiryPreferences.bike} />
     </section>}
+    {section === 'car-rentals' && <LadakhJourneyCatalog section="car-rentals" />}
     {section === 'car-rentals' && <section className="section page-width">
-      <div className="ladakh-card"><CarFront size={28} aria-hidden="true" /><h2>Cabs &amp; Transfers</h2><p>Discuss private circuits, Leh airport pickups and Srinagar - Kargil - Leh transfers.</p><p>Local transport arrangements, vehicle changes, luggage capacity, fees and route access require confirmation.</p><Link className="button button-outline" to="/ladakh/drivers">Meet Ladakh drivers <ArrowRight size={16} /></Link></div>
       <RegionalEnquiryForm region="Ladakh" kind="car" preference={ladakhEnquiryPreferences.car} />
     </section>}
     {section === 'places' && <LadakhPlaces />}
