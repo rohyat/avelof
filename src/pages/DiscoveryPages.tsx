@@ -1,7 +1,7 @@
 import BackButton from '../components/BackButton'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ArrowLeft, ArrowRight, Backpack, CalendarDays, CloudSun, CreditCard, HeartHandshake, IdCard, Leaf, MapPin, Pill, Route, Shirt, ShoppingBag, Smartphone, Snowflake, Sparkles, Sun, TicketCheck, Timer, Utensils, Wine } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Backpack, CalendarDays, CloudSun, CreditCard, HeartHandshake, IdCard, Leaf, MapPin, Pill, Route, Scissors, Shirt, ShoppingBag, Smartphone, Snowflake, Sparkles, Sun, TicketCheck, Timer, Utensils, Wine } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { travelGuideSections } from '../data/travelGuide'
 import { kashmirHandicrafts } from '../data/handicrafts'
@@ -81,13 +81,13 @@ export function FoodAndShoppingPage() {
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
   }, [kind, location])
-  return <DiscoveryLayout title="Food & Shopping" eyebrow="Discover a taste of Kashmir" copy="Find approved restaurants and local shops by destination. Listings are for discovery and in-person visits only.">
+  return <DiscoveryLayout title="Food & Shopping" eyebrow="Discover a taste of Kashmir" copy="Find approved restaurants, shops and handicraft businesses by destination. Listings are for discovery and in-person visits only.">
     <section id="handicrafts" aria-labelledby="handicrafts-title">
       <p className="eyebrow">Made with Kashmiri skill</p><h2 id="handicrafts-title">Kashmir's handicraft heritage</h2>
       <p>Explore the craft traditions Kashmir is known for. This is a discovery guide, not a product catalogue or a guarantee of authenticity; participating shops appear separately after review.</p>
       <div className="discovery-grid">{kashmirHandicrafts.map((craft) => <article className="discovery-card" key={craft.name}><h3>{craft.name}</h3><p>{craft.description}</p></article>)}</div>
     </section>
-    <div className="discovery-notice"><h2><MapPin size={26} aria-hidden="true" /><span>Discover here. Visit in person.</span></h2><p>AVELOF publishes participating businesses only after review. This directory does not provide food orders, online purchases, checkout or payments. Business hours and availability may change; confirm directly with the business. No discounts are promised.</p><Link className="button button-outline" to="/register-business">Register a restaurant or shop <ArrowRight size={16} aria-hidden="true" /></Link></div>
+    <div className="discovery-notice"><h2><MapPin size={26} aria-hidden="true" /><span>Discover here. Visit in person.</span></h2><p>AVELOF publishes participating businesses only after review. This directory does not provide food orders, online purchases, checkout or payments. Business hours and availability may change; confirm directly with the business. No discounts are promised.</p><Link className="button button-outline" to="/register-business">Register your business <ArrowRight size={16} aria-hidden="true" /></Link></div>
     <div className="activity-filters" aria-label="Food and shopping filters">
       <label>Business type<select value={kind} onChange={(event) => { setBusinesses([]); setLoading(true); setError(''); setKind(event.target.value as BusinessKind | '') }}><option value="">All businesses</option>{businessKinds.map((value) => <option key={value} value={value}>{businessKindLabels[value]}</option>)}</select></label>
       <label>Destination<select value={location} onChange={(event) => { setBusinesses([]); setLoading(true); setError(''); setLocation(event.target.value) }}><option value="">All destinations</option>{businessLocations.map((place) => <option key={place}>{place}</option>)}</select></label>
@@ -97,9 +97,9 @@ export function FoodAndShoppingPage() {
     {!loading && !error && <p role="status">{businesses.length} approved {businesses.length === 1 ? 'business' : 'businesses'} match these filters.</p>}
     <div className="discovery-grid">{businesses.map((business) => <article className="discovery-card" key={business.id}>
       <div className="hotel-photo-grid">{(business.photos ?? [business.photo]).map((photo, index) => <img key={photo} src={photo} alt={`${business.name}, photo ${index + 1} of shop, restaurant or products in ${business.location}`} loading="lazy" />)}</div>
-      <p className="eyebrow">{business.location} / {businessKindLabels[business.kind] === 'Restaurant' ? <><Utensils size={14} aria-hidden="true" /> Restaurant</> : <><ShoppingBag size={14} aria-hidden="true" /> Shop</>}</p>
+      <p className="eyebrow">{business.location} / {business.kind === 'restaurant' ? <Utensils size={14} aria-hidden="true" /> : business.kind === 'handicraft' ? <Scissors size={14} aria-hidden="true" /> : <ShoppingBag size={14} aria-hidden="true" />} {businessKindLabels[business.kind]}</p>
       <h2>{business.name}</h2><p><strong>Address:</strong> {business.address}</p><p>{business.description}</p>
-      {business.items.length > 0 && <div className="business-available-items"><h3>{business.kind === 'restaurant' ? 'Dishes to discover' : 'Find in store'}</h3><ul>{business.items.map((item, index) => <li key={`${index}-${item}`}>{business.kind === 'restaurant' ? <Utensils size={16} aria-hidden="true" /> : <ShoppingBag size={16} aria-hidden="true" />}<span>{item}</span></li>)}</ul></div>}
+      {business.items.length > 0 && <div className="business-available-items"><h3>{business.kind === 'restaurant' ? 'Dishes to discover' : business.kind === 'handicraft' ? 'Handicrafts to discover' : 'Find in store'}</h3><ul>{business.items.map((item, index) => <li className={typeof item === 'string' ? undefined : 'business-rich-item'} key={typeof item === 'string' ? index : item.id}>{typeof item === 'string' ? <>{business.kind === 'restaurant' ? <Utensils size={16} aria-hidden="true" /> : business.kind === 'handicraft' ? <Scissors size={16} aria-hidden="true" /> : <ShoppingBag size={16} aria-hidden="true" />}<span>{item}</span></> : <><img src={`/api/business-images/${business.id}?item=${item.id}`} alt={item.name} loading="lazy" /><div><h4>{item.name}</h4><p>{item.description}</p></div></>}</li>)}</ul></div>}
       <MapLocationLink location={business} />
       {business.website && <a className="text-link" href={business.website} target="_blank" rel="noreferrer">Visit business website <ArrowRight size={16} aria-hidden="true" /></a>}
       <small>Contact the business directly to confirm current opening and availability.</small>

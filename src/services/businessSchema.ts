@@ -14,13 +14,19 @@ const website = z.string().trim().max(200).refine((value) => {
   } catch { return false }
 }, 'Use a full https:// website address without embedded credentials.')
 
+export const businessItemSchema = z.object({
+  id: z.uuidv4().toLowerCase(),
+  name: text(100),
+  description: text(1000),
+}).strict()
 const businessDetailsObject = z.object({
   name: text(120).refine((value) => /[\p{L}\p{N}]/u.test(value.normalize('NFKD')), 'Enter a business name containing a letter or number.'),
   kind: z.enum(businessKinds),
   location: z.enum(businessLocations),
   address: text(200),
   description: z.string().trim().max(1600).default(''),
-  items: z.array(text(100)).max(20).default([]),
+  items: z.array(z.union([text(100), businessItemSchema])).max(20).default([])
+    .refine((items) => { const ids = items.filter((item) => typeof item !== 'string').map((item) => item.id); return new Set(ids).size === ids.length }, 'Item IDs must be unique.'),
   website,
   ...coordinateFields,
 }).strict()
@@ -34,6 +40,7 @@ export const businessSubmissionSchema = businessDetailsObject.extend({
   publicationConsent: z.literal(true),
   websiteTrap: z.string().max(200).default(''),
 }).strict().refine(coordinatesPaired, coordinatePairError)
+  .refine((business) => business.items.every((item) => typeof item !== 'string'), 'Each item needs a heading, description and one photo.')
 
 export const businessStatusSchema = hotelStatusSchema
 const businessPublicObject = businessDetailsObject.extend({
@@ -98,3 +105,4 @@ export type BusinessSubmission = z.infer<typeof businessSubmissionSchema>
 export type PublicBusiness = z.infer<typeof businessPublicSchema>
 export type AdminBusiness = z.infer<typeof businessAdminSchema>
 export type BusinessStatus = z.infer<typeof businessStatusSchema>
+export type BusinessItem = z.infer<typeof businessItemSchema>

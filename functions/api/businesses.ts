@@ -52,7 +52,7 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
     if (request.method === 'PATCH' || request.method === 'DELETE') {
       if (!await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
       if (request.headers.get('Content-Type')?.split(';')[0] !== 'application/json') return privateReply({ error: 'JSON required.' }, 415)
-      const bytes = await limitedBody(request, 12000)
+      const bytes = await limitedBody(request, 100000)
       if (bytes === null) return privateReply({ error: 'Business update too large.' }, 413)
       let input: unknown
       try { input = JSON.parse(new TextDecoder().decode(bytes)) } catch { return privateReply({ error: 'Invalid business update.' }, 400) }
@@ -69,6 +69,9 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
       const parsed = businessModerationSchema.safeParse(input)
       if (!parsed.success) return privateReply({ error: 'Check the public business details, listing status and moderation note.' }, 400)
       const { id, version, status, ownerNote, latitude, longitude, ...details } = parsed.data
+      for (const item of details.items) {
+        if (typeof item !== 'string' && !await DB.prepare('SELECT item_id FROM business_item_photos WHERE business_id = ? AND item_id = ?').bind(id, item.id).first()) return privateReply({ error: 'Each item must keep its registered photo. Ask the partner to upload new items through private editing.' }, 400)
+      }
       const row = await DB.prepare(`UPDATE business_registrations SET details_json = ?, status = ?, owner_note = ?, latitude = CASE WHEN ? THEN ? ELSE latitude END, longitude = CASE WHEN ? THEN ? ELSE longitude END, version = version + 1 WHERE id = ? AND version = ? RETURNING ${businessColumns}`)
         .bind(JSON.stringify(details), status, ownerNote, latitude !== undefined ? 1 : 0, latitude ?? null, longitude !== undefined ? 1 : 0, longitude ?? null, id, version).first<BusinessRow>()
       return row
@@ -104,7 +107,7 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
     catch { return privateReply({ error: 'Invalid business registration form.' }, 400) }
     const editing = form.has('auth')
     if (!editing && !await allowAccessAttempt(request, DB, 'business-submit', 5)) return privateReply({ error: 'Too many submissions. Try again in ten minutes.' }, 429)
-    if ([...form.keys()].some((key) => !['details', 'photo', 'auth', ...(editing ? ['retainedPhotos'] : [])].includes(key)) || form.getAll('details').length !== 1 || editing && form.getAll('auth').length !== 1 || !editing && form.getAll('photo').length < 1 || form.getAll('photo').length > 5) return privateReply({ error: 'Provide business details and 1-5 photos, or keep existing photos when editing.' }, 400)
+    if ([...form.keys()].some((key) => !['details', 'photo', 'auth', ...(editing ? ['retainedPhotos'] : [])].includes(key) && !/^itemPhoto_[a-f0-9-]{36}$/.test(key)) || form.getAll('details').length !== 1 || editing && form.getAll('auth').length !== 1 || !editing && form.getAll('photo').length < 1 || form.getAll('photo').length > 5) return privateReply({ error: 'Provide business details and 1-5 photos, or keep existing photos when editing.' }, 400)
     const retained = readRetainedPhotos(form)
     if (!retained.success) return privateReply({ error: 'Invalid retained photos.' }, 400)
     let authInput: unknown
@@ -124,6 +127,21 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
       images.push(image)
     }
     const data = parsed.data
+    const itemIds = data.items.flatMap((item) => typeof item === 'string' ? [] : [item.id])
+    const itemImages = new Map<string, Uint8Array>()
+    for (const key of new Set(form.keys())) {
+      if (!key.startsWith('itemPhoto_')) continue
+      const itemId = key.slice('itemPhoto_'.length)
+      const photo = form.get(key)
+      if (!itemIds.includes(itemId) || form.getAll(key).length !== 1 || !(photo instanceof File) || photo.type !== 'image/jpeg') return privateReply({ error: 'Upload exactly one JPEG photo for each item.' }, 400)
+      const image = new Uint8Array(await photo.arrayBuffer())
+      if (!validHotelJpeg(image)) return privateReply({ error: 'Each item photo must be a valid JPEG under 1 MB and 1920 pixels per side.' }, 400)
+      itemImages.set(itemId, image)
+    }
+    const itemDigests = await Promise.all([...itemImages].sort(([first], [second]) => first.localeCompare(second)).map(async ([id, image]) => {
+      const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(image).buffer))
+      return [id, Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('')]
+    }))
     const photoDigests = await Promise.all(images.map(async (image) => {
       const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(image).buffer))
       return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('')
@@ -131,7 +149,7 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
     const photoDigest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(photoDigests))))
     const photoHash = images.length === 1 ? photoDigests[0] : Array.from(photoDigest, (byte) => byte.toString(16).padStart(2, '0')).join('')
     const { items, ...legacyData } = data
-    const payloadHash = await hashText(JSON.stringify(editing ? { operation: 'business-update', data, auth: auth.data, photoDigests, ...(retained.data === undefined ? {} : { retainedPhotos: retained.data }) } : { operation: 'business-submit', data: items.length ? data : legacyData, photoHash }))
+    const payloadHash = await hashText(JSON.stringify(editing ? { operation: 'business-update', data, auth: auth.data, photoDigests, ...(retained.data === undefined ? {} : { retainedPhotos: retained.data }), ...(itemDigests.length ? { itemDigests } : {}) } : { operation: 'business-submit', data: items.length ? data : legacyData, photoHash, ...(itemDigests.length ? { itemDigests } : {}) }))
     submittingId = data.id
     submittingHash = payloadHash
     const existing = await DB.prepare(`SELECT ${businessColumns} FROM business_registrations WHERE id = ?`).bind(data.id).first<BusinessRow>()
@@ -144,6 +162,9 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
       if (!editing && existing.payload_hash === payloadHash) return privateReply(businessReceipt(existing))
       if (!editing) return privateReply({ error: 'This registration request was already used. Refresh the form and submit again.' }, 409)
     }
+    for (const itemId of itemIds) {
+      if (!itemImages.has(itemId) && (!editing || !await DB.prepare('SELECT item_id FROM business_item_photos WHERE business_id = ? AND item_id = ?').bind(data.id, itemId).first())) return privateReply({ error: 'Each item needs exactly one photo. Upload the missing item photo.' }, 400)
+    }
 
     const uploadId = crypto.randomUUID()
     const newKeys = images.map((_, index) => `businesses/${data.id}/${uploadId}/${index}.jpg`)
@@ -155,6 +176,8 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
     const { id, contactName, contactPhone, contactEmail, publicationConsent, websiteTrap, latitude, longitude, ...details } = data
     void publicationConsent
     void websiteTrap
+    const itemWrites = [...itemImages].map(([itemId, image]) => DB.prepare('INSERT INTO business_item_photos (business_id, item_id, content) SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM business_registrations WHERE id = ? AND payload_hash = ?) ON CONFLICT (business_id, item_id) DO UPDATE SET content = excluded.content')
+      .bind(id, itemId, new Uint8Array(image).buffer, id, payloadHash))
     if (editing && auth.success && existing) {
       const duplicate = await DB.prepare('SELECT id FROM business_registrations WHERE registration_key = ? AND id != ?').bind(registrationKey, id).first<{ id: string }>()
       if (duplicate) return privateReply({ error: 'These business details already belong to another listing.' }, 409)
@@ -165,6 +188,9 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
           .bind(newKeys[index], new Uint8Array(image).buffer, id, payloadHash, auth.data.version + 1, JSON.stringify(uploadedKeys))),
         ...businessPhotoKeys(existing).filter((key) => !keptKeys.includes(key)).map((key) => DB.prepare('DELETE FROM registration_photos WHERE photo_key = ? AND EXISTS (SELECT 1 FROM business_registrations WHERE id = ? AND payload_hash = ? AND version = ? AND photo_keys_json = ?)')
           .bind(key, id, payloadHash, auth.data.version + 1, JSON.stringify(uploadedKeys))),
+        ...itemWrites,
+        DB.prepare("DELETE FROM business_item_photos WHERE business_id = ? AND item_id NOT IN (SELECT json_extract(value, '$.id') FROM json_each(?) WHERE json_type(value) = 'object') AND EXISTS (SELECT 1 FROM business_registrations WHERE id = ? AND payload_hash = ? AND version = ?)")
+          .bind(id, JSON.stringify(items), id, payloadHash, auth.data.version + 1),
       ])
       const row = await DB.prepare(`SELECT ${businessColumns} FROM business_registrations WHERE id = ?`).bind(id).first<BusinessRow>()
       if (!row || row.payload_hash !== payloadHash || row.version !== auth.data.version + 1) return privateReply({ error: 'This business changed. Check your status again before editing.' }, 409)
@@ -176,6 +202,7 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
         .bind(id, registrationKey, contactName, contactPhone, contactEmail, JSON.stringify(details), uploadedKey, JSON.stringify(uploadedKeys), payloadHash, latitude ?? null, longitude ?? null),
       ...images.map((image, index) => DB.prepare('INSERT INTO registration_photos (photo_key, content) SELECT ?, ? WHERE EXISTS (SELECT 1 FROM business_registrations WHERE id = ? AND photo_key = ?)')
         .bind(uploadedKeys[index], new Uint8Array(image).buffer, id, uploadedKey)),
+      ...itemWrites,
     ])
     const row = await DB.prepare(`SELECT ${businessColumns} FROM business_registrations WHERE id = ?`).bind(id).first<BusinessRow>()
     if (!row || row.payload_hash !== payloadHash) return privateReply({ error: 'This business or registration request is already registered. Contact AVELOF for help with an existing listing.' }, 409)

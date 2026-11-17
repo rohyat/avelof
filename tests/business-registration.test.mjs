@@ -10,7 +10,7 @@ const publicBusiness = {
   id, name: 'Saffron Table', kind: 'restaurant', location: 'Srinagar',
   address: 'Main market, Srinagar', description: 'A locally owned restaurant serving Kashmiri specialities to visitors and residents.',
   website: 'https://example.com', photo: `/api/business-images/${id}`,
-  items: ['Kashmiri wazwan', 'Kahwa'],
+  items: ['Kashmiri wazwan', 'Kahwa'].map((name, index) => ({ id: `c0a80123-4567-489a-8abc-00000000001${index}`, name, description: `${name}, prepared with local ingredients.` })),
   photos: Array.from({ length: 5 }, (_, index) => `/api/business-images/${id}?index=${index}`),
   latitude: 34.0837123, longitude: 74.7973456,
 }
@@ -60,6 +60,12 @@ test('business registration, moderation and discovery work without exposing priv
           assert.equal(photo.type, 'image/jpeg')
           assert.ok(photo.size > 0 && photo.size <= 1000000)
         }
+        for (const item of details.items) {
+          assert.ok(item.name && item.description && item.id)
+          assert.equal(form.getAll(`itemPhoto_${item.id}`).length, 1)
+          assert.equal(form.get(`itemPhoto_${item.id}`).type, 'image/jpeg')
+          assert.ok(form.get(`itemPhoto_${item.id}`).size <= 1000000)
+        }
         assert.equal(details.contactEmail, adminBusiness.contactEmail)
         assert.equal(details.publicationConsent, true)
         if (submissions.length === 1) return route.fulfill({ status: 503, json: { error: 'Temporary database issue. Retry with the same unchanged form.' } })
@@ -74,20 +80,34 @@ test('business registration, moderation and discovery work without exposing priv
         await page.locator('[name=location]').selectOption('Srinagar')
         await page.locator('[name=address]').fill(publicBusiness.address)
         assert.equal(await page.getByLabel('About your business', { exact: true }).count(), 0)
-        await page.getByLabel('Item 1', { exact: true }).fill('Kashmiri wazwan')
+        await page.getByLabel('Business description', { exact: true }).fill(publicBusiness.description)
+        assert.deepEqual(await page.locator('[name=kind] option').allTextContents(), ['Restaurant', 'Shop', 'Handicraft Business'])
         await page.getByRole('button', { name: 'Add another item' }).click()
-        await page.getByLabel('Item 2', { exact: true }).fill('Kahwa')
+        await page.getByLabel('Item 1 heading', { exact: true }).fill('Kashmiri wazwan')
+        await page.getByLabel('Item 1 description', { exact: true }).fill(publicBusiness.items[0].description)
+        await page.getByRole('button', { name: 'Add another item' }).click()
+        await page.getByLabel('Item 2 heading', { exact: true }).fill('Kahwa')
+        await page.getByLabel('Item 2 description', { exact: true }).fill(publicBusiness.items[1].description)
+        await page.getByRole('button', { name: 'Add another item' }).click()
+        await page.getByLabel('Item 3 heading', { exact: true }).fill('Removed item')
+        await page.getByRole('button', { name: 'Remove item 3', exact: true }).click()
+        assert.equal(await page.getByLabel('Item 3 heading', { exact: true }).count(), 0)
         await page.getByLabel('Public website (optional)', { exact: true }).fill(publicBusiness.website)
         await page.getByLabel("Contact person's name", { exact: true }).fill(adminBusiness.contactName)
         await page.getByLabel('Private contact phone', { exact: true }).fill(adminBusiness.contactPhone)
         await page.getByLabel('Private contact email', { exact: true }).fill(adminBusiness.contactEmail)
         const file = await photoFile(page)
-        await page.locator('input[type=file]').setInputFiles(Array.from({ length: 6 }, (_, index) => ({ ...file, name: `shop-${index}.png` })))
+        assert.equal(await page.getByRole('button', { name: 'Submit for approval', exact: true }).isDisabled(), true)
+        await page.getByLabel('Item 1 photo', { exact: true }).setInputFiles({ name: 'bad.txt', mimeType: 'text/plain', buffer: Buffer.from('not an image') })
+        await page.getByRole('alert').filter({ hasText: 'Use a JPEG, PNG or WebP' }).waitFor()
+        await page.getByLabel('Item 1 photo', { exact: true }).setInputFiles(file)
+        await page.getByLabel('Item 2 photo', { exact: true }).setInputFiles(file)
+        await page.locator('input[name=photos]').setInputFiles(Array.from({ length: 6 }, (_, index) => ({ ...file, name: `shop-${index}.png` })))
         await page.getByRole('alert').filter({ hasText: 'Choose between one and five' }).waitFor()
         assert.equal(await page.getByRole('button', { name: 'Submit for approval', exact: true }).isDisabled(), true)
-        await page.locator('input[type=file]').setInputFiles(file)
+        await page.locator('input[name=photos]').setInputFiles(file)
         await page.getByRole('status').filter({ hasText: '1 photos ready' }).waitFor()
-        await page.locator('input[type=file]').setInputFiles(Array.from({ length: 5 }, (_, index) => ({ ...file, name: `shop-${index}.png` })))
+        await page.locator('input[name=photos]').setInputFiles(Array.from({ length: 5 }, (_, index) => ({ ...file, name: `shop-${index}.png` })))
         await page.getByRole('status').filter({ hasText: '5 photos ready' }).waitFor()
         await page.locator('[name=publicationConsent]').check()
         assert.equal(await page.locator('.location-picker').count(), 0)
@@ -111,7 +131,7 @@ test('business registration, moderation and discovery work without exposing priv
         assert.deepEqual(submissions[0], submissions[1])
         assert.equal(submissions[1].latitude, null)
         assert.equal(submissions[1].longitude, null)
-        assert.deepEqual(submissions[1].items, ['Kashmiri wazwan', 'Kahwa'])
+        assert.deepEqual(submissions[1].items.map((item) => item.name), ['Kashmiri wazwan', 'Kahwa'])
         assert.ok((await dialog.innerText()).includes('Status access code'))
         assert.ok((await dialog.innerText()).includes('SAFF3210'))
         await dialog.getByRole('button', { name: 'View registration details' }).click()
@@ -122,8 +142,8 @@ test('business registration, moderation and discovery work without exposing priv
       } finally { await page.close() }
     })
 
-    await context.test('restaurants and shops can privately check and edit details, retaining or replacing photos', async () => {
-      for (const kind of ['restaurant', 'shop']) {
+    await context.test('all three business types can privately check and edit details, retaining or replacing photos', async () => {
+      for (const kind of ['restaurant', 'shop', 'handicraft']) {
         const page = await browser.newPage({ viewport: { width: 390, height: 900 } })
         const { photo, photos, ownerNote, createdAt, ...original } = adminBusiness
         void photo; void photos; void ownerNote; void createdAt
@@ -132,7 +152,16 @@ test('business registration, moderation and discovery work without exposing priv
         const updates = []
         const lookups = []
         const errors = []
-        await mockPartnerPhotos(page)
+        await mockPartnerPhotos(page, 3, original.items.map((item) => item.id))
+        let failPreview = kind === 'handicraft'
+        if (kind === 'handicraft') {
+          await page.route('**/api/partner-photos', async (route) => {
+            if (route.request().postDataJSON().itemPhotos && failPreview) {
+              return route.fulfill({ status: 503, json: { error: 'Item previews temporarily unavailable.' } })
+            }
+            return route.fallback()
+          })
+        }
         page.on('pageerror', (error) => errors.push(error.message))
         await page.route('**/api/businesses*', async (route) => {
           const request = route.request()
@@ -153,7 +182,8 @@ test('business registration, moderation and discovery work without exposing priv
           assert.equal(details.kind, kind)
           assert.equal(details.latitude, original.latitude)
           assert.equal(details.longitude, original.longitude)
-          assert.deepEqual(details.items, ['Updated item', 'Kahwa'])
+          assert.deepEqual(details.items, [{ ...original.items[0], name: 'Updated item' }, original.items[1]])
+          assert.equal([...form.keys()].filter((key) => key.startsWith('itemPhoto_')).length, kind === 'handicraft' ? 1 : 0)
           assert.equal(form.getAll('photo').length, kind === 'shop' ? 2 : 0)
           assert.deepEqual(JSON.parse(form.get('retainedPhotos')), kind === 'shop' ? [0, 2] : [0, 1, 2])
           updates.push(details)
@@ -167,7 +197,7 @@ test('business registration, moderation and discovery work without exposing priv
         try {
           await page.goto(`${origin}/partners`)
           assert.equal(await page.getByRole('link', { name: 'Browse the directory', exact: true }).count(), 0)
-          await page.locator('.partner-options article').filter({ hasText: 'Restaurants & shops' }).getByRole('link', { name: 'Edit your details', exact: true }).click()
+          await page.locator('.partner-options article').filter({ hasText: 'Restaurants, shops & handicrafts' }).getByRole('link', { name: 'Edit your details', exact: true }).click()
           assert.equal(new URL(page.url()).pathname, '/business-status')
           await page.getByLabel('Business ID or phone number', { exact: true }).fill(id)
           await page.getByLabel('Status access code', { exact: true }).fill('NOPE3210')
@@ -177,18 +207,26 @@ test('business registration, moderation and discovery work without exposing priv
           await page.getByLabel('Status access code', { exact: true }).fill('saff3210')
           await page.getByRole('button', { name: 'Check status', exact: true }).click()
           await page.getByRole('button', { name: 'Edit registration', exact: true }).click()
+          if (kind === 'handicraft') {
+            await page.getByRole('alert').filter({ hasText: 'Item previews temporarily unavailable' }).waitFor()
+            assert.equal(await page.getByRole('button', { name: 'Save changes for approval', exact: true }).isDisabled(), true)
+            failPreview = false
+            await page.getByRole('button', { name: 'Retry item photos', exact: true }).click()
+          }
           assert.equal(await page.getByLabel('Business name', { exact: true }).inputValue(), original.name)
           assert.equal(await page.getByLabel('Private contact email', { exact: true }).inputValue(), original.contactEmail)
           assert.equal(await page.locator('[name=kind]').inputValue(), kind)
-          assert.equal(await page.locator('input[type=file]').getAttribute('required'), null)
+          assert.equal(await page.locator('.partner-photo-editor input[type=file]').getAttribute('required'), null)
           await page.getByAltText('Existing business photo 3').waitFor()
           await page.getByLabel('Business name', { exact: true }).fill('Valley Business')
           await page.getByLabel('Private contact phone', { exact: true }).fill('9123456789')
-          await page.getByLabel('Item 1', { exact: true }).fill('Updated item')
+          await page.getByLabel('Item 1 heading', { exact: true }).fill('Updated item')
+          await page.getByAltText('Photo for item 1', { exact: true }).waitFor()
+          if (kind === 'handicraft') await page.getByLabel('Item 1 photo', { exact: true }).setInputFiles(await photoFile(page))
           if (kind === 'shop') {
             await page.getByRole('button', { name: 'Remove existing photo 2', exact: true }).click()
             const file = await photoFile(page)
-            await page.locator('input[type=file]').setInputFiles([file, { ...file, name: 'products.png' }])
+            await page.locator('.partner-photo-editor input[type=file]').setInputFiles([file, { ...file, name: 'products.png' }])
             await page.getByRole('status').filter({ hasText: '4 of 5 photos selected.' }).waitFor()
           }
           await page.locator('[name=publicationConsent]').check()
@@ -250,7 +288,7 @@ test('business registration, moderation and discovery work without exposing priv
         assert.equal(await toggle.getAttribute('aria-expanded'), 'false')
         await page.setViewportSize({ width: 1440, height: 900 })
         assert.equal(await nav.isVisible(), true)
-        assert.equal(await nav.getByRole('link').count(), 6)
+        assert.equal(await nav.getByRole('link', { name: 'About & Contact', exact: true }).count(), 1)
         await assertNoOverflow(page)
       } finally { await page.close() }
     })
@@ -261,8 +299,9 @@ test('business registration, moderation and discovery work without exposing priv
       const actions = []
       const shop = {
         ...publicBusiness, id: 'c0a80123-4567-489a-8abc-000000000002', name: 'Valley Crafts',
-        kind: 'shop', location: 'Gulmarg', address: 'Gulmarg market',
+        kind: 'shop', location: 'Gulmarg', address: 'Gulmarg market', items: ['Saffron', 'Walnut crafts'],
       }
+      const craft = { ...shop, id: 'c0a80123-4567-489a-8abc-000000000003', kind: 'handicraft', name: 'Craft Workshop', items: publicBusiness.items }
       await page.route('**/api/business-images/*', (route) => route.fulfill({ contentType: 'image/jpeg', body: jpeg }))
       await page.route('**/api/businesses*', async (route) => {
         const request = route.request()
@@ -291,7 +330,7 @@ test('business registration, moderation and discovery work without exposing priv
           address: current.address, description: current.description, website: current.website, photo: current.photo,
           items: current.items, photos: current.photos,
           latitude: current.latitude, longitude: current.longitude,
-        }, shop] : [shop]
+        }, shop, craft] : [shop, craft]
         const businesses = approved.filter((item) => (!url.searchParams.get('kind') || item.kind === url.searchParams.get('kind')) && (!url.searchParams.get('location') || item.location === url.searchParams.get('location')))
         return route.fulfill({ json: { businesses, total: businesses.length, page: 1, pageSize: 25 } })
       })
@@ -312,13 +351,15 @@ test('business registration, moderation and discovery work without exposing priv
         assert.equal(actions[0].name, 'Saffron Table Kashmir')
         assert.equal(actions[0].latitude, publicBusiness.latitude)
         assert.equal(actions[0].longitude, publicBusiness.longitude)
+        assert.deepEqual(actions[0].items, publicBusiness.items)
 
         await page.goto(`${origin}/food-and-shopping`)
         await page.getByRole('heading', { name: 'Saffron Table Kashmir', exact: true }).waitFor()
         await page.getByRole('heading', { name: 'Valley Crafts', exact: true }).waitFor()
         const publishedCard = page.locator('.discovery-card').filter({ hasText: 'Saffron Table Kashmir' })
-        assert.deepEqual(await publishedCard.locator('.business-available-items li').allTextContents(), publicBusiness.items)
-        assert.equal(await publishedCard.locator('.business-available-items li .lucide-utensils').count(), publicBusiness.items.length)
+        assert.deepEqual(await publishedCard.locator('.business-available-items h4').allTextContents(), publicBusiness.items.map((item) => item.name))
+        assert.deepEqual(await publishedCard.locator('.business-available-items p').allTextContents(), publicBusiness.items.map((item) => item.description))
+        assert.equal(await publishedCard.locator('.business-rich-item img').count(), publicBusiness.items.length)
         assert.equal(await page.locator('.discovery-card').filter({ hasText: 'Valley Crafts' }).locator('.business-available-items li .lucide-shopping-bag').count(), shop.items.length)
         assert.equal(await publishedCard.locator('.hotel-photo-grid img').count(), 5)
         assert.equal(new URL(await page.locator('.discovery-card').filter({ hasText: 'Saffron Table Kashmir' }).getByRole('link', { name: 'View on Google Maps' }).getAttribute('href')).searchParams.get('query'), `${publicBusiness.latitude},${publicBusiness.longitude}`)
@@ -329,6 +370,12 @@ test('business registration, moderation and discovery work without exposing priv
           await page.setViewportSize({ width, height: 900 })
           await assertNoOverflow(page)
         }
+        await page.getByLabel('Business type').selectOption('handicraft')
+        await page.getByRole('heading', { name: 'Craft Workshop', exact: true }).waitFor()
+        const craftCard = page.locator('.discovery-card').filter({ hasText: 'Craft Workshop' })
+        assert.match(await craftCard.locator('.eyebrow').innerText(), /Handicraft Business/i)
+        assert.equal(await craftCard.locator('.lucide-scissors').count(), 1)
+        assert.equal(await craftCard.locator('.business-rich-item img').count(), 2)
         await page.getByLabel('Business type').selectOption('shop')
         await page.getByRole('heading', { name: 'Valley Crafts', exact: true }).waitFor()
         assert.equal(await page.getByRole('heading', { name: 'Saffron Table Kashmir', exact: true }).count(), 0)

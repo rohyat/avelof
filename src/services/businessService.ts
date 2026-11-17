@@ -59,11 +59,12 @@ export async function compressBusinessPhoto(file: File) {
   } finally { image.close() }
 }
 
-export async function saveBusiness(details: BusinessSubmission, photos: Blob[]) {
+export async function saveBusiness(details: BusinessSubmission, photos: Blob[], itemPhotos: ReadonlyMap<string, Blob> = new Map()) {
   if (photos.length < 1 || photos.length > 5) throw new BusinessError('Choose between one and five photos of your shop or restaurant and products.', 400)
   const body = new FormData()
   body.append('details', JSON.stringify(details))
   photos.forEach((photo, index) => body.append('photo', photo, `business-${index + 1}.jpg`))
+  itemPhotos.forEach((photo, id) => body.append(`itemPhoto_${id}`, photo, `${id}.jpg`))
   const receipt = businessReceiptSchema.parse(await requestBusiness('/api/businesses', 'POST', body))
   if (receipt.id !== details.id) throw new BusinessError('Business registration could not be confirmed. Retry with the same form.', 503)
   return receipt
@@ -73,16 +74,22 @@ export async function lookupBusiness(identifier: string, accessCode: string) {
   return z.object({ business: businessOwnerSchema }).parse(await requestBusiness('/api/businesses', 'POST', { identifier, accessCode })).business
 }
 
-export async function editBusiness(details: BusinessSubmission, auth: BusinessEditAuth, photos: Blob[], retainedPhotos?: number[]) {
+export async function editBusiness(details: BusinessSubmission, auth: BusinessEditAuth, photos: Blob[], retainedPhotos?: number[], itemPhotos: ReadonlyMap<string, Blob> = new Map()) {
   if (photos.length > 5) throw new BusinessError('Choose no more than five replacement photos.', 400)
   const body = new FormData()
   body.append('details', JSON.stringify(details))
   body.append('auth', JSON.stringify(auth))
   if (retainedPhotos !== undefined) body.append('retainedPhotos', JSON.stringify(retainedPhotos))
   photos.forEach((photo, index) => body.append('photo', photo, `business-${index + 1}.jpg`))
+  itemPhotos.forEach((photo, id) => body.append(`itemPhoto_${id}`, photo, `${id}.jpg`))
   const receipt = businessReceiptSchema.parse(await requestBusiness('/api/businesses', 'POST', body))
   if (receipt.id !== details.id || receipt.status !== 'pending') throw new BusinessError('Business update could not be confirmed. Check your status again.', 503)
   return receipt
+}
+
+export async function loadBusinessItemPhotos(id: string, accessCode: string, version: number, signal?: AbortSignal) {
+  const result = await requestBusiness('/api/partner-photos', 'POST', { kind: 'business', id, accessCode, version, itemPhotos: true }, signal)
+  return z.object({ itemPhotos: z.record(z.uuidv4(), z.string().regex(/^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/)) }).parse(result).itemPhotos
 }
 
 export async function loadPublicBusinesses(filters: { kind?: BusinessKind; location?: string }, signal?: AbortSignal) {

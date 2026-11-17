@@ -479,32 +479,40 @@ Union-cab charges are separate from the estimate and require confirmation.
 Saved planner version 3 maps older vehicle/hotel steps to the six-step flow.
 
 Food & Shopping is discovery-only: there is no ordering, checkout or payment.
-Restaurant/shop owners can register at `/register-business`, also linked from
+Restaurant, shop and handicraft business owners can register at `/register-business`, also linked from
 Partners. Public business information and photos require explicit publication
 consent. Owner contact name, phone and email stay private. Registration confirms
 receipt only after storage succeeds; nothing is advertised automatically.
 The existing admin session protects `/admin/panel/businesses`, where AVELOF can
 edit, approve, hide or delete submissions. The public directory shows approved
 records only and supports business-type and destination filters.
-Businesses can add up to 20 product/dish names (100 characters each), displayed
-as item chips on approved listings, with dish icons for restaurants and shopping
-icons for shops. The former About your business field is
-removed from registration; existing descriptions remain readable and editable
-in the admin panel. Address guidance asks for a nearby attraction or landmark.
+Businesses can add up to 20 optional products, dishes or handicrafts. Every added
+item requires a heading (100 characters), description (1,000 characters) and
+exactly one photo. Registration also includes a business description. Approved
+item cards display the linked photo, heading and description. Legacy item-name-only
+listings remain readable; owners complete their descriptions/photos when editing,
+or remove those items. Admins can review photos and edit text without replacing
+item identities. Address guidance asks for a nearby attraction or landmark.
 Business registrations require 1-5 shop, restaurant or product photos (JPEG,
 PNG or WebP, up to 5 MB original each); invalid counts are rejected with feedback.
 Every photo is compressed and validated, saved transactionally in D1, private
 until approval, visible in the approved gallery and deleted with its listing.
 Apply `0023_business_photo_gallery.sql` before deploying these gallery changes;
-it preserves existing single-photo listings. Only the local migration has been
-applied during development.
+it preserves existing single-photo listings. Also apply
+`0027_business_item_photos.sql` for separate D1 item-photo storage. Item photos
+use stable UUIDs, are written/removed transactionally with owner updates, and are
+deleted with the parent registration. New submissions require a photo per item;
+private edits can retain each existing item photo or replace it. Public image
+requests require an approved listing; admins use their session and owners use
+authenticated POST previews. Uploads accept up to 5 MB originals and compress to
+JPEG, at most 1 MB / 1920 pixels per side, matching the gallery rules.
 
 The Partners page shows each registration button followed by “Edit your details”,
 alongside its call-help tile. Edit links lead to the separate status pages, not
 the new-registration forms. Hotel and driver forms use compact headers with only
 the registration title and review badge; their steps remain visible. Editing forms
 retain their resubmission explanation. Header surfaces and icons support dark mode.
-Restaurant/shop owners can check and edit details at `/business-status`, linked
+Restaurant, shop and handicraft business owners can check and edit details at `/business-status`, linked
 from the registration receipt. Use the business ID (or registered
 phone) and private status access code: the first four alphanumeric characters of
 the business name, uppercased, plus the final four phone digits, matching hotel
@@ -513,11 +521,11 @@ Credentials travel only in POST bodies, never URLs or browser storage. Public
 listings do not expose owner contacts or access codes; pending photos remain
 private. The edit form privately previews existing photos. Remove individual photos
 with X or add new ones, keeping 1-5 photos in total. Removals apply only on a successful
-save. Edits preserve legacy descriptions and hide the listing pending fresh approval.
+save. Edits hide the listing pending fresh approval, including all item images.
 Name/phone changes can change the access code shown on the saved receipt.
 Version checks prevent stale edits, and unchanged retries recover saved updates
-without duplicating photo bytes. No additional database migration is needed
-beyond the gallery migration above.
+without duplicating photo bytes. Item-photo digests participate in retry identity;
+optimistic version checks prevent losing edits from changing stored photos.
 
 The mobile navigation closes on outside taps or Escape without blocking page
 scrolling; its toggle exposes expanded state to assistive technology.

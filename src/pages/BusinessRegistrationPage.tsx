@@ -6,7 +6,9 @@ import { ArrowRight, FileImage, Plus, Trash2 } from 'lucide-react'
 import { businessKindLabels, businessKinds, businessLocations } from '../data/businessRegistration'
 import { businessDetailsSchema, businessStatusSchema, businessSubmissionSchema } from '../services/businessSchema'
 import type { AdminBusiness, BusinessDetails, BusinessReceipt, BusinessStatus, OwnerBusiness } from '../services/businessSchema'
-import { BusinessError, businessErrorText, compressBusinessPhoto, deleteBusiness, editBusiness, loadAdminBusinesses, lookupBusiness, moderateBusiness, saveBusiness } from '../services/businessService'
+import { BusinessError, businessErrorText, compressBusinessPhoto, deleteBusiness, editBusiness, loadAdminBusinesses, loadBusinessItemPhotos, lookupBusiness, moderateBusiness, saveBusiness } from '../services/businessService'
+import BusinessItemEditor from '../components/BusinessItemEditor'
+import type { EditableBusinessItem } from '../components/BusinessItemEditor'
 import { hotelStatusLabels } from '../data/hotelRegistration'
 import RegistrationReceipt from '../components/RegistrationReceipt'
 import SubmissionProgress from '../components/SubmissionFeedback'
@@ -27,7 +29,8 @@ function PhotoPreview({ photo }: { photo: Blob }) {
 
 export default function BusinessRegistrationPage({ editing, onCancel }: { editing?: { business: OwnerBusiness; accessCode: string }; onCancel?: () => void } = {}) {
   const [photos, setPhotos] = useState<Blob[]>([])
-  const [items, setItems] = useState(() => (editing?.business.items.length ? editing.business.items : ['']).map((name) => ({ id: crypto.randomUUID(), name })))
+  const [items, setItems] = useState<EditableBusinessItem[]>(() => (editing?.business.items ?? []).map((item) => typeof item === 'string' ? { id: crypto.randomUUID(), name: item, description: '' } : item))
+  const [itemPhotoState, setItemPhotoState] = useState({ loading: Boolean(editing?.business.items.some((item) => typeof item !== 'string')), error: '', revision: 0 })
   const [processing, setProcessing] = useState(Boolean(editing))
   const [retainedPhotos, setRetainedPhotos] = useState<number[]>([])
   const [busy, setBusy] = useState(false)
@@ -38,13 +41,27 @@ export default function BusinessRegistrationPage({ editing, onCancel }: { editin
   const coordinates = mapCoordinates(editing?.business ?? {})
   const pending = useRef({ id: crypto.randomUUID(), fingerprint: '' })
   const photoVersion = useRef(0)
+  const galleryRevision = useRef(0)
   const inFlight = useRef(false)
+  useEffect(() => {
+    if (!editing?.business.items.some((item) => typeof item !== 'string')) return
+    const controller = new AbortController()
+    loadBusinessItemPhotos(editing.business.id, editing.accessCode, editing.business.version, controller.signal).then((previews) => {
+      if (controller.signal.aborted) return
+      if (editing.business.items.some((item) => typeof item !== 'string' && !previews[item.id])) throw new BusinessError('An existing item photo could not be loaded. Retry before saving.', 503)
+      setItems((current) => current.map((item) => ({ ...item, preview: previews[item.id] })))
+      setItemPhotoState((current) => ({ ...current, loading: false, error: '' }))
+    }).catch((failure: unknown) => { if (!controller.signal.aborted) setItemPhotoState((current) => ({ ...current, loading: false, error: businessErrorText(failure) })) })
+    return () => controller.abort()
+  }, [editing, itemPhotoState.revision])
+  const itemsBlocked = itemPhotoState.loading || Boolean(itemPhotoState.error) || items.some((item) => item.processing || item.error || (!item.photo && !item.preview))
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (inFlight.current || processing) return
     setError('')
-    if ((!editing && !photos.length) || photoError) { setError('Select between one and five valid photos of your shop or restaurant and products.'); return }
+    if (itemsBlocked) { setError('Finish uploading one valid photo for every item, or retry loading existing item photos.'); return }
+    if ((!editing && !photos.length) || photoError) { setError('Select between one and five valid photos of your business or products.'); return }
     const fields = new FormData(event.currentTarget)
     const details = {
       name: fields.get('name'),
@@ -52,8 +69,8 @@ export default function BusinessRegistrationPage({ editing, onCancel }: { editin
       location: fields.get('location'),
       ...locationFields(coordinates),
       address: fields.get('address'),
-      description: editing?.business.description ?? '',
-      items: items.map((item) => item.name.trim()).filter(Boolean),
+      description: fields.get('description'),
+      items: items.map(({ id, name, description }) => ({ id, name: name.trim(), description: description.trim() })),
       website: fields.get('website'),
       contactName: fields.get('contactName'),
       contactPhone: fields.get('contactPhone'),
@@ -68,34 +85,36 @@ export default function BusinessRegistrationPage({ editing, onCancel }: { editin
     if (!parsed.success) { setError(parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(' ')); return }
     inFlight.current = true
     setBusy(true)
-    try { setReceipt(editing ? await editBusiness(parsed.data, { accessCode: editing.accessCode, version: editing.business.version }, photos, retainedPhotos) : await saveBusiness(parsed.data, photos)) }
+    const itemPhotos = new Map(items.flatMap((item) => item.photo ? [[item.id, item.photo] as const] : []))
+    try { setReceipt(editing ? await editBusiness(parsed.data, { accessCode: editing.accessCode, version: editing.business.version }, photos, retainedPhotos, itemPhotos) : await saveBusiness(parsed.data, photos, itemPhotos)) }
     catch (failure) { setError(businessErrorText(failure)) }
     finally { inFlight.current = false; setBusy(false) }
   }
 
   async function selectPhotos(files: File[]) {
-    const version = ++photoVersion.current
+    const version = ++galleryRevision.current
+    photoVersion.current++
     setPhotos([])
     setError('')
     setPhotoError('')
     setProcessing(false)
     if (editing && !files.length) return
-    if (files.length < 1 || files.length > 5) { setPhotoError('Choose between one and five photos of your shop or restaurant and products.'); return }
+    if (files.length < 1 || files.length > 5) { setPhotoError('Choose between one and five photos of your business or products.'); return }
     setProcessing(true)
     try {
       const compressed: Blob[] = []
       for (let index = 0; index < files.length; index += 2) {
         compressed.push(...await Promise.all(files.slice(index, index + 2).map(compressBusinessPhoto)))
       }
-      if (photoVersion.current === version) setPhotos(compressed)
+      if (galleryRevision.current === version) setPhotos(compressed)
     } catch (failure) {
-      if (photoVersion.current === version) setPhotoError(businessErrorText(failure))
-    } finally { if (photoVersion.current === version) setProcessing(false) }
+      if (galleryRevision.current === version) setPhotoError(businessErrorText(failure))
+    } finally { if (galleryRevision.current === version) setProcessing(false) }
   }
 
   return <section className="enquiry-access-page page-width">
     <Link className="text-link" to="/partners">Partner with AVELOF</Link>
-    <div className="enquiry-access-heading"><BackButton /><div><p className="eyebrow">Local restaurants and shops</p><h1>{editing ? 'Edit your business' : 'Register your business'}</h1><p>Share your business with travellers. AVELOF reviews every submission before it appears in Food & Shopping.</p></div></div>
+    <div className="enquiry-access-heading"><BackButton /><div><p className="eyebrow">Restaurants, shops & handicraft businesses</p><h1>{editing ? 'Edit your business' : 'Register your business'}</h1><p>Share your business with travellers. AVELOF reviews every submission before it appears in Food & Shopping.</p></div></div>
     {receipt ? <RegistrationReceipt kind="Business" reference={receipt.id} accessCode={receipt.accessCode}>
       <h2>Your registration has been received.</h2>
       <p>Status: {hotelStatusLabels[receipt.status]}. Your listing is not public until approved. This is a discovery listing only; it does not accept orders or payments, and no discount or booking is guaranteed.</p>
@@ -112,7 +131,10 @@ export default function BusinessRegistrationPage({ editing, onCancel }: { editin
           <label>Business type<select name="kind" required defaultValue={editing?.business.kind ?? 'restaurant'}>{businessKinds.map((kind) => <option key={kind} value={kind}>{businessKindLabels[kind]}</option>)}</select></label>
           <label>Destination<select name="location" required value={destination} onChange={(event) => setDestination(event.target.value)}>{businessLocations.map((location) => <option key={location}>{location}</option>)}</select></label>
           <label>Public address or area<input name="address" maxLength={200} required autoComplete="street-address" defaultValue={editing?.business.address} placeholder="Address or nearby main attraction" /><small>Include a nearby main attraction or landmark so guests can recognise the area.</small></label>
-          <fieldset className="business-items-fields review-text-field"><legend>Products or dishes available (optional)</legend><p>Add up to 20 item names for guests to browse. This is not an online ordering menu.</p>{items.map((item, index) => <div className="business-item-row" key={item.id}><label>Item {index + 1}<input name={`item-${item.id}`} maxLength={100} value={item.name} placeholder="For example, saffron or walnut wood crafts" onChange={(event) => setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, name: event.target.value } : entry))} /></label>{items.length > 1 && <button className="icon-button" type="button" aria-label={`Remove item ${index + 1}`} onClick={() => setItems((current) => current.filter((entry) => entry.id !== item.id))}><Trash2 size={18} /></button>}</div>)}<button className="button button-outline" type="button" disabled={items.length >= 20} onClick={() => setItems((current) => [...current, { id: crypto.randomUUID(), name: '' }])}><Plus size={16} />Add another item</button></fieldset>
+          <label className="review-text-field">Business description<textarea name="description" rows={4} maxLength={1600} required defaultValue={editing?.business.description} /></label>
+          <fieldset className="business-items-fields review-text-field" disabled={itemPhotoState.loading || Boolean(itemPhotoState.error)}><legend>Products, dishes or handicrafts (optional)</legend><p>Add up to 20 items. Every added item needs a heading, description and exactly one photo. This is not an online ordering menu.</p>{items.map((item, index) => <BusinessItemEditor key={item.id} item={item} index={index} onChange={(changes) => { photoVersion.current++; setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, ...changes } : entry)) }} onRemove={() => { photoVersion.current++; setItems((current) => current.filter((entry) => entry.id !== item.id)) }} />)}<button className="button button-outline" type="button" disabled={items.length >= 20} onClick={() => setItems((current) => [...current, { id: crypto.randomUUID(), name: '', description: '' }])}><Plus size={16} />Add another item</button></fieldset>
+          {itemPhotoState.loading && <p role="status">Loading existing item photos...</p>}
+          {itemPhotoState.error && <p role="alert" className="enquiry-error">{itemPhotoState.error} <button type="button" onClick={() => setItemPhotoState((current) => ({ loading: true, error: '', revision: current.revision + 1 }))}>Retry item photos</button></p>}
           <label>Public website (optional)<input name="website" type="url" maxLength={200} placeholder="https://example.com" defaultValue={editing?.business.website} /></label>
         </section>
         <section className="hotel-form-fields registration-section" aria-labelledby="business-contact-title">
@@ -121,22 +143,22 @@ export default function BusinessRegistrationPage({ editing, onCancel }: { editin
           <label>Private contact phone<input name="contactPhone" type="tel" maxLength={30} required autoComplete="tel" defaultValue={editing?.business.contactPhone} /></label>
           <label>Private contact email<input name="contactEmail" type="email" maxLength={200} required autoComplete="email" defaultValue={editing?.business.contactEmail} /></label>
           {editing ? <PartnerPhotoEditor kind="business" id={editing.business.id} accessCode={editing.accessCode} version={editing.business.version} onChange={(next, retained, blocked) => { photoVersion.current++; setPhotos(next); setRetainedPhotos(retained); setProcessing(blocked) }} /> : <>
-          <label className="review-text-field photo-upload-field"><span className="photo-upload-heading"><FileImage size={24} aria-hidden="true" /> Shop, restaurant & product photos (1-5 required)</span><small>Choose between one and five JPEG, PNG or WebP photos, up to 5 MB each. Show your shop or restaurant and the products or dishes you offer. Photos are resized, compressed and stripped of original metadata before upload.</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required onChange={(event) => void selectPhotos(Array.from(event.target.files ?? []))} /></label>
+          <label className="review-text-field photo-upload-field"><span className="photo-upload-heading"><FileImage size={24} aria-hidden="true" /> Business & product photos (1-5 required)</span><small>Choose between one and five JPEG, PNG or WebP photos, up to 5 MB each. These business gallery photos are separate from the one photo required per item. Photos are resized, compressed and stripped of original metadata before upload.</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required onChange={(event) => void selectPhotos(Array.from(event.target.files ?? []))} /></label>
           {photoError && <p className="enquiry-error review-text-field" role="alert">{photoError}</p>}
           <div className="hotel-photo-grid review-text-field">{photos.map((photo, index) => <PhotoPreview key={index} photo={photo} />)}</div>
           </>}
           <label className="enquiry-honeypot" aria-hidden="true">Website<input name="websiteTrap" tabIndex={-1} autoComplete="off" /></label>
-          <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I am authorised to register this business and use these photos. I consent to publishing the business name, type, destination, address{coordinates ? ', existing map pin' : ''}, item names, website and photos if approved. My contact name, phone and email stay private. I understand this listing does not take orders or payments and does not guarantee a discount.</span></label>
+          <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I am authorised to register this business and use these photos. I consent to publishing the business name, description, type, destination, address{coordinates ? ', existing map pin' : ''}, item headings, descriptions, website and photos if approved. My contact name, phone and email stay private. I understand this listing does not take orders or payments and does not guarantee a discount.</span></label>
           {error && <p className="enquiry-error review-text-field" role="alert">{error}</p>}
           {!editing && <p className="review-text-field" role="status">{processing ? 'Preparing photos...' : photos.length ? `${photos.length} photos ready to upload.` : 'Select at least one photo before submitting.'}</p>}
           {busy && <p className="review-text-field" role="status">Submitting your business for review…</p>}
-          <button className="button button-dark" type="submit" disabled={processing || (!editing && !photos.length) || Boolean(photoError) || busy}>{busy ? 'Submitting…' : editing ? 'Save changes for approval' : 'Submit for approval'} <ArrowRight size={16} /></button>
+          <button className="button button-dark" type="submit" disabled={processing || itemsBlocked || (!editing && !photos.length) || Boolean(photoError) || busy}>{busy ? 'Submitting…' : editing ? 'Save changes for approval' : 'Submit for approval'} <ArrowRight size={16} /></button>
           {editing && <button className="button button-outline" type="button" onClick={onCancel}>Cancel editing</button>}
           <p className="registration-submit-note">Your registration remains private and is not published until AVELOF approves it.</p>
         </section>
       </fieldset>
     </RegistrationForm>}
-    {busy && <SubmissionProgress title="Saving your business registration">Uploading photos and saving your restaurant or shop details. Please keep this page open until you see your receipt.</SubmissionProgress>}
+    {busy && <SubmissionProgress title="Saving your business registration">Uploading photos and saving your business details. Please keep this page open until you see your receipt.</SubmissionProgress>}
   </section>
 }
 
@@ -159,7 +181,7 @@ export function BusinessStatusPage() {
     finally { setBusy(false); inFlight.current = false }
   }
   if (editing && business) return <BusinessRegistrationPage editing={{ business, accessCode }} onCancel={() => { setEditing(false); setBusiness(null); setAccessCode('') }} />
-  return <section className="enquiry-access-page page-width"><div className="page-back-line"><BackButton /><Link to="/partners">Partner with AVELOF</Link></div><h1>Edit your business details</h1><p>Enter your business ID or registered phone number and status access code to check your restaurant or shop registration. The code uses the first four letters of the business name and last four phone digits.</p><form className="review-submission-form" onSubmit={submit}><label>Business ID or phone number<input name="identifier" maxLength={80} required autoComplete="off" /></label><label>Status access code<input name="accessCode" minLength={5} maxLength={12} required autoComplete="off" /></label><button className="button button-dark" disabled={busy}>{busy ? 'Checking...' : 'Check status'}</button></form>{error && <p className="enquiry-error" role="alert">{error}</p>}{business && <section className="admin-review-record hotel-owner-status"><h2>{business.name}</h2><p>{businessKindLabels[business.kind]} · {business.location}</p><p className="hotel-identifier">{business.id}</p><p role="status">{hotelStatusLabels[business.status]}</p>{business.status === 'approved' ? <Link to="/food-and-shopping">View business directory</Link> : <p>Not publicly listed.</p>}<p>Saving changes hides your listing until it is approved again.</p><button className="button button-dark" type="button" onClick={() => setEditing(true)}>Edit registration</button></section>}</section>
+  return <section className="enquiry-access-page page-width"><div className="page-back-line"><BackButton /><Link to="/partners">Partner with AVELOF</Link></div><h1>Edit your business details</h1><p>Enter your business ID or registered phone number and status access code to check your restaurant, shop or handicraft business registration. The code uses the first four letters of the business name and last four phone digits.</p><form className="review-submission-form" onSubmit={submit}><label>Business ID or phone number<input name="identifier" maxLength={80} required autoComplete="off" /></label><label>Status access code<input name="accessCode" minLength={5} maxLength={12} required autoComplete="off" /></label><button className="button button-dark" disabled={busy}>{busy ? 'Checking...' : 'Check status'}</button></form>{error && <p className="enquiry-error" role="alert">{error}</p>}{business && <section className="admin-review-record hotel-owner-status"><h2>{business.name}</h2><p>{businessKindLabels[business.kind]} · {business.location}</p><p className="hotel-identifier">{business.id}</p><p role="status">{hotelStatusLabels[business.status]}</p>{business.status === 'approved' ? <Link to="/food-and-shopping">View business directory</Link> : <p>Not publicly listed.</p>}<p>Saving changes hides your listing until it is approved again.</p><button className="button button-dark" type="button" onClick={() => setEditing(true)}>Edit registration</button></section>}</section>
 }
 
 function BusinessRecord({ business, disabled, save, remove }: {
@@ -182,7 +204,7 @@ function BusinessRecord({ business, disabled, save, remove }: {
       address: fields.get('address'),
       ...locationFields(coordinates),
       description: fields.get('description'),
-      items: String(fields.get('items') ?? '').split('\n').map((item) => item.trim()).filter(Boolean),
+      items: business.items.map((item, index) => typeof item === 'string' ? String(fields.get(`itemName_${index}`) ?? '') : { ...item, name: fields.get(`itemName_${index}`), description: fields.get(`itemDescription_${index}`) }),
       website: fields.get('website'),
     })
     if (!parsed.success) { setValidationError(parsed.error.issues.map((issue) => issue.message).join(' ')); return }
@@ -201,8 +223,8 @@ function BusinessRecord({ business, disabled, save, remove }: {
         <label>Business type<select name="kind" defaultValue={business.kind}>{businessKinds.map((kind) => <option key={kind} value={kind}>{businessKindLabels[kind]}</option>)}</select></label>
         <label>Destination<select name="location" value={destination} onChange={(event) => setDestination(event.target.value)}>{businessLocations.map((location) => <option key={location}>{location}</option>)}</select></label>
         <label>Public address<input name="address" maxLength={200} required defaultValue={business.address} /></label>
-        <label className="review-text-field">Public description (legacy, optional)<textarea name="description" rows={4} maxLength={1600} defaultValue={business.description} /></label>
-        <label className="review-text-field">Available items (one per line, up to 20)<textarea name="items" rows={5} maxLength={2019} defaultValue={business.items.join('\n')} /></label>
+        <label className="review-text-field">Public description<textarea name="description" rows={4} maxLength={1600} defaultValue={business.description} /></label>
+        {business.items.map((item, index) => <fieldset className="business-item-editor review-text-field" key={typeof item === 'string' ? index : item.id}><legend>Item {index + 1}</legend><label>Item {index + 1} heading<input name={`itemName_${index}`} required maxLength={100} defaultValue={typeof item === 'string' ? item : item.name} /></label>{typeof item === 'string' ? <p>Legacy item: the owner can add a description and photo through private editing.</p> : <><label>Item {index + 1} description<textarea name={`itemDescription_${index}`} required maxLength={1000} defaultValue={item.description} /></label><div className="hotel-photo-grid"><a href={`/api/business-images/${business.id}?item=${item.id}`} target="_blank" rel="noreferrer"><img src={`/api/business-images/${business.id}?item=${item.id}`} alt={item.name} loading="lazy" /></a></div></>}</fieldset>)}
         <label>Public website<input name="website" type="url" maxLength={200} defaultValue={business.website} /></label>
         <label>Listing status<select value={status} onChange={(event) => setStatus(businessStatusSchema.parse(event.target.value))}><option value="pending">Awaiting approval</option><option value="approved">Approve and publish</option><option value="rejected">Reject / hide</option></select></label>
         <label className="review-text-field">Private note<textarea name="ownerNote" maxLength={1000} defaultValue={business.ownerNote} /></label>
