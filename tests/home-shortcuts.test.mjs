@@ -23,6 +23,9 @@ test('homepage shortcuts place local trips after cabs and offer a full-width dir
     assert.equal(await call.locator('.home-call-copy > span:last-child').textContent(), 'We’ll help you plan your trip based on your requirements.')
     assert.equal(await call.locator('.home-call-action > span').textContent(), 'Call AVELOF directly ')
     const reassurance = page.locator('.home-call-panel .hero-trust')
+    assert.equal(await call.locator('.hero-trust').count(), 1)
+    assert.equal(await page.locator('.home-call-panel > .hero-trust').count(), 0)
+    assert.equal(await call.getByText('From Kashmir, with care').count(), 0)
     assert.deepEqual(await reassurance.locator('li span').allTextContents(), [...brandPromises])
     assert.equal(await reassurance.locator('li').first().evaluate((el) => getComputedStyle(el).animationName), 'hero-trust-cycle')
     for (const width of [320, 390, 768, 1440]) {
@@ -34,7 +37,8 @@ test('homepage shortcuts place local trips after cabs and offer a full-width dir
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       assert.equal(await call.evaluate((el) => el.scrollWidth > el.clientWidth), false)
       const trustBox = await reassurance.boundingBox()
-      assert.ok(trustBox.y + trustBox.height <= callBox.y)
+      const headlineBox = await call.locator('strong').boundingBox()
+      assert.ok(trustBox.y >= callBox.y && trustBox.y + trustBox.height <= headlineBox.y)
       if (width <= 600) {
         const icon = await call.locator('.home-call-icon').boundingBox()
         const headline = await call.locator('strong').boundingBox()
