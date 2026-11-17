@@ -4,6 +4,7 @@ export const business = {
   email: 'info@avelof.in',
   instagram: 'https://www.instagram.com/avelof.in/',
   instagramHandle: '@avelof.in',
+  facebook: 'https://www.facebook.com/avelof.in',
   phone: '+91 914-941-8161',
   destination: 'Kashmir, India',
 }

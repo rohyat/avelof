@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { ArrowRight, BedDouble, Snowflake } from 'lucide-react'
+import { ArrowRight, BedDouble, ExternalLink, Snowflake } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { rentalCars } from '../data/catalog'
 import { diwaliReferencePrice, featuredOfferHotelId } from '../data/offers'
@@ -9,6 +9,7 @@ import { hotelPackagePriceInclusions } from '../services/pricing'
 import { usePricing, useTourPackages } from '../services/pricingContext'
 import { PricingNotice } from './PricingProvider'
 import { useRegisteredHotels } from '../services/hotelService'
+import { business } from '../config'
 
 const startingCab = rentalCars.reduce((lowest, car) => car.price < lowest.price ? car : lowest)
 interface BannerOffer {
@@ -100,7 +101,20 @@ export default function OfferBanner() {
       '--snow-turn': `${index % 2 ? -90 : 90}deg`,
       '--snow-delay': `${-index * 2.7}s`,
     } as CSSProperties}><Snowflake size={12} strokeWidth={1.5} /></span>)}</div>
-    <div className="offer-banner-heading"><div className="offer-heading-line"><Snowflake className="offer-winter-icon" size={28} aria-hidden="true" /><strong>Winter offers are live</strong></div><span className="offer-heading-subtitle">Flat {pricing.settings.discountPercent}% off on packages &amp; hotels · 30% off on cabs</span><span className="offer-heading-subtitle">{hotelPackagePriceInclusions}</span></div>
+    <div className="offer-banner-heading"><div className="offer-heading-line"><Snowflake className="offer-winter-icon" size={28} aria-hidden="true" /><strong>Winter offers are live</strong></div><span className="offer-heading-subtitle">Flat {pricing.settings.discountPercent}% off on packages &amp; hotels · 30% off on cabs</span><span className="offer-heading-subtitle">{hotelPackagePriceInclusions}</span>
+      <details className="offer-social">
+        <summary>Get extra 4% off</summary>
+        <div className="offer-social-panel">
+          <strong>Follow both. Get extra 4% off your package.</strong>
+          <p>Follow AVELOF on Instagram and Facebook to be eligible for an extra 4% off tour packages.</p>
+          <div className="offer-social-links">
+            <a href={business.instagram} target="_blank" rel="noopener noreferrer">Follow on Instagram <ExternalLink size={16} aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span></a>
+            <a href={business.facebook} target="_blank" rel="noopener noreferrer">Follow on Facebook <ExternalLink size={16} aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span></a>
+          </div>
+          <p>After following both pages, let our team know during your enquiry. AVELOF will verify your eligibility and confirm the extra discount in your final quote. It is not applied automatically to the prices shown.</p>
+        </div>
+      </details>
+    </div>
     <div className="offer-carousel" role="region" aria-roledescription="carousel" aria-label="Packages, hotels and cabs offers"
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onPointerDownCapture={() => setFocused(false)}

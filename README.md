@@ -297,6 +297,12 @@ do not currently affect ranking; admin ordering remains newest-first.
 The theme preference has no expiry in local storage and is retained between visits
 until changed or browser site data is cleared.
 
+The winter-offer banner includes “Get extra 4% off” for tour packages. Its
+expandable panel links to the Instagram and Facebook pages in `src/config.ts`.
+Customers must follow both; AVELOF manually verifies eligibility and confirms the
+extra discount in the final quote. This promotion does not automatically change
+catalog prices, estimates, saved enquiries or PDF prices.
+
 The package comparison dialog keeps only a short travel-date/availability and
 enquiry notice above the feature comparison, without introductory paragraphs.
 

@@ -101,6 +101,15 @@ img { display: block; max-width: 100%; }
 .offer-banner-heading strong { font-size: 22px; line-height: 1.3; }
 .offer-heading-subtitle { padding-left: 36px; font-size: 11px; line-height: 1.3; }
 .offer-heading-line + .offer-heading-subtitle { color: #ffe0ad; font-weight: 600; }
+.offer-social { min-width: 0; width: 100%; margin-top: 4px; padding-left: 36px; }
+.offer-social summary { width: fit-content; color: #ffe0ad; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.offer-social-panel { display: grid; gap: 10px; margin-top: 10px; padding: 14px; border: 1px solid #7096aa; border-radius: 10px; background: #102d46; color: #fff; }
+.offer-social-panel > strong { font-size: 15px; }
+.offer-social-panel > p { margin: 0; color: #e0edf5; font-size: 12px; line-height: 1.6; }
+.offer-social-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.offer-social-links a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 10px; border: 1px solid #7096aa; border-radius: 6px; color: #fff; font-size: 12px; }
+.offer-social-links a:hover { background: #24536c; }
+@media (max-width: 800px) { .offer-social { padding-left: 0; } }
 .offer-carousel { min-width: 0; }
 .offer-rail { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-inline: contain; }
 .offer-rail::-webkit-scrollbar { display: none; }
