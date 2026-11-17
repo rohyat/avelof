@@ -14,10 +14,23 @@ Placement is based on recognisable scenes, not verified capture metadata.
 | ladakh-nubra-signpost-user.jpg | Image 9 | Nubra guide road scene; exact junction not asserted |
 | ladakh-pangong-lakeside-user.jpg | Image 10 | Pangong lakeshore photo props |
 
-Images 1-4, 6 and 11 are deliberately not imported: exact locations are uncertain.
-The first monastery may be in Spiti rather than Ladakh. Blossom, frozen-river,
-night-sky and unidentified canyon photographs are not used to substantiate
-destination or seasonal claims. The owner selected using matched photos only.
+The owner subsequently requested all 11 images, including the uncertain ones.
+Images 1-4, 6 and 11 now appear only in the explicitly labelled inspiration
+gallery on the Ladakh home and places pages, with a visible location-unverified
+badge and individual captions. They are not assigned to destination guides.
+These six JPEG copies use quality 86:
+
+| File | Shared image | Limitation |
+| --- | --- | --- |
+| mountain-monastery-inspiration-user.jpg | Image 1 | Location unverified; may be Spiti, outside Ladakh |
+| blossom-walk-inspiration-user.jpg | Image 2 | Location and season unverified |
+| blossom-valley-inspiration-user.jpg | Image 3 | Location and blossom timing unverified |
+| frozen-river-inspiration-user.jpg | Image 4 | Location unverified; not a summer scene or offered trek |
+| mountain-night-inspiration-user.jpg | Image 6 | Location and image treatment unverified |
+| river-canyon-inspiration-user.jpg | Image 11 | Exact river and location unverified |
+
+Blossom, frozen-river, night-sky and unidentified canyon photographs are not
+used to substantiate destination or seasonal claims.
 Scooters shown by the lake are photo backdrops, not evidence of offered rentals.
 The existing homepage river photograph is unchanged.
 

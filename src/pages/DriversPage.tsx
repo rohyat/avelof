@@ -4,6 +4,7 @@ import { ArrowRight, CircleCheck, MapPin, Users } from 'lucide-react'
 import ReviewStars from '../components/ReviewStars'
 import { useRegisteredDrivers } from '../services/driverService'
 import CallAssistance from '../components/CallAssistance'
+import LadakhPhotoGallery from '../components/LadakhPhotoGallery'
 import { regionBasePath, regionHomePath } from '../data/regions'
 import type { Region } from '../data/regions'
 
@@ -17,7 +18,7 @@ export default function DriversPage({ region = 'Kashmir' }: { region?: Region })
       <p>Browse drivers approved by AVELOF. Phone and driving-licence numbers are masked for privacy.</p>
     </div></section>
     <section className="page-width driver-directory">
-      <CallAssistance regional={region !== 'Kashmir'} />
+      <CallAssistance regional={region === 'Jammu'} />
       {drivers.loading && <p role="status">Loading approved drivers...</p>}
       {drivers.error && <p className="enquiry-error" role="alert">{drivers.error} <button type="button" className="text-link" onClick={drivers.reload}>Retry loading drivers</button></p>}
       {!drivers.loading && !drivers.error && !drivers.cars.length && <div className="empty-state"><h2>Driver listings are coming soon.</h2><p>Our team reviews each {region} driver before they appear here.</p><Link className="button button-outline" to={region === 'Jammu' ? '/register-driver' : `${base}/car-rentals`}>{region === 'Jammu' ? 'Register as a driver' : 'Explore vehicles'}</Link></div>}
@@ -45,5 +46,6 @@ export default function DriversPage({ region = 'Kashmir' }: { region?: Region })
         <Link className="button button-outline" to="/register-driver">Register as a Driver <ArrowRight size={16} /></Link>
       </div>
     </section>
+    {region === 'Ladakh' && <LadakhPhotoGallery preview />}
   </>
 }

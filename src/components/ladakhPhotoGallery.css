@@ -1,0 +1,20 @@
+.ladakh-photo-collection { padding-block: 48px; scroll-margin-top: 110px; }
+.ladakh-photo-collection > .eyebrow { display: flex; align-items: center; gap: 8px; }
+.ladakh-photo-collection h2 { margin-block: 12px; font-size: clamp(26px, 3vw, 38px); }
+.ladakh-photo-collection-intro { max-width: 760px; color: var(--muted); line-height: 1.8; font-size: 14px; }
+.ladakh-photo-collection-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; margin-block: 26px; }
+.ladakh-photo-collection figure { min-width: 0; margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--ivory); }
+.ladakh-photo-collection-image { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: var(--glacier); }
+.ladakh-photo-collection-image img { width: 100%; height: 100%; object-fit: cover; }
+.ladakh-photo-collection-image > span { position: absolute; bottom: 12px; left: 12px; right: 12px; width: fit-content; padding: 7px 10px; border-radius: 20px; background: rgba(14,35,27,.88); color: #fff; font-size: 11px; }
+.ladakh-photo-collection figcaption { padding: 18px; }
+.ladakh-photo-collection figcaption strong { color: var(--ink); font-size: 15px; }
+.ladakh-photo-collection figcaption p { margin: 7px 0 0; font-size: 12px; color: var(--muted); line-height: 1.7; }
+@media (max-width: 800px) {
+  .ladakh-photo-collection-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+}
+@media (max-width: 540px) {
+  .ladakh-photo-collection { padding-block: 32px; }
+  .ladakh-photo-collection-grid { grid-template-columns: 1fr; }
+  .ladakh-photo-collection-image { aspect-ratio: 4 / 3; }
+}

@@ -488,9 +488,15 @@ Each guide separates highlights, nearby stops, route fit, seasonal conditions an
 local planning notes, with an official district source. Remote extensions are not
 presented as included in standard packages. Enquiry links prefill editable route
 requirements with a validated catalog place, without changing receipt/booking rules.
-Five matched owner-supplied photos are optimised locally; uncertain photos remain
-unused. See `public/images/destinations/SOURCES.md` for placement and limitations.
-The original Ladakh hero and bike-trip section are unchanged. Run
+All 11 owner-supplied photos are optimised locally. The home and places pages
+show the complete collection; other Ladakh service pages, including hotels and
+drivers, show a three-photo preview linking to it. Six uncertain-location images
+have visible unverified badges and individual limitations; they are not assigned
+to named destinations. See `public/images/destinations/SOURCES.md` for provenance.
+The Ladakh call-help tile uses the same component, wording and four promises as
+Kashmir, including on hotel and driver directories. Jammu's regional suppression
+and partner-registration help remain unchanged. The original hero stays intact.
+Bike-page previews are sightseeing photos, not claims of available vehicles. Run
 `node --test tests/ladakh-places.test.mjs tests/ladakh.test.mjs` against port 8792
 for image loading, filters, keyboard details, enquiry context and responsive checks.
 
