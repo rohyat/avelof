@@ -19,8 +19,8 @@ test('homepage shortcuts place local trips after cabs and offer a full-width dir
     assert.equal(await call.getAttribute('href'), `tel:${business.phone.replace(/[^\d+]/g, '')}`)
     assert.ok((await call.textContent()).includes(business.phone))
     assert.equal(await call.locator('strong').textContent(), 'Your Kashmir memoriesstart with a conversation.')
-    assert.equal(await call.locator('.home-call-copy > span:last-child').textContent(), 'Tell us what you’re dreaming of. Let’s plan it together.')
-    assert.equal(await call.locator('.home-call-action > span').textContent(), 'Call AVELOF ')
+    assert.equal(await call.locator('.home-call-copy > span:last-child').textContent(), 'We’ll help you plan your trip based on your requirements.')
+    assert.equal(await call.locator('.home-call-action > span').textContent(), 'Call AVELOF directly ')
     for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       const navBox = await nav.boundingBox()
