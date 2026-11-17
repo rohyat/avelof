@@ -4,7 +4,7 @@ import { chromium } from 'playwright'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://127.0.0.1:8792'
 
-test('holiday destinations sit above the hero in a centred responsive row with only Kashmir enabled', async () => {
+test('holiday destinations sit above the hero with Kashmir and Ladakh enabled', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage()
   await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
@@ -14,15 +14,15 @@ test('holiday destinations sit above the hero in a centred responsive row with o
     const navigation = page.getByRole('navigation', { name: 'Holiday destinations' })
     await navigation.waitFor()
     assert.deepEqual(await navigation.locator('.home-destination-name').allTextContents(), ['Kashmir', 'Ladakh', 'Shimla', 'Manali', 'Spiti Valley'])
-    assert.equal(await navigation.getByRole('link').count(), 0)
-    const kashmir = navigation.getByRole('button', { name: 'Kashmir', exact: true })
-    assert.equal(await kashmir.getAttribute('aria-pressed'), 'true')
+    assert.equal(await navigation.getByRole('link').count(), 2)
+    const kashmir = navigation.getByRole('link', { name: 'Kashmir', exact: true })
+    assert.equal(await kashmir.getAttribute('aria-current'), 'page')
     assert.equal(await navigation.getByText('Explore places').count(), 0)
-    for (const name of ['Ladakh', 'Shimla', 'Manali', 'Spiti Valley']) {
+    for (const name of ['Shimla', 'Manali', 'Spiti Valley']) {
       assert.equal(await navigation.getByRole('button', { name: `${name} Coming soon` }).isDisabled(), true)
     }
     assert.equal(await navigation.locator('svg').count(), 5)
-    const ladakhIcon = navigation.getByRole('button', { name: 'Ladakh Coming soon' }).locator('svg')
+    const ladakhIcon = navigation.getByRole('link', { name: 'Ladakh', exact: true }).locator('svg')
     const spitiIcon = navigation.getByRole('button', { name: 'Spiti Valley Coming soon' }).locator('svg')
     assert.equal(await kashmir.locator('svg').evaluate((icon) => icon.classList.contains('lucide-sailboat')), true)
     assert.equal(await ladakhIcon.evaluate((icon) => icon.classList.contains('lucide-mountain')), true)
@@ -55,7 +55,7 @@ test('holiday destinations sit above the hero in a centred responsive row with o
       const url = page.url()
       await kashmir.click()
       assert.equal(page.url(), url)
-      assert.equal(await kashmir.getAttribute('aria-pressed'), 'true')
+      assert.equal(await kashmir.getAttribute('aria-current'), 'page')
       await page.getByRole('heading', { name: 'Experience Kashmir Beyond Expectations.' }).waitFor()
     }
   } finally { await browser.close() }

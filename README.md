@@ -14,6 +14,19 @@ Create a production build with `npm run build`. Run the configured linter with `
 The Dark mode switch sits beside the header logo. Dark mode is the default for new visitors;
 the chosen theme is stored in the browser and shared across open tabs.
 
+The homepage destination selector links Kashmir (`/`) and Ladakh (`/ladakh`).
+Ladakh has its own service icons, route previews, Bike Trips section, stays,
+transport, places and travel guidance. Its header/footer links stay within Ladakh,
+and Kashmir discounts and payment promises are not shown there. Ladakh is a
+planning preview: prices, suppliers and departures are not confirmed, and contact
+is by phone rather than the Kashmir booking planner. Content lives in
+`src/data/ladakh.ts`. Route cards can be filtered by starting city and have
+expandable proposed journey outlines. The responsive hero uses original,
+explicitly labelled landscape artwork rather than an unverified destination
+photo. FAQs explain the prelaunch status and altitude/transport checks.
+Run `node --test tests/ladakh.test.mjs` against port 8792
+to check destination switching, section links, theme and responsive layout.
+
 A simple back arrow appears inline beside Home in each page's existing breadcrumb.
 Pages without breadcrumbs place it alongside their existing opening heading or
 partner link. It adds no separate row or gap below the header and is absent on Home.

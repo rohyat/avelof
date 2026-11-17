@@ -13,12 +13,14 @@ import { ActivitiesPage, FoodAndShoppingPage, TravelGuidePage } from './pages/Di
 import BusinessRegistrationPage, { AdminBusinessesPage, BusinessStatusPage } from './pages/BusinessRegistrationPage'
 import LocalTripsPage from './pages/LocalTripsPage'
 import PricingProvider from './components/PricingProvider'
+import LadakhPage from './pages/LadakhPage'
 
 export default function App() {
   return (
     <PricingProvider><Routes>
       <Route element={<SiteLayout />}>
         <Route index element={<HomePage />} />
+        <Route path="ladakh" element={<LadakhPage />} />
         <Route path="tour-packages" element={<CollectionPage />} />
         <Route path="tour-packages/:slug" element={<DetailPage />} />
         <Route path="car-rentals" element={<CollectionPage />} />

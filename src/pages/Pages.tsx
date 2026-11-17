@@ -1,6 +1,6 @@
 import BackButton from '../components/BackButton'
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, ArrowUpRight, BedDouble, BookOpen, CalendarDays, CarFront, Check, CircleCheck, CircleMinus, ClipboardList, Compass, Mail, MapPin, Mountain, MountainSnow, Package, Phone, PlaneLanding, PlaneTakeoff, Plus, Route, Sailboat, ShieldCheck, ShoppingBag, Sparkles, TentTree, Trees, UserRound, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, BedDouble, BookOpen, CalendarDays, CarFront, Check, CircleCheck, CircleMinus, ClipboardList, Compass, Mail, MapPin, MountainSnow, Package, Phone, PlaneLanding, PlaneTakeoff, Plus, Route, Sailboat, ShieldCheck, ShoppingBag, Sparkles, Trees, UserRound, Users } from 'lucide-react'
 import { Link, useLocation, useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import { business } from '../config'
 import { rentalCars } from '../data/catalog'
@@ -30,6 +30,7 @@ import DownloadItineraryPdfButton from '../components/DownloadItineraryPdfButton
 import { tourPackagePdfData } from '../services/itineraryPdf'
 import PackageComparison from '../components/PackageComparison'
 import CallAssistance from '../components/CallAssistance'
+import HolidayDestinations from '../components/HolidayDestinations'
 
 const routeFor: Record<CatalogKind, string> = { package: '/tour-packages', car: '/car-rentals', hotel: '/hotels' }
 function useBooking() {
@@ -94,15 +95,7 @@ export function HomePage() {
   const tourPackages = useTourPackages()
 
   return <>
-    <nav className="home-destinations page-width" aria-label="Holiday destinations">
-      <div className="home-destination-grid">
-        <button className="home-destination-card" type="button" aria-pressed="true"><span className="home-destination-icon"><Sailboat size={26} aria-hidden="true" /></span><span className="home-destination-name">Kashmir</span></button>
-        <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><Mountain size={26} aria-hidden="true" /></span><span className="home-destination-name">Ladakh</span><span className="home-destination-status">Coming soon</span></button>
-        <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><Trees size={26} aria-hidden="true" /></span><span className="home-destination-name">Shimla</span><span className="home-destination-status">Coming soon</span></button>
-        <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><TentTree size={26} aria-hidden="true" /></span><span className="home-destination-name">Manali</span><span className="home-destination-status">Coming soon</span></button>
-        <button className="home-destination-card" type="button" disabled><span className="home-destination-icon"><svg className="spiti-monastery" width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 21h18M4 21V11h6m4 0h6v10M8 21V7h8v14M7 7h10L12 3 7 7ZM3 11h5m8 0h5M11 21v-5h2v5M11 10h2M5 14h1m12 0h1M5 17h1m12 0h1" /></svg></span><span className="home-destination-name">Spiti Valley</span><span className="home-destination-status">Coming soon</span></button>
-      </div>
-    </nav>
+    <HolidayDestinations destination="kashmir" />
     <section className="home-hero">
       <div className="hero-content page-width"><Eyebrow>Your Kashmir, thoughtfully planned</Eyebrow><h1>Experience Kashmir<br /><em>Beyond Expectations.</em></h1><p>Where Kashmir&apos;s natural beauty meets warm hospitality, memorable stays and genuine local care.</p>
         <HeroTrustPoints />

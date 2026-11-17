@@ -65,10 +65,10 @@ img { display: block; max-width: 100%; }
 .home-destination-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; max-width: 608px; margin-inline: auto; }
 .home-destination-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-width: 0; min-height: 112px; padding: 12px 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--ivory); color: var(--ink); text-align: center; }
 .home-destination-card:not(:disabled):hover { border-color: var(--forest); background: var(--glacier); }
-.home-destination-card[aria-pressed="true"], .home-destination-card[aria-pressed="true"]:hover { background: #18594e; border-color: #18594e; color: #fff; box-shadow: 0 0 0 2px var(--ivory), 0 0 0 3px #18594e; }
-.home-destination-card[aria-pressed="true"] .home-destination-icon { background: #307165; color: #fff; }
-:root[data-theme="dark"] .home-destination-card[aria-pressed="true"] { background: #a4d9c9; border-color: #a4d9c9; color: #123e39; box-shadow: 0 0 0 2px var(--ivory), 0 0 0 3px #a4d9c9; }
-:root[data-theme="dark"] .home-destination-card[aria-pressed="true"] .home-destination-icon { background: #c9eadf; color: #123e39; }
+.home-destination-card[aria-current="page"], .home-destination-card[aria-current="page"]:hover { background: #18594e; border-color: #18594e; color: #fff; box-shadow: 0 0 0 2px var(--ivory), 0 0 0 3px #18594e; }
+.home-destination-card[aria-current="page"] .home-destination-icon { background: #307165; color: #fff; }
+:root[data-theme="dark"] .home-destination-card[aria-current="page"] { background: #a4d9c9; border-color: #a4d9c9; color: #123e39; box-shadow: 0 0 0 2px var(--ivory), 0 0 0 3px #a4d9c9; }
+:root[data-theme="dark"] .home-destination-card[aria-current="page"] .home-destination-icon { background: #c9eadf; color: #123e39; }
 .home-destination-card:disabled { color: var(--muted); background: var(--paper); cursor: not-allowed; }
 .home-destination-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--glacier); color: var(--forest); }
 .home-destination-card:disabled .home-destination-icon { color: var(--muted); }
