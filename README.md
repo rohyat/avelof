@@ -271,7 +271,7 @@ optional help channel, not the enquiry submission flow.
 
 Tile order: Plan a trip, Packages, Hotels, Cabs, Local Trips, Drivers, Bookings,
 Places, Activities, Food & Shopping, Travel Guide, Partner. A full-width direct
-call tile below leads with “Let’s discuss your travel requirements” and uses
+call tile below leads with “Your Kashmir memories start with a conversation” and uses
 the business phone number in a prominent Call AVELOF panel. The entire tile
 remains a single tap-to-call link, with a stacked layout on mobile.
 Reviews remain available on their existing page, without a homepage shortcut.
