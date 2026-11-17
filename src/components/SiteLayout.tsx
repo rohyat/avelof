@@ -193,7 +193,6 @@ export default function SiteLayout() {
       <OfferBanner />
       <header className="site-header">
         <div className="header-brand-group">
-          {location.pathname !== '/' && <button type="button" className="page-back-button" onClick={goBack} aria-label="Go back" title="Go back"><ArrowLeft size={20} aria-hidden="true" /></button>}
           <Link className="brand" to="/" aria-label="AVELOF home" onClick={returnHome}><img className="brand-logo" src="/app-icon-512.png?v=chinar-1" alt="" width={44} height={44} /><span>AVELOF<small>BEYOND EXPECTATIONS</small></span></Link>
           <button type="button" className="theme-toggle" role="switch" aria-label="Dark mode" aria-checked={darkMode} onClick={() => setDarkMode((current) => !current)}>{darkMode ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}<span className="theme-toggle-track" aria-hidden="true"><span className="theme-toggle-thumb" /></span></button>
         </div>
@@ -202,7 +201,10 @@ export default function SiteLayout() {
           {navItems.map(([label, href]) => <NavLink key={href} to={href} onClick={closeMenu}>{label}</NavLink>)}
         </nav>
       </header>
-      <main><Outlet context={{ openBooking } satisfies SiteContext} /></main>
+      <main>
+        {location.pathname !== '/' && <div className="page-width page-back-row"><button type="button" className="page-back-button" onClick={goBack} aria-label="Go back" title="Go back"><ArrowLeft size={20} aria-hidden="true" /></button></div>}
+        <Outlet context={{ openBooking } satisfies SiteContext} />
+      </main>
       <a className="whatsapp-float" href={createWhatsAppUrl('Hello AVELOF, I would like help planning my Kashmir journey.')} target="_blank" rel="noreferrer" aria-label="Chat with AVELOF on WhatsApp" title="Chat with AVELOF on WhatsApp"><WhatsAppIcon size={28} /></a>
       <footer className="site-footer">
         <div className="footer-main">

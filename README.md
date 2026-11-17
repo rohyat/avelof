@@ -14,10 +14,10 @@ Create a production build with `npm run build`. Run the configured linter with `
 The Dark mode switch sits beside the header logo. Dark mode is the default for new visitors;
 the chosen theme is stored in the browser and shared across open tabs.
 
-A simple back arrow appears in the header on every page except Home.
+A simple back arrow appears just below the header on every page except Home,
+aligned with the left content edge and above the first page text.
 It returns to the previous in-site history entry, or Home when opened directly.
-It adds no extra row or page spacing. On small screens the arrow takes the place
-of the decorative logo image; the AVELOF name remains a Home link.
+The header logo remains visible on small screens; the AVELOF name remains a Home link.
 Both header and footer AVELOF logos
 return to the top of Home, including when Home is already open.
 Run `node --test tests/site-navigation.test.mjs` against the local Vite server

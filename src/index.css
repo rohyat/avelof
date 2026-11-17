@@ -147,6 +147,7 @@ img { display: block; max-width: 100%; }
 @media (max-width: 480px) { .offer-banner { gap: 2px; padding-block: 4px; } .offer-tile { grid-template-columns: 72px minmax(0, 1fr); gap: 2px 8px; padding: 4px; } .offer-image-frame { width: 72px; height: 76px; grid-row: 1 / span 2; } .offer-explore { grid-column: 2; justify-self: start; min-height: 28px; padding: 4px 8px; font-size: 11px; } .offer-controls button { height: 24px; } }
 .site-header { position: sticky; z-index: 20; top: 0; height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 34px; padding: 0 max(36px, calc((100% - 1200px) / 2)); background: rgba(255,255,255,.97); border-bottom: 1px solid var(--line); backdrop-filter: blur(14px); }
 .header-brand-group { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.page-back-row { display: flex; align-items: center; padding-block: 4px; }
 .page-back-button { display: inline-grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--forest); }
 .page-back-button:hover { background: var(--glacier); }
 .page-back-button:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
@@ -757,7 +758,6 @@ body.enquiry-open { overflow: hidden; }
   .package-end-booking { display: block; }
 }
 @media (max-width: 560px) {
-  .header-brand-group:has(.page-back-button) .brand-logo { display: none; }
   .package-journey { padding: 18px; }
   .package-itinerary article { grid-template-columns: 56px minmax(0, 1fr); gap: 10px; }
   .package-day-copy { padding: 16px; }
@@ -1308,7 +1308,6 @@ dialog.registration-success, dialog.registration-progress { position: fixed; ins
 @media (min-width: 821px) and (max-width: 900px) {
   .site-header { padding-inline: 22px; }
   .main-nav { gap: 8px; }
-  .header-brand-group:has(.page-back-button) .brand-logo { display: none; }
 }
 
 @media (max-width: 820px) {
