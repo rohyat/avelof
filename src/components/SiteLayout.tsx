@@ -53,8 +53,8 @@ function saveScrollPosition(key: string, x: number, y: number) {
 
 export default function SiteLayout() {
   const [darkMode, setDarkMode] = useState(() => {
-    try { return localStorage.getItem('avelof:theme') === 'dark' }
-    catch (error) { console.warn('Could not read the saved theme preference.', error); return false }
+    try { return localStorage.getItem('avelof:theme') !== 'light' }
+    catch (error) { console.warn('Could not read the saved theme preference.', error); return true }
   })
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLElement>(null)
@@ -72,7 +72,7 @@ export default function SiteLayout() {
 
   useEffect(() => {
     const syncTheme = (event: StorageEvent) => {
-      if (event.key === 'avelof:theme' || event.key === null) setDarkMode(event.newValue === 'dark')
+      if (event.key === 'avelof:theme' || event.key === null) setDarkMode(event.newValue !== 'light')
     }
     window.addEventListener('storage', syncTheme)
     return () => window.removeEventListener('storage', syncTheme)

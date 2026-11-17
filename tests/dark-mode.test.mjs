@@ -7,6 +7,7 @@ const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://127.0.0.1:8792'
 test('dark mode persists across pages and reloads and can be turned off', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const context = await browser.newContext()
+  await context.addInitScript(() => { if (!localStorage.getItem('avelof:theme')) localStorage.setItem('avelof:theme', 'light') })
   const page = await context.newPage()
   await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
   await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
@@ -27,6 +28,7 @@ test('dark mode persists across pages and reloads and can be turned off', async 
         const track = header.querySelector('.theme-toggle-track').getBoundingClientRect()
         return { beside: control.left >= brand.right && Math.abs((control.top + control.bottom - brand.top - brand.bottom) / 2) <= 1, contained: control.top >= bounds.top && control.bottom <= bounds.bottom, overlap: control.right > right.left, overflow: document.documentElement.scrollWidth > innerWidth || right.right > bounds.right, height: bounds.height, thumbOffset: thumb.left - track.left, text: header.querySelector('.theme-toggle').textContent }
       })
+
       assert.equal(geometry.beside, true)
       assert.equal(geometry.contained, true)
       assert.equal(Boolean(geometry.overlap), false)
@@ -68,5 +70,30 @@ test('dark mode persists across pages and reloads and can be turned off', async 
     await secondPage.getByRole('switch', { name: 'Dark mode', exact: true }).click()
     await page.waitForFunction(() => document.documentElement.dataset.theme === 'light')
     await secondPage.close()
+  } finally { await browser.close() }
+})
+
+test('new visitors start in dark mode and a saved light choice overrides the default', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const context = await browser.newContext()
+  await context.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
+  try {
+    let page = await context.newPage()
+    await page.goto(origin)
+    const theme = () => page.locator('html').getAttribute('data-theme')
+    assert.equal(await theme(), 'dark')
+    assert.equal(await page.evaluate(() => localStorage.getItem('avelof:theme')), 'dark')
+    await page.getByRole('switch', { name: 'Dark mode', exact: true }).click()
+    assert.equal(await theme(), 'light')
+    await page.close()
+    page = await context.newPage()
+    await page.goto(`${origin}/partners`)
+    assert.equal(await theme(), 'light')
+    await page.reload()
+    assert.equal(await theme(), 'light')
+    const other = await context.newPage()
+    await other.goto(origin)
+    await other.evaluate(() => localStorage.removeItem('avelof:theme'))
+    await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark')
   } finally { await browser.close() }
 })

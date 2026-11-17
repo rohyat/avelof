@@ -7,6 +7,7 @@ const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://127.0.0.1:8792'
 test('partner edit links stay below registration buttons and form headers are compact and readable', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage()
+  await page.addInitScript(() => { if (!localStorage.getItem('avelof:theme')) localStorage.setItem('avelof:theme', 'light') })
   await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
   try {
     for (const width of [320, 390, 1440]) {
