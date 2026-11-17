@@ -283,9 +283,10 @@ preferences show all four without animation. On mobile the phone icon is
 vertically centred beside the planning message, below the rotating commitments.
 Reviews remain available on their existing page, without a homepage shortcut.
 The shared call assistance tile also appears below the introductions on package,
-hotel, cab and local-trip listings and in the custom trip planner. Partners has
+hotel, cab and local-trip listings. In the custom trip planner it appears below
+the step controls, including “Next: places”, rather than above the planner. Partners has
 registration-specific help without the traveller commitment messages. Layout
-responds to the tile's available width, including the narrower planner sidebar.
+responds to the tile's available width, including the planner.
 
 The package comparison dialog keeps only a short travel-date/availability and
 enquiry notice above the feature comparison, without introductory paragraphs.

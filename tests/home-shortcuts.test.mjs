@@ -76,6 +76,17 @@ test('listing and planner call assistance shares the compact design while partne
           assert.equal(await tile.locator('.hero-trust').count(), route === '/partners' ? 0 : 1)
         }
         if (route === '/partners') assert.ok((await tiles.textContent()).includes('Need help with registration?'))
+        if (route === '/' || route === '/tour-packages') {
+          const planner = page.locator('.trip-planner')
+          assert.equal(await page.locator('.custom-trip-intro .home-call-tile').count(), 0)
+          const assistance = planner.locator('.home-call-tile')
+          assert.equal(await assistance.count(), 1)
+          const next = planner.getByRole('button', { name: 'Next: places' })
+          await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+          const nextBox = await next.boundingBox()
+          const assistanceBox = await assistance.boundingBox()
+          assert.ok(assistanceBox.y >= nextBox.y + nextBox.height, 'Planner assistance sits below Next: places')
+        }
         if (route === '/tour-packages') {
           assert.ok(await tiles.first().evaluate((el) => Boolean(el.compareDocumentPosition(document.querySelector('.package-comparison-intro')) & Node.DOCUMENT_POSITION_FOLLOWING)))
         }

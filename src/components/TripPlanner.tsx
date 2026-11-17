@@ -539,7 +539,6 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
         <p className="eyebrow">Customise your trip</p>
         <h2>Plan your trip,<br /><em>your way.</em></h2>
         <p>Choose your dates and places. We’ll shape a thoughtful itinerary around your interests, pace and stay preferences.</p>
-        <CallAssistance />
       </div>
 
       <div ref={plannerRef} tabIndex={-1} className="trip-planner" aria-label="Customise your Kashmir journey">
@@ -691,6 +690,7 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
           <h3>Contact details</h3><p>Your selected dates, guests, vehicle, hotel rooms, activity and union-cab requests will be included automatically.</p>{selectedActivities && <section className="planner-activity-summary" aria-label="Requested activities"><h4>Requested activities</h4><p>{selectedActivities}</p><small>Subject to confirmation. Activity costs are separate from the estimate.</small></section>}{unionCabRequests && <section className="planner-activity-summary" aria-label="Requested union cabs"><h4>Requested union cabs</h4><p>{unionCabRequests}          </p><small>{unionCabRefundNote}</small></section>}<EnquiryForm kind="package" selectedItem="Custom package" additionalFields={enquiryFields} onSubmittingChange={setSubmitting} onPrepared={(saved) => { setReceipt(saved); requestAnimationFrame(() => { plannerRef.current?.focus(); plannerRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) }) }} />
         </>)}
         {step < 5 && <div className="planner-footer"><p>Your route is a starting point. Our local team will help check travel times, access and availability.</p>{step < 4 ? <button className="button button-dark" type="button" disabled={!tripDays} onClick={() => changeStep(step + 1)}>Next: {step === 0 ? 'places' : step === 1 ? 'vehicle' : step === 2 ? 'activities' : 'hotels'} <ArrowRight size={16} /></button> : <button className="button button-dark" type="button" disabled={!tripDays || invalidRooms} onClick={continueToEnquiry}>Continue with this plan <ArrowRight size={16} /></button>}</div>}
+        <CallAssistance />
       </div>
     </div>
   </section>
