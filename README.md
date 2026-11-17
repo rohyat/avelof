@@ -297,7 +297,7 @@ do not currently affect ranking; admin ordering remains newest-first.
 The theme preference has no expiry in local storage and is retained between visits
 until changed or browser site data is cleared.
 
-The winter-offer banner includes “Get extra 4% off” for tour packages, with a
+The winter-offer banner includes “Get extra 3% off” for tour packages, with a
 visible “Follow us on Instagram + Facebook” prompt and both platform icons. Its
 expandable panel links to the Instagram and Facebook pages in `src/config.ts`.
 Customers must follow both; AVELOF manually verifies eligibility and confirms the

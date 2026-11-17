@@ -110,10 +110,10 @@ export default function OfferBanner() {
     } as CSSProperties}><Snowflake size={12} strokeWidth={1.5} /></span>)}</div>
     <div className="offer-banner-heading"><div className="offer-heading-line"><Snowflake className="offer-winter-icon" size={28} aria-hidden="true" /><strong>Winter offers are live</strong></div><span className="offer-heading-subtitle">Flat {pricing.settings.discountPercent}% off on packages &amp; hotels · 30% off on cabs</span><span className="offer-heading-subtitle">{hotelPackagePriceInclusions}</span>
       <details className="offer-social">
-        <summary><span>Get extra 4% off</span><span className="offer-social-follow">Follow us on <span><SocialIcon platform="instagram" /> Instagram</span> + <span><SocialIcon platform="facebook" /> Facebook</span></span></summary>
+        <summary><span>Get extra 3% off</span><span className="offer-social-follow">Follow us on <span><SocialIcon platform="instagram" /> Instagram</span> + <span><SocialIcon platform="facebook" /> Facebook</span></span></summary>
         <div className="offer-social-panel">
-          <strong>Follow both. Get extra 4% off your package.</strong>
-          <p>Follow AVELOF on Instagram and Facebook to be eligible for an extra 4% off tour packages.</p>
+          <strong>Follow both. Get extra 3% off your package.</strong>
+          <p>Follow AVELOF on Instagram and Facebook to be eligible for an extra 3% off tour packages.</p>
           <div className="offer-social-links">
             <a href={business.instagram} target="_blank" rel="noopener noreferrer"><SocialIcon platform="instagram" /> Follow on Instagram <ExternalLink size={16} aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span></a>
             <a href={business.facebook} target="_blank" rel="noopener noreferrer"><SocialIcon platform="facebook" /> Follow on Facebook <ExternalLink size={16} aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span></a>

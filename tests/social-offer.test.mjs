@@ -20,7 +20,7 @@ test('extra package offer opens both social links and requires manual verificati
       const prices = await page.locator('.catalog-card .price').allTextContents()
       assert.equal(await panel.isVisible(), false)
       const trigger = offer.locator('summary')
-      assert.match(await trigger.textContent(), /Get extra 4% offFollow us on .*Instagram.*Facebook/)
+      assert.match(await trigger.textContent(), /Get extra 3% offFollow us on .*Instagram.*Facebook/)
       assert.equal(await trigger.locator('.offer-social-icon').count(), 2)
       assert.equal(await trigger.locator('.offer-social-follow').isVisible(), true)
       await trigger.focus()
@@ -33,6 +33,8 @@ test('extra package offer opens both social links and requires manual verificati
         assert.equal(await link.getAttribute('rel'), 'noopener noreferrer')
       }
       assert.match(await panel.textContent(), /Follow AVELOF on Instagram and Facebook/)
+      assert.match(await panel.textContent(), /extra 3% off tour packages/)
+      assert.doesNotMatch(await offer.textContent(), /4%/)
       assert.match(await panel.textContent(), /verify your eligibility/)
       assert.match(await panel.textContent(), /not applied automatically/)
       assert.deepEqual(await page.locator('.catalog-card .price').allTextContents(), prices)
