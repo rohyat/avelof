@@ -6,8 +6,10 @@ import HolidayDestinations from '../components/HolidayDestinations'
 import CallAssistance from '../components/CallAssistance'
 import HeroTrustPoints from '../components/HeroTrustPoints'
 import RegionalEnquiryForm from '../components/RegionalEnquiryForm'
+import LadakhPlaces from '../components/LadakhPlaces'
 import { business } from '../config'
-import { ladakhEnquiryPreferences, ladakhFaqs, ladakhPackages, ladakhPlaces, ladakhPages } from '../data/ladakh'
+import { ladakhEnquiryPreferences, ladakhFaqs, ladakhPackages, ladakhPages } from '../data/ladakh'
+import { ladakhPlaces } from '../data/ladakhPlaces'
 import type { LadakhSection } from '../data/ladakh'
 import './ladakh.css'
 
@@ -51,6 +53,7 @@ export default function LadakhPage({ section = 'home' }: { section?: LadakhSecti
   const [search] = useSearchParams()
   const { hash } = useLocation()
   const selectedRoute = ladakhPackages.find((trip) => trip.name === search.get('service'))?.name
+  const selectedPlace = ladakhPlaces.find((place) => place.id === search.get('place'))
   const home = section === 'home'
   const legacySection = { '#packages': 'packages', '#bike-trips': 'bike-trips', '#transport': 'car-rentals', '#stays': 'hotels', '#places': 'places', '#experiences': 'experiences', '#travel-guide': 'travel-guide', '#contact': 'contact', '#plan': 'contact' }
   const legacyPath = Object.entries(legacySection).find(([key]) => key === hash)?.[1]
@@ -67,6 +70,7 @@ export default function LadakhPage({ section = 'home' }: { section?: LadakhSecti
       <section className="home-shortcuts"><nav className="home-shortcut-grid page-width" aria-label="Explore Ladakh">{shortcuts.map(({ label, path, icon: Icon }) => <Link className="home-shortcut-link" to={`/ladakh/${path}`} key={label}><span className="home-shortcut-icon"><Icon size={22} aria-hidden="true" /></span><span>{label}</span></Link>)}</nav><div className="page-width"><CallAssistance regional /></div></section>
       <section className="section page-width"><p className="eyebrow">Plan for the place</p><h2>Your route comes first.</h2><p>Start in Leh or travel from Srinagar via Kargil. Share your dates, group size, preferred pace and stay style before choosing a final itinerary.</p><AltitudeNotice /></section>
       <PackageRoutes preview />
+      <LadakhPlaces preview />
       <section className="section page-width"><div className="ladakh-card-grid">
         <article className="ladakh-card"><Motorbike size={28} aria-hidden="true" /><h2>For the riders.</h2><p>Explore proposed motorcycle circuits and the checks before a ride.</p><Link className="text-link" to="/ladakh/bike-trips">Explore Bike Trips <ArrowRight size={16} /></Link></article>
         <article className="ladakh-card"><BedDouble size={28} aria-hidden="true" /><h2>Your Ladakh stay.</h2><p>Find approved hotels with their own facilities, rates and meal options.</p><Link className="text-link" to="/ladakh/hotels">Browse hotels <ArrowRight size={16} /></Link></article>
@@ -89,11 +93,11 @@ export default function LadakhPage({ section = 'home' }: { section?: LadakhSecti
       <div className="ladakh-card"><CarFront size={28} aria-hidden="true" /><h2>Cabs &amp; Transfers</h2><p>Discuss private circuits, Leh airport pickups and Srinagar - Kargil - Leh transfers.</p><p>Local transport arrangements, vehicle changes, luggage capacity, fees and route access require confirmation.</p><Link className="button button-outline" to="/ladakh/drivers">Meet Ladakh drivers <ArrowRight size={16} /></Link></div>
       <RegionalEnquiryForm region="Ladakh" kind="car" preference={ladakhEnquiryPreferences.car} />
     </section>}
-    {section === 'places' && <section className="section page-width"><h2>Places along the journey.</h2><div className="ladakh-card-grid">{ladakhPlaces.map((place) => <article className="ladakh-card" key={place.name}><MapPin size={22} aria-hidden="true" /><h3>{place.name}</h3><p>{place.description}</p></article>)}</div></section>}
+    {section === 'places' && <LadakhPlaces />}
     {section === 'experiences' && <section className="section page-width"><div className="ladakh-card"><Landmark size={28} aria-hidden="true" /><h2>Culture &amp; Experiences</h2><p>Monastery visits, village walks, local food and landscape photography.</p><p>Guided rafting or other paid activities can only be offered after seasonal and operator checks. Nothing is included automatically.</p><Link className="text-link" to="/ladakh/contact">Discuss experiences <ArrowRight size={16} /></Link></div></section>}
     {section === 'travel-guide' && <section className="section page-width"><h2>Travel prepared.</h2><AltitudeNotice /><ul className="ladakh-guide"><li>Summer road access depends on weather and official openings; no fixed opening date is guaranteed.</li><li>Travellers with health concerns should seek medical advice before high-altitude travel.</li><li>Documents, permits, fees and restricted-area access depend on nationality and current rules.</li><li>Remote stays may have limited power, heating and connectivity. Confirm facilities before committing.</li><li>Final quotes must state meals, fuel, activities, taxes, exclusions and disruption or cancellation terms.</li></ul><a className="text-link" href="https://leh.nic.in/48-hours-acclimatization-for-tourists-arriving-in-leh/" target="_blank" rel="noreferrer">Read the official Leh acclimatisation advisory <ArrowRight size={16} aria-hidden="true" /></a></section>}
     {(home || section === 'travel-guide') && <section className="section page-width ladakh-faq" aria-labelledby="ladakh-faq-heading"><div><p className="eyebrow">A few things worth knowing</p><h2 id="ladakh-faq-heading">Before you make plans.</h2></div><div className="ladakh-faq-list">{ladakhFaqs.map((faq) => <details key={faq.question}><summary>{faq.question}<ChevronDown size={18} aria-hidden="true" /></summary><p>{faq.answer}</p></details>)}</div></section>}
-    {section === 'contact' && <section className="section page-width"><RegionalEnquiryForm key={selectedRoute ?? 'general'} region="Ladakh" preference={selectedRoute ?? ladakhEnquiryPreferences.contact} /></section>}
+    {section === 'contact' && <section className="section page-width"><RegionalEnquiryForm key={selectedRoute ?? selectedPlace?.id ?? 'general'} region="Ladakh" preference={selectedRoute ?? ladakhEnquiryPreferences.contact} initialDetails={selectedPlace ? `I would like to explore ${selectedPlace.name}. Please help me plan a suitable route, time and stay options.` : undefined} /></section>}
     <section className="section page-width"><div className="ladakh-card ladakh-contact"><div><h2>Your Ladakh journey starts with a conversation.</h2><p>Share your dates, starting point and travel style. We will help you understand the next steps.</p>{section !== 'contact' && <Link className="text-link" to="/ladakh/contact">Send an enquiry <ArrowRight size={16} /></Link>}</div><div className="ladakh-contact-action"><a className="button button-dark" href={`tel:${business.phone.replace(/[^\d+]/g, '')}`}><Phone size={18} aria-hidden="true" /> Call AVELOF <ArrowRight size={17} aria-hidden="true" /></a><strong>{business.phone}</strong><p>A conversation is not a booking confirmation. Prices and availability still need checking.</p></div></div></section>
   </div>
 }

@@ -56,7 +56,48 @@
 .ladakh-contact-action p { font-size: 12px; }
 .ladakh-page .button-dark { background: #18594e; color: #fff; }
 .ladakh-page .button-dark:hover { background: #123e39; }
+.ladakh-places-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; }
+.ladakh-places-intro > div { max-width: 700px; }
+.ladakh-places-intro > div > p:last-child { color: var(--muted); font-size: 15px; }
+.ladakh-places-mark { display: grid; justify-items: center; gap: 10px; flex-shrink: 0; padding: 18px; border: 1px solid var(--line); border-radius: 16px; color: var(--forest); font-size: 12px; }
+.ladakh-places-planning { display: flex; align-items: flex-start; gap: 12px; padding: 18px 22px; margin-top: 20px; border-left: 3px solid var(--forest); border-radius: 0 12px 12px 0; background: var(--glacier); }
+.ladakh-places-planning > svg { flex-shrink: 0; margin-top: 5px; color: var(--forest); }
+.ladakh-places-planning p { margin: 0; font-size: 13px; }
+.ladakh-place-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 28px; margin-top: 26px; }
+.ladakh-places-preview .ladakh-place-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.ladakh-place-card { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 20px; background: var(--ivory); box-shadow: 0 8px 28px rgba(14,35,27,.05); }
+.ladakh-place-photo { position: relative; overflow: hidden; aspect-ratio: 4 / 3; background: var(--glacier); }
+.ladakh-place-photo img { width: 100%; height: 100%; object-fit: cover; }
+.ladakh-place-photo > span { position: absolute; bottom: 14px; left: 14px; display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid rgba(255,255,255,.3); border-radius: 20px; background: rgba(14,35,27,.82); color: #fff; font-size: 10px; }
+.ladakh-place-identity { display: flex; align-items: center; gap: 18px; min-height: 120px; padding: 24px 28px; color: var(--forest); background: linear-gradient(130deg, var(--glacier), var(--ivory)); border-bottom: 1px solid var(--line); }
+.ladakh-place-identity svg { flex-shrink: 0; }
+.ladakh-place-identity span { font-family: var(--serif); font-size: 21px; line-height: 1.4; }
+.ladakh-place-body { padding: 26px; }
+.ladakh-place-body > .eyebrow { display: flex; align-items: center; gap: 7px; margin: 0 0 10px; font-size: 10px; }
+.ladakh-place-body h3 { margin: 0; font-family: var(--serif); font-size: clamp(24px, 2.4vw, 32px); line-height: 1.25; }
+.ladakh-place-body .ladakh-place-tagline { margin: 10px 0; font-size: 14px; color: var(--forest); font-weight: 600; }
+.ladakh-place-description { font-size: 14px; color: var(--muted); }
+.ladakh-place-highlights { display: grid; gap: 18px; margin: 22px 0; padding: 0; list-style: none; }
+.ladakh-place-highlights > li { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.ladakh-place-highlights > li > svg { flex-shrink: 0; margin-top: 3px; color: var(--forest); }
+.ladakh-place-highlights strong { font-size: 12px; color: var(--ink); }
+.ladakh-place-highlights p { margin: 3px 0 0; font-size: 13px; color: var(--muted); }
+.ladakh-place-details { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ladakh-place-details > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding-block: 14px; cursor: pointer; list-style: none; font-size: 13px; font-weight: 600; color: var(--forest); }
+.ladakh-place-details > .text-link { margin: 0 0 20px; font-size: 12px; }
+.ladakh-place-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-block: 20px; }
+.ladakh-place-gallery figure { min-width: 0; margin: 0; }
+.ladakh-place-gallery img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; }
+.ladakh-place-gallery figcaption { margin-top: 8px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.ladakh-place-action { margin-top: 20px; font-size: 13px; }
+.ladakh-photo-note { max-width: 760px; margin-top: 24px; color: var(--muted); font-size: 12px; }
 @media (max-width: 800px) {
+  .ladakh-places-preview .ladakh-place-grid { grid-template-columns: 1fr; }
+  .ladakh-places-preview .ladakh-place-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); }
+  .ladakh-places-preview .ladakh-place-photo { height: 100%; aspect-ratio: auto; }
+  .ladakh-places-intro { gap: 18px; }
+  .ladakh-places-mark { padding: 14px; }
+  .ladakh-place-body { padding: 22px; }
   .ladakh-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ladakh-facts > div { padding-inline: 12px; gap: 8px; align-items: flex-start; }
   .ladakh-faq, .ladakh-contact { grid-template-columns: 1fr; gap: 20px; }
@@ -64,6 +105,13 @@
   .ladakh-card { padding: 22px; }
 }
 @media (max-width: 540px) {
+  .ladakh-places-intro { display: block; }
+  .ladakh-places-mark { display: inline-flex; margin-top: 12px; padding: 10px 14px; }
+  .ladakh-places-mark svg { width: 20px; height: 20px; }
+  .ladakh-place-grid { grid-template-columns: 1fr; gap: 22px; }
+  .ladakh-places-preview .ladakh-place-card { display: block; }
+  .ladakh-places-preview .ladakh-place-photo { height: auto; aspect-ratio: 4 / 3; }
+  .ladakh-places-planning { padding: 16px; }
   .ladakh-page .section { padding-block: 40px; }
   .ladakh-card-grid { grid-template-columns: 1fr; }
   .ladakh-facts { grid-template-columns: 1fr; gap: 16px; }

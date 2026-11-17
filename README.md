@@ -482,6 +482,18 @@ Kashmir and Ladakh homepage service shortcuts sit 12px below the hero promises
 on mobile and 18px on larger screens, matching the headline-to-description gap.
 Hero height follows its content so fixed minimum heights do not add empty space.
 
+Ladakh's homepage previews three illustrated destinations; `/ladakh/places`
+contains nine category-filtered guides. Content lives in `src/data/ladakhPlaces.ts`.
+Each guide separates highlights, nearby stops, route fit, seasonal conditions and
+local planning notes, with an official district source. Remote extensions are not
+presented as included in standard packages. Enquiry links prefill editable route
+requirements with a validated catalog place, without changing receipt/booking rules.
+Five matched owner-supplied photos are optimised locally; uncertain photos remain
+unused. See `public/images/destinations/SOURCES.md` for placement and limitations.
+The original Ladakh hero and bike-trip section are unchanged. Run
+`node --test tests/ladakh-places.test.mjs tests/ladakh.test.mjs` against port 8792
+for image loading, filters, keyboard details, enquiry context and responsive checks.
+
 Food & Shopping is discovery-only: there is no ordering, checkout or payment.
 Restaurant, shop and handicraft business owners can register at `/register-business`, also linked from
 Partners. Public business information and photos require explicit publication

@@ -1,5 +1,28 @@
 # Destination Preview Images
 
+## Ladakh place photographs added 17 November 2026
+
+The site owner supplied these images in chat. JPEG copies use quality 88; source
+attachments remain unchanged. No photographer credit was supplied or invented.
+Placement is based on recognisable scenes, not verified capture metadata.
+
+| File | Shared image | Placement |
+| --- | --- | --- |
+| ladakh-phuktal-user.jpg | Image 5 | Phuktal/Phugtal cave monastery, Zanskar |
+| ladakh-pangong-user.jpg | Image 7 | Pangong lake scenery |
+| ladakh-pangong-shore-user.jpg | Image 8 | Pangong lakeshore photo props |
+| ladakh-nubra-signpost-user.jpg | Image 9 | Nubra guide road scene; exact junction not asserted |
+| ladakh-pangong-lakeside-user.jpg | Image 10 | Pangong lakeshore photo props |
+
+Images 1-4, 6 and 11 are deliberately not imported: exact locations are uncertain.
+The first monastery may be in Spiti rather than Ladakh. Blossom, frozen-river,
+night-sky and unidentified canyon photographs are not used to substantiate
+destination or seasonal claims. The owner selected using matched photos only.
+Scooters shown by the lake are photo backdrops, not evidence of offered rentals.
+The existing homepage river photograph is unchanged.
+
+## Existing images
+
 `ladakh-river-canyon-user.jpg` is the photo supplied by the site owner in chat
 on 17 November 2026 for the Ladakh homepage. It is an optimised JPEG copy;
 the original attachment is unchanged. The exact river/location and photographer

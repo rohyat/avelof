@@ -30,14 +30,6 @@ export const ladakhFaqs = [
   { question: 'Can we change the pace or avoid a lake overnight?', answer: 'Discuss a slower private route with our team. A Pangong overnight is not compulsory, and changing the stops may require extra days. Suitability, travel time and accommodation must be checked before confirming an itinerary.' },
 ]
 
-export const ladakhPlaces = [
-  { name: 'Leh', description: 'Your arrival and acclimatisation base, with gentle nearby cultural visits when comfortable.' },
-  { name: 'Nubra Valley', description: 'Diskit monastery, Hunder landscapes and village stays beyond Khardung La.' },
-  { name: 'Pangong Lake', description: 'High-altitude lake scenery; overnight stays depend on suitability, season and availability.' },
-  { name: 'Turtuk', description: 'Village walks and local culture on an optional extension from Nubra.' },
-  { name: 'Sham Valley & Lamayuru', description: 'Monasteries and dramatic landscapes along the western approach to Leh.' },
-  { name: 'Kargil', description: 'A possible overnight stop on the Srinagar approach, rather than rushing straight to Leh.' },
-]
 export const ladakhPages = {
   packages: { title: 'Find your Ladakh journey.', copy: 'Explore proposed routes from Leh or Srinagar, with room for acclimatisation and a pace that suits you.' },
   'bike-trips': { title: 'Ladakh Bike Trips', copy: 'Motorcycle journeys with their own planning, rider checks and local operating arrangements.' },

@@ -10,7 +10,7 @@ import { indianPhoneNumber } from '../services/phoneNumbers'
 import type { BookingKind, BookingPayload, PreparedRequest } from '../types'
 import type { Region } from '../data/regions'
 
-export default function RegionalEnquiryForm({ region, kind = 'contact', preference = 'General travel enquiry' }: { region: Region; kind?: BookingKind; preference?: string }) {
+export default function RegionalEnquiryForm({ region, kind = 'contact', preference = 'General travel enquiry', initialDetails }: { region: Region; kind?: BookingKind; preference?: string; initialDetails?: string }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [receipt, setReceipt] = useState<PreparedRequest | null>(null)
@@ -57,7 +57,7 @@ export default function RegionalEnquiryForm({ region, kind = 'contact', preferen
           <label>Children<input name="children" type="number" min={0} max={100} defaultValue={0} required /></label>
           {kind !== 'contact' && <><label>Start date<DateInput name="startDate" value={start} onChange={(event) => setStart(event.target.value)} required /></label><label>End date<DateInput name="endDate" min={start || undefined} required /></label></>}
         </div>
-        <label>Dates, route and requirements<textarea name="customDetails" rows={4} maxLength={20000} placeholder="Starting point, dates, preferred stays and anything you would like us to know" /></label>
+        <label>Dates, route and requirements<textarea name="customDetails" rows={4} maxLength={20000} defaultValue={initialDetails} placeholder="Starting point, dates, preferred stays and anything you would like us to know" /></label>
         {error && <p className="enquiry-error" role="alert">{error}</p>}
         <button className="button button-dark" type="submit">{busy ? 'Saving enquiry...' : 'Submit enquiry'}<ArrowRight size={17} aria-hidden="true" /></button>
         <p className="privacy-note">By submitting, you agree that AVELOF may store these details, show your selected service and dates with masked contact details in booking lookup, and contact you about your enquiry. This is not a confirmed booking.</p>
