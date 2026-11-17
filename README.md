@@ -627,7 +627,9 @@ keeps full descriptions and offers a return link to the saved planner.
 Both homepages have a centred two-destination row below the header and above
 the hero, linking to Kashmir and Ladakh. The current region has a contrasting
 selected background in both themes. Desktop tiles are compact squares;
-mobile tiles are smaller squares. No coming-soon destinations are displayed.
+mobile tiles are smaller squares. The tiles are separated by 18px on mobile
+and 24px on larger screens, without enlarging the tiles.
+No coming-soon destinations are displayed.
 
 Catalog images are local files in `public/images/` and are delivered directly by
 Cloudflare Pages. Customer-submitted hotel and driver photos are private JPEG

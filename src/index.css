@@ -62,7 +62,7 @@ img { display: block; max-width: 100%; }
 
 .page-width { width: min(1200px, calc(100% - 72px)); margin-inline: auto; }
 .home-destinations { padding-block: 16px; }
-.home-destination-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 236px; margin-inline: auto; }
+.home-destination-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; max-width: 248px; margin-inline: auto; }
 .home-destination-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-width: 0; min-height: 112px; padding: 12px 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--ivory); color: var(--ink); text-align: center; }
 .home-destination-card:not(:disabled):hover { border-color: var(--forest); background: var(--glacier); }
 .home-destination-card[aria-current="page"], .home-destination-card[aria-current="page"]:hover { background: #18594e; border-color: #18594e; color: #fff; box-shadow: 0 0 0 2px var(--ivory), 0 0 0 3px #18594e; }
@@ -82,7 +82,7 @@ img { display: block; max-width: 100%; }
 }
 @media (max-width: 600px) {
   .home-destinations { width: calc(100% - 24px); padding-block: 12px; }
-  .home-destination-grid { gap: 6px; max-width: 166px; }
+  .home-destination-grid { gap: 18px; max-width: 178px; }
   .home-destination-card { aspect-ratio: 1; min-height: 0; padding: 3px 1px; gap: 2px; }
   .home-destination-icon { width: 22px; height: 22px; flex-shrink: 0; }
   .home-destination-icon svg { width: 18px; height: 18px; }

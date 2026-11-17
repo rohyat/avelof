@@ -36,6 +36,7 @@ test('holiday destinations sit above the hero with Kashmir and Ladakh enabled', 
       }))
       assert.ok(bounds.every((box) => box.y === bounds[0].y && box.fits), `Both cards fit one row at ${width}px`)
       assert.ok(Math.abs((bounds[0].x + bounds[1].x + bounds[1].width) / 2 - width / 2) < 1)
+      assert.ok(Math.abs(bounds[1].x - bounds[0].x - bounds[0].width - (width <= 600 ? 18 : 24)) < 1, 'Tiles have the requested breathing room without changing their size')
       if (width > 600) assert.ok(bounds.every((box) => Math.abs(box.width - box.height) < 1 && box.width <= 113), 'Desktop tiles are compact squares')
       else assert.ok(bounds.every((box) => Math.abs(box.width - box.height) < 1 && box.width <= 80), 'Mobile tiles are smaller squares')
       const navBounds = await navigation.boundingBox()
