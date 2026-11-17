@@ -9,8 +9,7 @@ import { kashmirPhotosForPdf } from '../src/data/kashmirPhotoGallery.ts'
 import { localTrekPhotos } from '../src/data/localTrips.ts'
 import { discountedHotelPackagePrice } from '../src/services/pricing.ts'
 import { buildBrandedItineraryPdf, tourPackagePdfData, ladakhJourneyPdfData } from '../src/services/itineraryPdf.ts'
-import { ladakhJourneys } from '../src/data/ladakhJourneys.ts'
-import { ladakhPhotoPreview } from '../src/data/ladakhPhotos.ts'
+import { ladakhJourneys, ladakhJourneyPhotos } from '../src/data/ladakhJourneys.ts'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://127.0.0.1:8792'
 const nativeFetch = globalThis.fetch
@@ -89,7 +88,7 @@ test('Ladakh PDFs match each displayed itinerary without Kashmir routes, rates o
     const pdf = await buildBrandedItineraryPdf(data)
     const contents = Buffer.from(pdf.output('arraybuffer')).toString('latin1')
     for (const text of [trip.name, 'Summer 2027 planning preview', 'at least 48 hours', 'Price on enquiry', 'A glimpse of Ladakh', 'No travel service is included by default']) assert.ok(contents.includes(text), text)
-    for (const photo of ladakhPhotoPreview) assert.ok(contents.includes(photo.title))
+    for (const photo of ladakhJourneyPhotos(trip)) assert.ok(contents.includes(photo.title))
     for (const text of ['Your Kashmir journey', 'A glimpse of Kashmir', 'Current displayed package rate', 'Deluxe', 'Premium']) assert.ok(!contents.includes(text), text)
   }
 })

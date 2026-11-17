@@ -19,7 +19,7 @@ test('Ladakh has three packages, two bike itineraries and three cab options with
   assert.equal(new Set(ladakhJourneys.map(pathFor)).size, 8)
   for (const trip of ladakhJourneys) {
     assert.ok(trip.checks.length >= 3)
-    assert.ok(!trip.photo.unverified)
+    if (trip.section !== 'bike-trips') assert.ok(!trip.photo.unverified)
     assert.ok(trip.itinerary.length > 0)
     assert.equal('price' in trip, false, 'No invented rates')
     assert.equal(new Set(trip.itinerary.map((day) => day.day)).size, trip.itinerary.length)

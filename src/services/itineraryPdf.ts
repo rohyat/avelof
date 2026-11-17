@@ -3,7 +3,7 @@ import { business } from '../config.ts'
 import { brandPromises } from '../data/brandPromises.ts'
 import { kashmirPhotosForPdf } from '../data/kashmirPhotoGallery.ts'
 import { ladakhPhotoPreview } from '../data/ladakhPhotos.ts'
-import { ladakhAltitudeNote, ladakhPlanningNote } from '../data/ladakhJourneys.ts'
+import { ladakhAltitudeNote, ladakhPlanningNote, ladakhJourneyPhotos } from '../data/ladakhJourneys.ts'
 import type { LadakhJourney } from '../data/ladakhJourneys.ts'
 import { unionCabRefundNote } from '../data/unionCabs.ts'
 import type { TourPackage } from '../types.ts'
@@ -15,6 +15,8 @@ export interface ItineraryPdfDay {
 }
 
 export interface ItineraryPdfData {
+  photos?: { image: string; caption: string }[]
+  photoNote?: string
   region?: 'Kashmir' | 'Ladakh'
   title: string
   subtitle: string
@@ -130,6 +132,8 @@ export function tourPackagePdfData(item: TourPackage): ItineraryPdfData {
 export function ladakhJourneyPdfData(trip: LadakhJourney): ItineraryPdfData {
   return {
     region: 'Ladakh',
+    photos: ladakhJourneyPhotos(trip).map((photo) => ({ image: photo.src, caption: photo.title })),
+    photoNote: trip.section === 'bike-trips' ? 'Owner-supplied riding inspiration; locations unverified. Not confirmed departures, offered bikes or included support.' : undefined,
     title: `${trip.name} - Ladakh Planning Guide`,
     subtitle: trip.description,
     dates: trip.duration,
@@ -145,7 +149,7 @@ export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
   const { jsPDF } = await import('jspdf')
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: false })
   const region = data.region ?? 'Kashmir'
-  const photos = region === 'Ladakh' ? ladakhPhotoPreview.map((photo) => ({ image: photo.src, caption: photo.title })) : kashmirPhotosForPdf
+  const photos = data.photos ?? (region === 'Ladakh' ? ladakhPhotoPreview.map((photo) => ({ image: photo.src, caption: photo.title })) : kashmirPhotosForPdf)
   const photoImages = await Promise.all(photos.map(async (photo) => {
     const response = await fetch(photo.image)
     if (!response.ok) throw new Error(`Unable to load PDF photo ${photo.image}: ${response.status} ${response.statusText}`)
@@ -393,7 +397,7 @@ export async function buildBrandedItineraryPdf(data: ItineraryPdfData) {
     pdf.setLineWidth(0.8)
     pdf.line(margin, y + 3, margin + 18, y + 3)
     y += 11
-    writeWrapped(region === 'Ladakh' ? 'Ladakh sightseeing photographs, not confirmed stops, accommodation or offered vehicles.' : 'Illustrative travel and stay imagery; scenes and accommodation may vary by season and availability.', margin, y, pageWidth - margin * 2, 8, muted)
+    writeWrapped(data.photoNote ?? (region === 'Ladakh' ? 'Ladakh sightseeing photographs, not confirmed stops, accommodation or offered vehicles.' : 'Illustrative travel and stay imagery; scenes and accommodation may vary by season and availability.'), margin, y, pageWidth - margin * 2, 8, muted)
     const imageWidth = (pageWidth - margin * 2 - 8) / 2
     for (let index = firstPhoto; index < firstPhoto + photosOnPage; index += 1) {
       const position = index - firstPhoto

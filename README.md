@@ -40,6 +40,10 @@ confirmation and the summer 2027 planning-preview status remain explicit.
 Each detail page offers the shared branded itinerary PDF, using Ladakh wording,
 the displayed route and matched Ladakh sightseeing photos. Existing Kashmir PDFs
 retain their default content and photo gallery.
+Bike journeys instead use the four owner-supplied motorcycle photos across their
+cards, galleries and PDFs, plus the home bike preview. Their locations are
+unverified; visible notes distinguish inspiration from confirmed departures,
+rental-bike inventory or included riding support. Package and cab photos stay unchanged.
 No Kashmir prices, hotel inclusions, vehicle inventory or confirmed departures
 are copied into Ladakh. The responsive hero uses the owner-supplied
 river-canyon photo, optimised as a local JPEG background with the same text overlay

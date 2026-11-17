@@ -1,5 +1,20 @@
 # Destination Preview Images
 
+## Owner-supplied motorcycle photos
+
+Four motorcycle photographs supplied on 17 November 2026 are optimised JPEG
+copies (quality 86); the original attachments are unchanged:
+
+- Image 1: `ladakh-bike-group-user.jpg`, riders on an open mountain landscape.
+- Image 2: `ladakh-bike-rider-user.jpg`, a rider on a paved mountain road.
+- Image 3: `ladakh-bike-team-user.jpg`, travellers beside motorcycles.
+- Image 4: `ladakh-bike-convoy-user.jpg`, a convoy on a mountain road.
+
+Used on the Ladakh home bike preview, bike-trip cards, detail galleries,
+the four-photo bike inspiration gallery and bike itinerary PDFs.
+Exact locations are unverified. These photos do not establish AVELOF-operated
+departures, verified customer feedback, available rental bikes or included support.
+
 ## Ladakh place photographs added 17 November 2026
 
 The site owner supplied these images in chat. JPEG copies use quality 88; source

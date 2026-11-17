@@ -1,5 +1,14 @@
 import { ladakhEnquiryPreferences, ladakhPackages } from './ladakh.ts'
 import { ladakhPhotoPreview } from './ladakhPhotos.ts'
+import { ladakhBikePhotos } from './ladakhBikePhotos.ts'
+
+export interface LadakhJourneyPhoto {
+  src: string
+  alt: string
+  title: string
+  note: string
+  unverified: boolean
+}
 
 export type LadakhJourneySection = 'packages' | 'bike-trips' | 'car-rentals'
 export interface LadakhJourney {
@@ -11,7 +20,7 @@ export interface LadakhJourney {
   start: string
   stops: string[]
   description: string
-  photo: (typeof ladakhPhotoPreview)[number]
+  photo: LadakhJourneyPhoto
   itinerary: { day: string; title: string; detail: string }[]
   preference: string
   checks: string[]
@@ -51,6 +60,7 @@ export const ladakhBikeJourneys: LadakhJourney[] = [ladakhPackageJourneys[0], la
   ...trip, id: index === 0 ? 'leh-riding-circuit' : 'srinagar-entry-ride', section: 'bike-trips',
   name: index === 0 ? 'Leh-based Riding Circuit' : 'Srinagar-entry Expedition',
   label: 'Proposed motorcycle journey',
+  photo: ladakhBikePhotos[index === 0 ? 0 : 3],
   description: index === 0 ? 'A proposed Leh, Nubra and Pangong riding circuit, with rest before the higher roads.' : 'A longer proposed road-entry ride via Kargil, followed by rest in Leh before Nubra and Pangong.',
   preference: ladakhEnquiryPreferences.bike, checks: riderChecks,
 }))
@@ -64,3 +74,8 @@ export const ladakhCabJourneys: LadakhJourney[] = [
 ]
 
 export const ladakhJourneys = [...ladakhPackageJourneys, ...ladakhBikeJourneys, ...ladakhCabJourneys]
+
+export function ladakhJourneyPhotos(trip: LadakhJourney): LadakhJourneyPhoto[] {
+  const photos = trip.section === 'bike-trips' ? ladakhBikePhotos : ladakhPhotoPreview
+  return [trip.photo, ...photos.filter((photo) => photo.src !== trip.photo.src)]
+}

@@ -47,9 +47,10 @@ test('Ladakh pages share Kashmir call help, display photo collections and retain
       const gallery = page.locator('.ladakh-photo-collection')
       assert.equal(await gallery.count(), 1)
       const full = path === '' || path === '/places'
-      assert.equal(await gallery.locator('figure').count(), full ? 11 : 3)
-      assert.equal(await gallery.getByText('Location unverified', { exact: true }).count(), full ? 6 : 0)
-      if (!full) assert.equal(await gallery.getByRole('link').getAttribute('href'), '/ladakh/places#photo-inspiration')
+      const bike = path === '/bike-trips'
+      assert.equal(await gallery.locator('figure').count(), bike ? 4 : full ? 11 : 3)
+      assert.equal(await gallery.getByText('Location unverified', { exact: true }).count(), bike ? 4 : full ? 6 : 0)
+      if (!full && !bike) assert.equal(await gallery.getByRole('link').getAttribute('href'), '/ladakh/places#photo-inspiration')
       for (const theme of ['light', 'dark']) {
         await page.evaluate((theme) => { document.documentElement.dataset.theme = theme }, theme)
         for (const width of [320, 390, 768, 1440]) {
