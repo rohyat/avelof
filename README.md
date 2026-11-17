@@ -288,6 +288,15 @@ the step controls, including “Next: places”, rather than above the planner. 
 registration-specific help without the traveller commitment messages. Layout
 responds to the tile's available width, including the planner.
 
+Premium carries the “Most selling package” label. Premium and Luxury cover photos
+come from the shared catalog, including their detail galleries.
+Public hotel lists use a session-seeded order across all loaded pages, so new
+registrations do not automatically lead the list. Filtering, focus refreshes and
+returning to the list preserve the order during the visit. Reviews and click counts
+do not currently affect ranking; admin ordering remains newest-first.
+The theme preference has no expiry in local storage and is retained between visits
+until changed or browser site data is cleared.
+
 The package comparison dialog keeps only a short travel-date/availability and
 enquiry notice above the feature comparison, without introductory paragraphs.
 

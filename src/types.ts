@@ -33,6 +33,7 @@ interface CatalogBase {
 
 export interface TourPackage extends CatalogBase {
   kind: 'package'
+  badge?: string
   galleryAlts?: string[]
   originalPrice?: number
   underDevelopment?: boolean

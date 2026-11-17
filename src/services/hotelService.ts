@@ -7,6 +7,7 @@ import type { Hotel } from '../types'
 import type { MapCoordinates } from './mapLocation'
 import { locationFields } from './mapLocation'
 import { hotelRoomPriceForDate } from './hotelPricing'
+import { orderHotelsForVisit } from './hotelOrdering'
 
 const pagination = { total: z.number().int().min(0), page: z.number().int().min(1), pageSize: z.literal(25) }
 const publicList = z.object({ ...pagination, hotels: z.array(publicHotelSchema) })
@@ -114,7 +115,7 @@ export function useRegisteredHotels(enabled: boolean, id?: string) {
     if (!enabled) return
     const controller = new AbortController()
     loadPublicHotels(controller.signal, id).then((hotels) => {
-      setState({ key, hotels: hotels.map(toCatalogHotel), loading: false, error: '' })
+      setState({ key, hotels: orderHotelsForVisit(hotels).map(toCatalogHotel), loading: false, error: '' })
     }).catch((error: unknown) => {
       if (!controller.signal.aborted) setState({ key, hotels: [], loading: false, error: hotelErrorText(error) })
     })
