@@ -1,5 +1,11 @@
 # Destination Preview Images
 
+`ladakh-river-canyon-user.jpg` is the photo supplied by the site owner in chat
+on 17 November 2026 for the Ladakh homepage. It is an optimised JPEG copy;
+the original attachment is unchanged. The exact river/location and photographer
+were not provided, so the site uses descriptive alt text without a specific
+location or photographer attribution.
+
 The named WebP files preserve the website's existing Unsplash preview images.
 Names indicate their catalog placement, not the verified location of the photo.
 These are illustrative images, not verified photographs of the named Kashmir

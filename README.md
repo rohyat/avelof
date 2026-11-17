@@ -24,9 +24,9 @@ can be made by phone or through a regional enquiry form, not the Kashmir
 booking planner. Enquiries save to D1 before showing a receipt; they do not
 confirm availability or a booking. Content lives in
 `src/data/ladakh.ts`. Route cards can be filtered by starting city and have
-expandable proposed journey outlines. The responsive hero uses original,
-explicitly labelled landscape artwork rather than an unverified destination
-photo. FAQs explain the prelaunch status and altitude/transport checks.
+expandable proposed journey outlines. The responsive hero uses the owner-supplied
+river-canyon photo, optimised as a local JPEG with a readable caption overlay.
+Its exact location is not claimed. FAQs explain the prelaunch status and altitude/transport checks.
 Run `node --test tests/ladakh.test.mjs` against port 8792
 to check destination switching, separate-page links, theme and responsive layout.
 

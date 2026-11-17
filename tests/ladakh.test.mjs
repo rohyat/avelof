@@ -23,7 +23,8 @@ for (const width of [320, 390, 768, 820, 1024, 1440]) {
         assert.equal(await link.locator('svg').count(), 1)
       }
       assert.equal(await page.locator('.ladakh-hero-art img').evaluate((image) => image.complete && image.naturalWidth > 0), true)
-      assert.match(await page.locator('figcaption').innerText(), /not a location photograph/)
+      assert.equal(await page.locator('.ladakh-hero-art img').getAttribute('src'), '/images/destinations/ladakh-river-canyon-user.jpg')
+      assert.equal(await page.getByText('Original landscape illustration, not a location photograph.', { exact: true }).count(), 0)
       await shortcuts.getByRole('link', { name: 'Bike Trips', exact: true }).click()
       await page.waitForURL(`${origin}/ladakh/bike-trips`)
       await page.locator('h1').filter({ hasText: /Bike/ }).waitFor()
