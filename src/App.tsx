@@ -16,7 +16,10 @@ import PricingProvider from './components/PricingProvider'
 import LadakhPage from './pages/LadakhPage'
 import LadakhJourneyPage from './pages/LadakhJourneyPage'
 import RegionalHotelsPage from './pages/RegionalHotelsPage'
+import HotelComparisonPage from './pages/HotelComparisonPage'
 import { ladakhPages } from './data/ladakh'
+import ItineraryBuilderPage from './pages/ItineraryBuilderPage'
+import PaymentsPage from './pages/PaymentsPage'
 
 export default function App() {
   return (
@@ -29,12 +32,14 @@ export default function App() {
         <Route path="ladakh/bike-trips/:slug" element={<LadakhJourneyPage section="bike-trips" />} />
         <Route path="ladakh/car-rentals/:slug" element={<LadakhJourneyPage section="car-rentals" />} />
         <Route path="ladakh/hotels" element={<RegionalHotelsPage region="Ladakh" />} />
+        <Route path="ladakh/hotels/compare" element={<HotelComparisonPage />} />
         <Route path="ladakh/hotels/:hotelId/reviews" element={<DriverReviewsPage />} />
         <Route path="ladakh/hotels/:slug" element={<DetailPage />} />
         <Route path="ladakh/drivers" element={<DriversPage region="Ladakh" />} />
         <Route path="ladakh/drivers/:driverId/reviews" element={<DriverReviewsPage />} />
         <Route path="ladakh/partners" element={<PartnersPage region="Ladakh" />} />
         <Route path="jammu/hotels" element={<RegionalHotelsPage region="Jammu" />} />
+        <Route path="jammu/hotels/compare" element={<HotelComparisonPage />} />
         <Route path="jammu/hotels/:hotelId/reviews" element={<DriverReviewsPage />} />
         <Route path="jammu/hotels/:slug" element={<DetailPage />} />
         <Route path="jammu/drivers" element={<DriversPage region="Jammu" />} />
@@ -46,6 +51,7 @@ export default function App() {
         <Route path="drivers" element={<DriversPage />} />
         <Route path="drivers/:driverId/reviews" element={<DriverReviewsPage />} />
         <Route path="hotels" element={<CollectionPage />} />
+        <Route path="hotels/compare" element={<HotelComparisonPage />} />
         <Route path="hotels/:hotelId/reviews" element={<DriverReviewsPage />} />
         <Route path="hotels/:slug" element={<DetailPage />} />
         <Route path="register-hotel" element={<HotelRegistrationPage />} />
@@ -62,6 +68,8 @@ export default function App() {
         <Route path="travel-guide" element={<TravelGuidePage />} />
         <Route path="my-enquiries" element={<EnquiriesPage />} />
         <Route path="admin/panel" element={<AdminEnquiriesPage />} />
+        <Route path="admin/panel/itineraries" element={<ItineraryBuilderPage />} />
+        <Route path="admin/panel/payments" element={<PaymentsPage />} />
         <Route path="admin/panel/reviews" element={<AdminReviewsPage />} />
         <Route path="admin/panel/hotels" element={<AdminHotelsPage />} />
         <Route path="admin/panel/drivers" element={<AdminDriversPage />} />

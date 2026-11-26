@@ -40,7 +40,23 @@ test('homepage shortcuts place local trips after cabs and offer a full-width dir
   try {
     await page.goto(origin)
     const nav = page.getByRole('navigation', { name: 'Explore AVELOF' })
-    assert.deepEqual(await nav.getByRole('link').allTextContents(), ['Plan a trip', 'Packages', 'Hotels', 'Cabs', 'Local Trips', 'Drivers', 'Bookings', 'Places', 'Activities', 'Food & Shopping', 'Travel Guide', 'Handicrafts'])
+    assert.deepEqual(await nav.getByRole('link').allTextContents(), ['Plan a trip', 'Packages', 'Hotels', 'Cabs', 'Local Trips', 'Places'])
+    const more = page.getByRole('button', { name: 'View more', exact: true })
+    assert.equal(await more.getAttribute('aria-expanded'), 'false')
+    assert.equal(await nav.getByRole('link', { name: 'Drivers', exact: true }).count(), 0)
+    await more.click()
+    assert.deepEqual(await nav.getByRole('link').allTextContents(), ['Plan a trip', 'Packages', 'Hotels', 'Cabs', 'Local Trips', 'Places', 'Drivers', 'Bookings', 'Activities', 'Food & Shopping', 'Travel Guide', 'Handicrafts'])
+    assert.equal(await nav.locator('.home-shortcut-link .home-shortcut-icon').count(), 12)
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+      const tiles = await nav.locator('.home-shortcut-link').evaluateAll((items) => items.map((item) => item.getBoundingClientRect().width))
+      assert.ok(Math.max(...tiles) - Math.min(...tiles) < 1)
+    }
+    const less = page.getByRole('button', { name: 'View less', exact: true })
+    assert.equal(await less.getAttribute('aria-expanded'), 'true')
+    await less.click()
+    assert.equal(await nav.getByRole('link').count(), 6)
     assert.equal(await nav.getByRole('link', { name: 'Partner', exact: true }).count(), 0)
     assert.equal(await page.locator('footer').getByRole('link', { name: 'Partner with AVELOF', exact: true }).getAttribute('href'), '/partners')
     assert.equal(await nav.getByRole('link', { name: 'Reviews', exact: true }).count(), 0)
@@ -91,6 +107,7 @@ test('Kashmir Handicrafts shortcut opens the craft guide without an unsupported 
   await page.route('**/api/businesses*', (route) => route.fulfill({ json: { businesses: [], total: 0, page: 1, pageSize: 25 } }))
   try {
     await page.goto(origin)
+    await page.getByRole('button', { name: 'View more', exact: true }).click()
     await page.getByRole('navigation', { name: 'Explore AVELOF' }).getByRole('link', { name: 'Handicrafts', exact: true }).click()
     await page.waitForURL(`${origin}/food-and-shopping#handicrafts`)
     await page.getByRole('heading', { name: "Kashmir's handicraft heritage", exact: true }).waitFor()

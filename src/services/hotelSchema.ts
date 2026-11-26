@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { heatingOptions, hotelAmenities, hotelCategories, hotelIdPattern, hotelMealPlans, hotelPhotoCount, hotelRoomTypes, hotelTaxOptions, registrationLocations } from '../data/hotelRegistration.ts'
+import { heatingOptions, hotelAmenities, hotelIdPattern, houseboatAreas, houseboatCategories, houseboatLocations, propertyTypes, stayCategories, hotelMealPlans, hotelPhotoCount, hotelRoomTypes, hotelTaxOptions, registrationLocations } from '../data/hotelRegistration.ts'
 import { indianPhoneNumber } from './phoneNumbers.ts'
 import { partnerStatusAccessCodePattern } from './partnerAccessCode.ts'
 import { coordinateFields, coordinatePairError, coordinatesPaired } from './locationSchema.ts'
@@ -23,12 +23,12 @@ export function validHotelRoomRates(details: { roomRates?: HotelRoomRate[]; room
     && rates.every(({ roomType, count }) => details.roomTypes.includes(`${roomType} (${count} ${count === 1 ? 'room' : 'rooms'})`))
 }
 const hotelDetailsObject = z.object({
-  name: text(120), location: z.enum(registrationLocations), region: z.enum(regions).optional(), category: z.enum(hotelCategories),
+  name: text(120), propertyType: z.enum(propertyTypes).optional(), location: z.enum(registrationLocations), region: z.enum(regions).optional(), category: z.enum(stayCategories),
   exactLocation: text(120).optional(),
   description: text(1600).min(20), price: hotelPriceSchema,
   mealPlan: z.enum(hotelMealPlans), taxDetails: z.enum(hotelTaxOptions).optional(),
   gstPercent: z.unknown().optional(), // Accept historical stored metadata without applying it.
-  breakfastPrice: mealPriceSchema.optional(), dinnerPrice: mealPriceSchema.optional(),
+  breakfastPrice: mealPriceSchema.optional(), dinnerPrice: mealPriceSchema.optional(), extraBedPrice: mealPriceSchema.optional(),
   heating: z.enum(heatingOptions),
   hotColdAc: z.boolean().optional(),
   amenities: z.array(z.enum(hotelAmenities)).max(hotelAmenities.length).refine((items) => new Set(items).size === items.length),
@@ -40,12 +40,19 @@ const hotelDetailsObject = z.object({
   totalRooms: z.number().int().min(1).max(10000),
   ...coordinateFields,
 }).strict()
+type PropertyFields = { propertyType?: string; category: string; location: string; exactLocation?: string }
+const houseboat = (stay: PropertyFields) => stay.propertyType === 'Houseboat'
+export const categoryMatchesProperty = (stay: PropertyFields) => houseboat(stay) === houseboatCategories.some((category) => category === stay.category)
+export const houseboatLocationValid = (stay: PropertyFields) => !houseboat(stay)
+  || houseboatLocations.some((location) => location === stay.location) && houseboatAreas.some((area) => area === stay.exactLocation)
+const categoryError = { message: 'Choose a category for this property type.', path: ['category'] }
+const houseboatLocationError = { message: 'Houseboats must be on Dal Lake, Nigeen Lake or the Jhelum River in Srinagar.', path: ['exactLocation'] }
 export const hotelDetailsSchema = hotelDetailsObject.refine(coordinatesPaired, coordinatePairError)
 export const hotelSubmissionSchema = hotelDetailsObject.omit({ gstPercent: true }).extend({
   id: z.uuidv4().toLowerCase(), contactName: text(80),
   phone: text(30).transform(indianPhoneNumber).refine(Boolean, 'Enter a valid 10-digit Indian phone number.'),
   publicationConsent: z.literal(true), website: z.string().max(200).default(''),
-}).strict().refine(coordinatesPaired, coordinatePairError).refine((hotel) => hotelLocationsByRegion[listingRegion(hotel)].some((place) => place === hotel.location), { message: 'Choose a location in the selected region.', path: ['location'] })
+}).strict().refine(coordinatesPaired, coordinatePairError).refine(categoryMatchesProperty, categoryError).refine(houseboatLocationValid, houseboatLocationError).refine((hotel) => hotelLocationsByRegion[listingRegion(hotel)].some((place) => place === hotel.location), { message: 'Choose a location in the selected region.', path: ['location'] })
 const customerPriceSchema = z.number().min(0).max(1500000).refine((price) => Math.abs(price * 100 - Math.round(price * 100)) < 0.00001, 'Use at most two decimal places.')
 const customerRoomRateSchema = hotelRoomRateSchema.extend({ price: customerPriceSchema, originalPrice: customerPriceSchema.optional() })
 const customerRoomRatesSchema = z.array(customerRoomRateSchema).min(1).max(hotelRoomTypes.length)
@@ -74,7 +81,7 @@ export const hotelModerationObject = z.object({
   hotColdAc: z.boolean().optional(),
   id: z.uuidv4().toLowerCase(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
   status: hotelStatusSchema, price: hotelPriceSchema, ownerNote: z.string().trim().max(1000),
-  breakfastPrice: mealPriceSchema.optional(), dinnerPrice: mealPriceSchema.optional(),
+  breakfastPrice: mealPriceSchema.optional(), dinnerPrice: mealPriceSchema.optional(), extraBedPrice: mealPriceSchema.optional(),
   roomRates: hotelRoomRatesSchema.optional(),
   ...coordinateFields,
 }).strict()

@@ -45,27 +45,32 @@ async function fillRegistration(page) {
   await page.getByRole('combobox', { name: 'Location', exact: true }).selectOption(hotel.location)
   await page.getByRole('combobox', { name: 'Exact area', exact: true }).selectOption('Tangmarg')
   await page.getByLabel('AVELOF category').selectOption(hotel.category)
-  for (const roomType of ['Standard', 'Deluxe', 'Premium', 'Family', 'Suite']) {
+  assert.equal(await page.getByLabel('Standard rooms', { exact: true }).count(), 0)
+  for (const roomType of ['Deluxe', 'Premium', 'Family', 'Suite']) {
     const input = page.getByLabel(`${roomType} rooms`, { exact: true })
     assert.equal(await input.inputValue(), '0')
   }
-  await page.getByRole('button', { name: 'Increase Standard rooms', exact: true }).click()
-  assert.equal(await page.getByLabel('Standard rooms', { exact: true }).inputValue(), '1')
-  await page.getByRole('button', { name: 'Decrease Standard rooms', exact: true }).click()
-  assert.equal(await page.getByLabel('Standard rooms', { exact: true }).inputValue(), '0')
-  for (const [roomType, count] of [['Standard', 2], ['Deluxe', 3], ['Premium', 0], ['Family', 4], ['Suite', 3]]) {
+  await page.getByRole('button', { name: 'Increase Deluxe rooms', exact: true }).click()
+  assert.equal(await page.getByLabel('Deluxe rooms', { exact: true }).inputValue(), '1')
+  await page.getByRole('button', { name: 'Decrease Deluxe rooms', exact: true }).click()
+  assert.equal(await page.getByLabel('Deluxe rooms', { exact: true }).inputValue(), '0')
+  for (const [roomType, count] of [['Deluxe', 2], ['Premium', 3], ['Family', 4], ['Suite', 3]]) {
     await page.getByLabel(`${roomType} rooms`, { exact: true }).fill(String(count))
   }
   assert.equal(await page.locator('.hotel-amenity-options').getByLabel('Family rooms', { exact: true }).count(), 0)
-  for (const [index, roomType] of ['Standard', 'Deluxe', 'Premium', 'Family', 'Suite'].entries()) {
-    assert.equal(await page.getByLabel(`${roomType} rate (INR)`, { exact: true }).inputValue(), '2000')
+  for (const [index, roomType] of ['Deluxe', 'Premium', 'Family', 'Suite'].entries()) {
+    assert.equal(await page.getByLabel(`${roomType} rate (INR)`, { exact: true }).inputValue(), '0')
     await page.getByLabel(`${roomType} rate (INR)`, { exact: true }).fill(String(hotel.submittedPrice + index * 1000))
   }
-  assert.equal(await page.getByLabel('Breakfast add-on (INR)', { exact: true }).inputValue(), '500')
+  assert.equal(await page.getByLabel('Breakfast add-on (INR)', { exact: true }).inputValue(), '0')
+  assert.equal(await page.getByLabel('Dinner add-on (INR)', { exact: true }).inputValue(), '0')
+  assert.equal(await page.getByLabel('Extra bed charge (INR)', { exact: true }).inputValue(), '0')
+  await page.getByLabel('Breakfast add-on (INR)', { exact: true }).fill('500')
+  await page.getByLabel('Dinner add-on (INR)', { exact: true }).fill('500')
   await page.getByRole('button', { name: 'Increase Breakfast add-on (INR)', exact: true }).click()
   await page.getByRole('button', { name: 'Decrease Dinner add-on (INR)', exact: true }).click()
-  await page.getByLabel('Standard rate (INR)', { exact: true }).pressSequentially('abc')
-  assert.equal(await page.getByLabel('Standard rate (INR)', { exact: true }).inputValue(), String(hotel.submittedPrice))
+  await page.getByLabel('Deluxe rate (INR)', { exact: true }).pressSequentially('abc')
+  assert.equal(await page.getByLabel('Deluxe rate (INR)', { exact: true }).inputValue(), String(hotel.submittedPrice))
   const heating = page.getByLabel('Heating system')
   assert.equal(await page.locator('select[name="taxDetails"]').count(), 0)
   assert.deepEqual(await heating.locator('option:not([disabled])').allTextContents(), ['Centralised heating', 'Hot & cold AC', 'Room heaters', 'No heating'])
@@ -314,8 +319,8 @@ test('hotel registration, private lookup and moderation integrate with public st
         for (const width of [320, 390, 820, 821, 1440]) {
           await page.setViewportSize({ width, height: 900 })
           assert.equal(await bottomBooking.isVisible(), width <= 820)
-          assert.equal(await sidebarBooking.isVisible(), width > 820)
-          assert.equal(await page.getByRole('button', { name: 'Book Now', exact: true }).count(), 1)
+          assert.equal(await sidebarBooking.isVisible(), true)
+          assert.equal(await page.getByRole('button', { name: 'Book Now', exact: true }).count(), width <= 820 ? 2 : 1)
           assert.equal(await page.locator('.hotel-detail-layout').evaluate((element) => element.scrollWidth > element.clientWidth), false)
           if (width <= 820) {
             const bottom = await bottomBooking.boundingBox()
@@ -768,7 +773,8 @@ test('hotel registration, private lookup and moderation integrate with public st
         assert.equal(await partnership.locator('li svg').count(), 3)
         assert.equal((await partnership.innerText()).includes('Room rates are adjusted'), false)
         assert.equal((await pricingSection.innerText()).includes('9%'), false)
-        assert.equal((await pricingSection.innerText()).includes('commission'), false)
+        assert.ok((await pricingSection.innerText()).includes('B2B rates offered to travel agents'))
+        assert.ok((await pricingSection.innerText()).includes('Guests will see different prices'))
         assert.equal(await page.locator('.photo-upload-heading svg').count(), 1)
         await fillRegistration(page)
         assert.equal(await page.locator('.location-picker').count(), 0)
@@ -811,11 +817,16 @@ test('hotel registration, private lookup and moderation integrate with public st
         assert.equal(metrics.active, 0)
         await page.getByRole('status').filter({ hasText: 'Only the first 5 will be uploaded.' }).waitFor()
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
-        for (const roomType of ['Standard', 'Deluxe', 'Family', 'Suite']) await page.getByLabel(`${roomType} rooms`, { exact: true }).fill('0')
+        for (const roomType of ['Deluxe', 'Premium', 'Family', 'Suite']) await page.getByLabel(`${roomType} rooms`, { exact: true }).fill('0')
         await page.getByRole('button', { name: 'Submit hotel for approval' }).click()
         await page.getByRole('alert').filter({ hasText: 'Offer at least one room across the room types.' }).waitFor()
         assert.equal(saved, undefined)
-        for (const [roomType, count] of [['Standard', 2], ['Deluxe', 3], ['Family', 4], ['Suite', 3]]) await page.getByLabel(`${roomType} rooms`, { exact: true }).fill(String(count))
+        for (const [roomType, count] of [['Deluxe', 2], ['Premium', 3], ['Family', 4], ['Suite', 3]]) await page.getByLabel(`${roomType} rooms`, { exact: true }).fill(String(count))
+        await page.getByLabel('Deluxe rate (INR)', { exact: true }).fill('0')
+        await page.getByRole('button', { name: 'Submit hotel for approval' }).click()
+        await page.getByRole('alert').filter({ hasText: 'Enter a B2B nightly rate greater than INR 0' }).waitFor()
+        assert.equal(saved, undefined)
+        await page.getByLabel('Deluxe rate (INR)', { exact: true }).fill('5000')
         await page.getByRole('button', { name: 'Submit hotel for approval' }).click()
         await page.getByRole('alert').filter({ hasText: 'Photo storage is unavailable.' }).waitFor()
         assert.equal(await page.getByRole('heading', { name: 'Your hotel registration has been saved.' }).count(), 0)
@@ -865,11 +876,11 @@ test('hotel registration, private lookup and moderation integrate with public st
         assert.equal(saved.breakfastPrice, 550)
         assert.equal(saved.dinnerPrice, 450)
         assert.equal(saved.totalRooms, hotel.totalRooms)
-        assert.deepEqual(saved.roomTypes, hotel.roomTypes)
+        assert.deepEqual(saved.roomTypes, ['Deluxe (2 rooms)', 'Premium (3 rooms)', 'Family (4 rooms)', 'Suite (3 rooms)'])
         assert.equal(saved.price, 5000)
         assert.deepEqual(saved.roomRates, [
-          { roomType: 'Standard', count: 2, price: 5000 }, { roomType: 'Deluxe', count: 3, price: 6000 },
-          { roomType: 'Family', count: 4, price: 8000 }, { roomType: 'Suite', count: 3, price: 9000 },
+          { roomType: 'Deluxe', count: 2, price: 5000 }, { roomType: 'Premium', count: 3, price: 6000 },
+          { roomType: 'Family', count: 4, price: 7000 }, { roomType: 'Suite', count: 3, price: 8000 },
         ])
         assert.equal(saved.description, 'Premium accommodation in Gulmarg.')
         assert.deepEqual(saved.highlights, hotel.highlights)

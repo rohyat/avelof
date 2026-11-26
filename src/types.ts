@@ -33,6 +33,7 @@ interface CatalogBase {
 
 export interface TourPackage extends CatalogBase {
   kind: 'package'
+  discountPercent?: number
   badge?: string
   galleryAlts?: string[]
   originalPrice?: number
@@ -40,9 +41,9 @@ export interface TourPackage extends CatalogBase {
   duration: string
   hotelStandard: string
   tourGuide: string
-  itinerary: { day: string; title: string; detail: string }[]
+  itinerary: { day: string; title: string; detail: string; stayLink?: { text: string; stayIndex: number } }[]
   stay: string
-  stays: { location: string; nights: number; hotel: string }[]
+  stays: { location: string; nights: number; hotel: string; propertyType?: 'Hotel' | 'Houseboat' }[]
   transport: string
   experiences: string[]
   inclusions: string[]
@@ -77,6 +78,7 @@ export interface Hotel extends CatalogBase {
   latitude?: number | null
   longitude?: number | null
   kind: 'hotel'
+  propertyType?: 'Hotel' | 'Houseboat'
   registeredHotelId?: string
   hotelAverageRating?: number | null
   hotelReviewCount?: number
@@ -85,6 +87,7 @@ export interface Hotel extends CatalogBase {
   roomOnlyPrice?: number
   breakfastPrice?: number
   dinnerPrice?: number
+  extraBedPrice?: number
   rateBasis?: string
   mealPlan?: string
   packageId?: string

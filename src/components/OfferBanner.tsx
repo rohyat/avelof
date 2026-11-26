@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { ArrowRight, BedDouble, ExternalLink, Snowflake } from 'lucide-react'
+import { ArrowRight, BedDouble, Snowflake } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { rentalCars } from '../data/catalog'
-import { diwaliReferencePrice, featuredOfferHotelId } from '../data/offers'
+import { diwaliReferencePrice } from '../data/offers'
+import { hotelCategoryLabel } from '../data/hotelRegistration'
 import DiscountLabel from './DiscountLabel'
 import { hotelPackagePriceInclusions } from '../services/pricing'
 import { usePricing, useTourPackages } from '../services/pricingContext'
 import { PricingNotice } from './PricingProvider'
-import { useRegisteredHotels } from '../services/hotelService'
+import { hotelNightlyPrice, selectedHotelRoom, useRegisteredHotels } from '../services/hotelService'
+import { selectFeaturedHotels } from '../services/featuredHotels'
 import { business } from '../config'
 
 const startingCab = rentalCars.reduce((lowest, car) => car.price < lowest.price ? car : lowest)
@@ -34,8 +36,12 @@ interface BannerOffer {
 export default function OfferBanner() {
   const tourPackages = useTourPackages()
   const pricing = usePricing()
-  const registered = useRegisteredHotels(true, featuredOfferHotelId)
-  const hotel = registered.hotels.find((item) => item.id === featuredOfferHotelId)
+  const registered = useRegisteredHotels(true)
+  const hotels = selectFeaturedHotels(registered.hotels.map((hotel) => ({
+    ...hotel,
+    price: hotelNightlyPrice(hotel, false, false),
+    originalPrice: selectedHotelRoom(hotel)?.originalPrice ?? hotel.originalPrice,
+  })))
   const offers: BannerOffer[] = [
   ...tourPackages.filter((item) => !item.underDevelopment).map((item) => ({
     id: item.id,
@@ -44,17 +50,22 @@ export default function OfferBanner() {
     image: item.image,
     price: item.price,
     originalPrice: item.originalPrice,
+    discountPercent: item.discountPercent,
     priceLabel: 'per person',
     referenceLabel: 'Original price',
     href: `/tour-packages/${item.id}`,
   })),
-  {
-    id: 'hotels', title: 'Hotels',
-    description: hotel ? `${hotel.name} · ${hotel.location}` : 'Kashmir stays',
-    image: hotel?.image, price: hotel?.price, originalPrice: hotel?.originalPrice, discountPercent: hotel?.discountPercent,
-    priceLabel: hotel ? 'from / room / night · Room only' : '',
-    referenceLabel: 'Original price', href: hotel ? `/hotels/${hotel.id}` : '/hotels',
-  },
+  ...hotels.map((hotel) => ({
+    id: `hotels-${hotel.id}`, title: `Hotels · ${hotel.location}`,
+    description: `${hotel.name} · ${hotelCategoryLabel(hotel.category)}`,
+    image: hotel.image, price: hotel.price, originalPrice: hotel.originalPrice, discountPercent: hotel.discountPercent,
+    priceLabel: `from / room / night · ${hotel.breakfastPrice === undefined ? hotel.mealPlan ?? 'Room only' : 'Room only'}`,
+    referenceLabel: 'Original price', href: `/hotels/${hotel.id}`,
+  })),
+  ...(!hotels.length ? [{
+    id: 'hotels', title: 'Hotels', description: 'Premium & higher stays across Kashmir',
+    priceLabel: '', referenceLabel: 'Original price', href: '/hotels',
+  }] : []),
   {
     id: 'cabs', title: 'Cabs', description: 'Transfers & sightseeing · Vehicle only',
     image: startingCab.image, price: startingCab.price, originalPrice: diwaliReferencePrice(startingCab.price),
@@ -108,19 +119,11 @@ export default function OfferBanner() {
       '--snow-turn': `${index % 2 ? -90 : 90}deg`,
       '--snow-delay': `${-index * 2.7}s`,
     } as CSSProperties}><Snowflake size={12} strokeWidth={1.5} /></span>)}</div>
-    <div className="offer-banner-heading"><div className="offer-heading-line"><Snowflake className="offer-winter-icon" size={28} aria-hidden="true" /><strong>Winter offers are live</strong></div><span className="offer-heading-subtitle">Flat {pricing.settings.discountPercent}% off on packages &amp; hotels · 30% off on cabs</span><span className="offer-heading-subtitle">{hotelPackagePriceInclusions}</span>
-      <details className="offer-social">
-        <summary><span>Get extra 3% off</span><span className="offer-social-follow">Follow us on <span><SocialIcon platform="instagram" /> Instagram</span> + <span><SocialIcon platform="facebook" /> Facebook</span></span></summary>
-        <div className="offer-social-panel">
-          <strong>Follow both. Get extra 3% off your package.</strong>
-          <p>Follow AVELOF on Instagram and Facebook to be eligible for an extra 3% off tour packages.</p>
-          <div className="offer-social-links">
-            <a href={business.instagram} target="_blank" rel="noopener noreferrer"><SocialIcon platform="instagram" /> Follow on Instagram <ExternalLink size={16} aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span></a>
-            <a href={business.facebook} target="_blank" rel="noopener noreferrer"><SocialIcon platform="facebook" /> Follow on Facebook <ExternalLink size={16} aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span></a>
-          </div>
-          <p>After following both pages, let our team know during your enquiry. AVELOF will verify your eligibility and confirm the extra discount in your final quote. It is not applied automatically to the prices shown.</p>
-        </div>
-      </details>
+    <div className="offer-banner-heading"><div className="offer-heading-line"><Snowflake className="offer-winter-icon" size={28} aria-hidden="true" /><strong>Winter offers are live</strong></div><span className="offer-heading-subtitle">Flat {pricing.settings.discountPercent}% off on hotels and packages · 30% off on cabs</span><span className="offer-heading-subtitle">{hotelPackagePriceInclusions}</span>
+      <div className="offer-social">
+        <span className="offer-social-title">Get extra 3% off</span>
+        <span className="offer-social-follow">Follow us on <a href={business.instagram} target="_blank" rel="noopener noreferrer"><SocialIcon platform="instagram" /> Instagram<span className="sr-only"> (opens in a new tab)</span></a> + <a href={business.facebook} target="_blank" rel="noopener noreferrer"><SocialIcon platform="facebook" /> Facebook<span className="sr-only"> (opens in a new tab)</span></a></span>
+      </div>
     </div>
     <div className="offer-carousel" role="region" aria-roledescription="carousel" aria-label="Packages, hotels and cabs offers"
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
@@ -132,7 +135,7 @@ export default function OfferBanner() {
         {offers.map((offer, index) => <article key={offer.id} className={`offer-tile${offer.id === 'cabs' ? ' offer-tile-cabs' : ''}`} role="group" aria-roledescription="slide" aria-label={`${index + 1} of ${offers.length}: ${offer.title}`}>
           <div className="offer-image-frame">{offer.image ? <img src={offer.image} alt="" /> : <BedDouble className="offer-hotel-icon" size={40} aria-hidden="true" />}</div>
           <div className="offer-tile-copy"><strong>{offer.title}</strong><span>{offer.description}</span>
-            {offer.id === 'hotels' && !hotel && <span role={registered.loading ? 'status' : 'alert'}>{registered.loading ? 'Loading current hotel offer...' : registered.error || 'Crown Prince is not currently listed.'}{registered.error && <> <button className="text-link" type="button" onClick={registered.reload}>Retry hotel offer</button></>}</span>}
+            {offer.id === 'hotels' && <span role={registered.error ? 'alert' : 'status'}>{registered.loading ? 'Loading current hotel offers...' : registered.error || 'No approved Premium-or-higher stays are currently listed.'}{registered.error && <> <button className="text-link" type="button" onClick={registered.reload}>Retry hotel offer</button></>}</span>}
             {offer.price !== undefined && offer.originalPrice !== undefined && offer.originalPrice > offer.price && <span className="offer-reference-price">{offer.referenceLabel} <s>₹{offer.originalPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</s>{offer.discountPercent === undefined ? <DiscountLabel price={offer.price} originalPrice={offer.originalPrice} /> : <span className="discount-label">{offer.discountPercent}% off</span>}</span>}
             <span className="offer-payable">{offer.price !== undefined && <b>₹{offer.price.toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(offer.price) ? 0 : 2, maximumFractionDigits: 2 })}</b>} {offer.priceLabel}</span>
           </div>

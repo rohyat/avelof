@@ -274,7 +274,7 @@ export function AdminEnquiriesPage() {
       </>}
       <button className="button button-dark" disabled={busy} type="submit"><LockKeyhole size={17} /> {busy ? 'Signing in...' : requiresAuthenticator ? 'Verify and sign in' : 'Sign in'}</button>
     </form> : <>
-      <nav className="admin-section-nav" aria-label="Owner sections"><span aria-current="page">Enquiries</span><Link to="/admin/panel/reviews">Reviews</Link><Link to="/admin/panel/hotels">Hotels</Link><Link to="/admin/panel/drivers">Drivers</Link><Link to="/admin/panel/businesses">Food & Shopping</Link></nav>
+      <nav className="admin-section-nav" aria-label="Owner sections"><span aria-current="page">Enquiries</span><Link to="/admin/panel/reviews">Reviews</Link><Link to="/admin/panel/hotels">Hotels</Link><Link to="/admin/panel/drivers">Drivers</Link><Link to="/admin/panel/businesses">Businesses</Link><Link to="/admin/panel/itineraries">Itineraries</Link><Link to="/admin/panel/payments">Payments</Link></nav>
       <OwnerPushNotifications />
       <AdminPricing />
       <div className="admin-enquiry-toolbar">

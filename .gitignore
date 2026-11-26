@@ -14,6 +14,13 @@ dist-ssr
 .wrangler/
 .dev.vars*
 
+# Social-media exports belong in Downloads, not in the website repository.
+/instagram-carousel/
+/social-pack/
+/social-media/
+/AVELOF-Social-Media-Pack*/
+/AVELOF*.zip
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

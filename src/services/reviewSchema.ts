@@ -18,12 +18,10 @@ export const reviewSubmissionSchema = z.object({
   website: z.string().max(200).default(''),
 }).strict().superRefine((review, context) => {
   const scoped = Boolean(review.driverId || review.hotelId)
-  const written = Boolean(review.title || review.reviewText)
   if (review.driverId && review.hotelId) context.addIssue({ code: 'custom', path: ['hotelId'], message: 'Choose one review subject.' })
-  if (!scoped && !review.reviewerName) context.addIssue({ code: 'custom', path: ['reviewerName'], message: 'Enter a display name.' })
+  if (!review.reviewerName) context.addIssue({ code: 'custom', path: ['reviewerName'], message: 'Enter a display name.' })
   if (!scoped && review.reviewText.length < 20) context.addIssue({ code: 'custom', path: ['reviewText'], message: 'Review must contain at least 20 characters.' })
-  if (scoped && written && !review.reviewerName) context.addIssue({ code: 'custom', path: ['reviewerName'], message: 'Enter your display name when adding written feedback.' })
-  if (scoped && written && !review.bookingId) context.addIssue({ code: 'custom', path: ['bookingId'], message: 'Enter your booking ID when adding written feedback.' })
+  if (scoped && !review.reviewText) context.addIssue({ code: 'custom', path: ['reviewText'], message: 'Enter your review.' })
 })
 
 export type ReviewSubmission = z.infer<typeof reviewSubmissionSchema>

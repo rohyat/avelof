@@ -70,7 +70,7 @@ async function publicSummary(row: EnquiryRow, database: D1Database) {
   const source = fields && typeof fields === 'object' ? fields as Record<string, unknown> : {}
   const selected: Record<string, string> = {}
   if (!selected.preferredStay && typeof source.preferredStay === 'string') {
-    const match = /\((AVELOF_HTL_(?:[0-9]{5,10}[A-Z]{3}|[A-F0-9]{32}))\)$/.exec(source.preferredStay)
+    const match = /\((AVELOF_(?:(?:HTL|HB)_[0-9]{5,10}[A-Z]{3}|HTL_[A-F0-9]{32}))\)$/.exec(source.preferredStay)
     if (match) {
       const hotel = await database.prepare("SELECT details_json FROM hotel_registrations WHERE (hotel_id = ? OR id = (SELECT registration_id FROM hotel_reference_numbers WHERE legacy_hotel_id = ?)) AND status = 'approved'").bind(match[1], match[1]).first<{ details_json: string }>()
       if (hotel) {

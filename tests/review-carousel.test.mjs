@@ -48,12 +48,14 @@ test('admin separates review subjects and retains filters for moderation and del
     checkIn: '14:00', checkOut: '11:00', photos: [`/api/hotel-images/${partnerId}/0`],
     status: 'rejected', version: 0, ownerNote: '', createdAt: '2026-11-13T10:00:00Z', updatedAt: '2026-11-13T10:00:00Z',
   }
+  const secondHotel = { ...hotel, id: '00000000-0000-4000-8000-000000000097', hotelId: 'AVELOF_HTL_10002SRG', name: 'Another Hotel' }
   let records = ['guest', 'driver', 'hotel'].map((category, index) => ({
     ...reviews[0], id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
     reviewerName: `${category} reviewer`, driverId: category === 'driver' ? driver.driverId : null,
     hotelId: category === 'hotel' ? hotel.hotelId : null, status: 'published', version: 0,
     createdAt: '2026-11-13T10:00:00Z', submissionSource: 'guest_submission',
   }))
+  records.push({ ...records[2], id: '00000000-0000-4000-8000-000000000004', reviewerName: 'Second hotel reviewer', hotelId: secondHotel.hotelId })
   const queries = []
   let failPartners = true
   await page.route('**/api/drivers*', (route) => {
@@ -62,7 +64,7 @@ test('admin separates review subjects and retains filters for moderation and del
   })
   await page.route('**/api/hotels*', (route) => route.fulfill(failPartners
     ? { status: 503, json: { error: 'Test partners unavailable' } }
-    : { json: { hotels: [hotel], total: 1, page: 1, pageSize: 25 } }))
+    : { json: { hotels: [hotel, secondHotel], total: 2, page: 1, pageSize: 25 } }))
   await page.route('**/api/reviews*', (route) => {
     const request = route.request()
     if (request.method() === 'GET') {
@@ -115,6 +117,12 @@ test('admin separates review subjects and retains filters for moderation and del
     await page.getByRole('button', { name: 'Retry loading partners' }).waitFor()
     failPartners = false
     await page.getByRole('button', { name: 'Retry loading partners' }).click()
+    await page.getByLabel('Select hotel').selectOption(hotel.hotelId)
+    await page.getByText('hotel reviewer', { exact: true }).waitFor()
+    assert.equal(await page.getByText('Second hotel reviewer', { exact: true }).count(), 0)
+    await page.getByLabel('Select hotel').selectOption(secondHotel.hotelId)
+    await page.getByText('Second hotel reviewer', { exact: true }).waitFor()
+    assert.equal(await page.getByText('hotel reviewer', { exact: true }).count(), 0)
     await page.getByLabel('Select hotel').selectOption(hotel.hotelId)
     await page.getByText('hotel reviewer', { exact: true }).waitFor()
     await page.getByRole('button', { name: 'Delete review', exact: true }).click()
@@ -226,7 +234,7 @@ test('review carousel preserves layout and supports accessible automatic and man
         const tiles = page.locator('.home-shortcut-link')
         const shortcuts = page.getByRole('navigation', { name: 'Explore AVELOF' })
         await tiles.last().waitFor()
-        assert.deepEqual(await tiles.allTextContents(), ['Plan a trip', 'Packages', 'Hotels', 'Cabs', 'Local Trips', 'Drivers', 'Bookings', 'Places', 'Activities', 'Food & Shopping', 'Travel Guide', 'Partner'])
+        assert.deepEqual(await tiles.allTextContents(), ['Plan a trip', 'Packages', 'Stays', 'Cabs', 'Local Trips', 'Drivers', 'Bookings', 'Places', 'Activities', 'Food & Shopping', 'Travel Guide', 'Partner'])
         assert.equal(await page.getByRole('button', { name: 'Ask AVELOF' }).count(), 0)
         assert.ok(await page.getByRole('heading', { name: 'Experience Kashmir Beyond Expectations.' }).isVisible())
         assert.ok(await page.getByText("Where Kashmir's natural beauty meets warm hospitality, memorable stays and genuine local care.", { exact: true }).isVisible())
@@ -306,7 +314,7 @@ test('review carousel preserves layout and supports accessible automatic and man
         assert.equal(await shortcuts.getByRole('link', { name: 'Plan a trip', exact: true }).getAttribute('href'), '#custom-trip')
         assert.equal(await shortcuts.getByRole('link', { name: 'Packages', exact: true }).getAttribute('href'), '/tour-packages')
         assert.equal(await shortcuts.getByRole('link', { name: 'Cabs', exact: true }).getAttribute('href'), '/car-rentals')
-        assert.equal(await shortcuts.getByRole('link', { name: 'Hotels', exact: true }).getAttribute('href'), '/hotels')
+        assert.equal(await shortcuts.getByRole('link', { name: 'Stays', exact: true }).getAttribute('href'), '/hotels')
         assert.equal(await shortcuts.getByRole('link', { name: 'Places', exact: true }).getAttribute('href'), '/destinations')
         assert.equal(await shortcuts.getByRole('link', { name: 'Bookings', exact: true }).getAttribute('href'), '/my-enquiries')
         assert.equal(await shortcuts.getByRole('link', { name: 'Reviews', exact: true }).count(), 0)

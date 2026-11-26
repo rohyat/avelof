@@ -56,8 +56,8 @@ function saveScrollPosition(key: string, x: number, y: number) {
 
 export default function SiteLayout() {
   const [darkMode, setDarkMode] = useState(() => {
-    try { return localStorage.getItem('avelof:theme') !== 'light' }
-    catch (error) { console.warn('Could not read the saved theme preference.', error); return true }
+    try { return localStorage.getItem('avelof:theme') === 'dark' }
+    catch (error) { console.warn('Could not read the saved theme preference.', error); return false }
   })
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLElement>(null)
@@ -85,7 +85,7 @@ export default function SiteLayout() {
 
   useEffect(() => {
     const syncTheme = (event: StorageEvent) => {
-      if (event.key === 'avelof:theme' || event.key === null) setDarkMode(event.newValue !== 'light')
+      if (event.key === 'avelof:theme' || event.key === null) setDarkMode(event.newValue === 'dark')
     }
     window.addEventListener('storage', syncTheme)
     return () => window.removeEventListener('storage', syncTheme)
@@ -154,7 +154,7 @@ export default function SiteLayout() {
       '/ladakh': { title: 'Ladakh Holidays & Bike Trip Planning | AVELOF', description: 'Explore proposed summer Ladakh routes, motorcycle journeys, stays and travel guidance. Prices, departures and availability require confirmation.' },
       '/tour-packages': { title: 'Kashmir Tour Packages | AVELOF', description: 'Explore thoughtfully planned Kashmir tour packages with local expertise, flexible itineraries and handpicked stays.' },
       '/car-rentals': { title: 'Kashmir Car Rentals | AVELOF', description: 'Find comfortable vehicles and local drivers for airport transfers, day trips and Kashmir journeys.' },
-      '/hotels': { title: 'Kashmir Hotels & Stays | AVELOF', description: 'Discover houseboats, boutique hotels, family stays and mountain retreats across Kashmir.' },
+      '/hotels': { title: 'Kashmir Hotels & Houseboats | AVELOF', description: 'Discover houseboats, boutique hotels, family stays and mountain retreats across Kashmir.' },
       '/destinations': { title: 'Kashmir Places & Destination Guide | AVELOF', description: 'Explore Kashmir places, main attractions, seasonal guidance and optional activities, then customise your journey in the trip planner.' },
       '/activities': { title: 'Kashmir Activities | AVELOF', description: 'Browse Kashmir activity inspiration by destination and category, then request your favourites when planning a trip. Suggestions are not a live availability feed.' },
       '/local-trips': { title: 'Local Trips in Kashmir | AVELOF', description: 'Enquire about Kashmir treks, picnic destinations and local transport for families and friends.' },
@@ -170,7 +170,7 @@ export default function SiteLayout() {
       '/admin/panel': { title: 'Owner Enquiry Dashboard | AVELOF', description: 'Private AVELOF owner sign-in.' },
       '/admin/panel/reviews': { title: 'Review Moderation | AVELOF', description: 'Private AVELOF review approval dashboard.' },
       '/admin/panel/hotels': { title: 'Hotel Registrations | AVELOF', description: 'Private AVELOF hotel approval dashboard.' },
-      '/register-hotel': { title: 'Register Your Hotel | AVELOF', description: 'Submit your Kashmir hotel for AVELOF review and approval.' },
+      '/register-hotel': { title: 'Register Your Hotel or Houseboat | AVELOF', description: 'Submit your Kashmir hotel or houseboat for AVELOF review and approval.' },
       '/hotel-status': { title: 'Private Hotel Status | AVELOF', description: 'Check your hotel registration with your private access code.' },
       '/partners': { title: 'Partner with AVELOF | Kashmir', description: 'Registration for hotel owners and driver partners.' },
       '/register-driver': { title: 'Register as a Driver | AVELOF', description: 'Submit your vehicle for AVELOF approval.' },
@@ -183,12 +183,15 @@ export default function SiteLayout() {
       ? Object.entries(ladakhPages).find(([key]) => key === section)?.[1]
       : undefined
     const regionalDirectory = regionFromPath(location.pathname) !== 'Kashmir' && (section === 'hotels' || section === 'drivers')
-    const details = journey
+    const hotelComparison = /\/hotels\/compare$/.test(location.pathname)
+    const details = hotelComparison
+      ? { title: `Compare ${regionFromPath(location.pathname)} Hotels & Houseboats | AVELOF`, description: 'Compare approved hotel and houseboat photos, room rates, meals and facilities side by side.' }
+      : journey
       ? { title: `${journey.name} | AVELOF Ladakh`, description: journey.description }
       : ladakhDetails
       ? { title: `${ladakhDetails.title} | AVELOF`, description: ladakhDetails.copy }
       : regionalDirectory
-      ? { title: `${regionFromPath(location.pathname)} ${section === 'hotels' ? 'Hotels' : 'Drivers'} | AVELOF`, description: `Explore approved ${section} in ${regionFromPath(location.pathname)} with AVELOF.` }
+      ? { title: `${regionFromPath(location.pathname)} ${section === 'hotels' ? 'Hotels' : 'Drivers'} | AVELOF`, description: `Explore approved ${section === 'hotels' ? 'stays' : section} in ${regionFromPath(location.pathname)} with AVELOF.` }
       : catalogItem
       ? { title: `${catalogItem.name} | AVELOF Kashmir`, description: catalogItem.description }
       : pageDetails[location.pathname] ?? { title: `AVELOF | ${regionFromPath(location.pathname)} Travel`, description: `Discover thoughtful travel experiences in ${regionFromPath(location.pathname)} with AVELOF.` }
@@ -225,7 +228,7 @@ export default function SiteLayout() {
       <footer className="site-footer">
         <div className="footer-main">
           <div className="footer-brand"><Link className="brand brand-light" to={homePath} aria-label="AVELOF home" onClick={returnHome}><img className="brand-logo" src="/app-icon-512.png?v=chinar-1" alt="" width={44} height={44} /><span>AVELOF<small>YOUR {destinationName.toUpperCase()} EXPERIENCE</small></span></Link><p>Your stay. Your journey.<br />Your {destinationName} experience.</p></div>
-          <div><h3>Explore</h3>{region !== 'Kashmir' ? <>{visibleNavItems.map(([label, href]) => <Link key={href} to={href}>{label}</Link>)}{isLadakh && <><Link to="/ladakh/travel-guide">Travel guide</Link><Link to="/ladakh/experiences">Experiences</Link><Link to="/ladakh/partners">Partner with AVELOF</Link></>}<Link to="/">Explore Kashmir</Link></> : <><Link to="/tour-packages">Tour packages</Link><Link to="/local-trips">Local Trips</Link><Link to="/car-rentals">Car rentals</Link><Link to="/drivers">Our drivers</Link><Link to="/hotels">Hotels & stays</Link><Link to="/destinations">Destinations</Link><Link to="/jammu/hotels">Jammu hotels</Link><Link to="/jammu/drivers">Jammu drivers</Link><Link to="/partners">Partner with AVELOF</Link></>}</div>
+          <div><h3>Explore</h3>{region !== 'Kashmir' ? <>{visibleNavItems.map(([label, href]) => <Link key={href} to={href}>{label}</Link>)}{isLadakh && <><Link to="/ladakh/travel-guide">Travel guide</Link><Link to="/ladakh/experiences">Experiences</Link><Link to="/ladakh/partners">Partner with AVELOF</Link></>}<Link to="/">Explore Kashmir</Link></> : <><Link to="/tour-packages">Tour packages</Link><Link to="/local-trips">Local Trips</Link><Link to="/car-rentals">Car rentals</Link><Link to="/drivers">Our drivers</Link><Link to="/hotels">Hotels</Link><Link to="/destinations">Destinations</Link><Link to="/partners">Partner with AVELOF</Link></>}</div>
           <div><h3>AVELOF</h3><Link to="/about">About & Contact</Link><Link to="/reviews">Reviews</Link><Link to="/my-enquiries">Check bookings</Link><a href={business.instagram} target="_blank" rel="noreferrer">Instagram</a><InstallApp /><Link to="/admin/panel">Admin sign-in</Link></div>
           <div><h3>Email our team</h3><a href={`mailto:${business.email}`}>{business.email}</a><span>Kashmir, India</span></div>
         </div>

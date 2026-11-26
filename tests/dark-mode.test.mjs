@@ -7,7 +7,6 @@ const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://127.0.0.1:8792'
 test('dark mode persists across pages and reloads and can be turned off', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const context = await browser.newContext()
-  await context.addInitScript(() => { if (!localStorage.getItem('avelof:theme')) localStorage.setItem('avelof:theme', 'light') })
   const page = await context.newPage()
   await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
   await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
@@ -73,27 +72,31 @@ test('dark mode persists across pages and reloads and can be turned off', async 
   } finally { await browser.close() }
 })
 
-test('new visitors start in dark mode and a saved light choice overrides the default', async () => {
+test('new visitors start in light mode and saved choices persist until changed', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
-  const context = await browser.newContext()
+  const context = await browser.newContext({ colorScheme: 'dark' })
   await context.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
   try {
     let page = await context.newPage()
     await page.goto(origin)
     const theme = () => page.locator('html').getAttribute('data-theme')
-    assert.equal(await theme(), 'dark')
-    assert.equal(await page.evaluate(() => localStorage.getItem('avelof:theme')), 'dark')
-    await page.getByRole('switch', { name: 'Dark mode', exact: true }).click()
     assert.equal(await theme(), 'light')
+    assert.equal(await page.evaluate(() => localStorage.getItem('avelof:theme')), 'light')
+    await page.getByRole('switch', { name: 'Dark mode', exact: true }).click()
+    assert.equal(await theme(), 'dark')
     await page.close()
     page = await context.newPage()
     await page.goto(`${origin}/partners`)
+    assert.equal(await theme(), 'dark')
+    await page.reload()
+    assert.equal(await theme(), 'dark')
+    await page.getByRole('switch', { name: 'Dark mode', exact: true }).click()
     assert.equal(await theme(), 'light')
     await page.reload()
     assert.equal(await theme(), 'light')
     const other = await context.newPage()
     await other.goto(origin)
     await other.evaluate(() => localStorage.removeItem('avelof:theme'))
-    await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark')
+    await page.waitForFunction(() => document.documentElement.dataset.theme === 'light')
   } finally { await browser.close() }
 })

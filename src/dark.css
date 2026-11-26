@@ -42,7 +42,8 @@
   .package-hero-facts span, .package-stay-nights, .package-experience-icon, .hotel-feature-chips > .hotel-feature,
   .business-available-items li, .place-travel-facts, .place-attractions li, .place-access-note,
   .number-stepper,   .planner-hotel-tile, .planner-place-notice, .planner-step-number, .package-day-marker, .activity-choice,
-  .hotel-calendar-heading button, .hotel-calendar-days button, .date-input-control .date-price-picker) {
+  .hotel-calendar-heading button, .hotel-calendar-days button, .date-input-control .date-price-picker,
+  .selected-hotel-field strong) {
   background: #294640;
   border-color: #48665f;
   color: #e3efec;
@@ -53,6 +54,8 @@
 :root[data-theme="dark"] :is(.planner-navigation > p, .planner-pdf-prompt .planner-pdf-assurance, .planner-union-refund-note) { color: #c5d8d1; }
 :root[data-theme="dark"] .planner-navigation > p { background: #203b35; border-color: #5b8074; }
 :root[data-theme="dark"] .planner-activity-option { background: #294640; }
+:root[data-theme="dark"] .package-stay-options a { background: #182b28; border-color: #48665f; color: #e3efec; }
+:root[data-theme="dark"] .package-stay-options a:hover { background: #294640; border-color: #a4d9c9; }
 :root[data-theme="dark"] .planner-pdf-assurance svg, :root[data-theme="dark"] .planner-navigation > p svg { color: #f2ad98; }
 :root[data-theme="dark"] :is(main, .booking-modal, .install-dialog) :is(h1, h2, h3, h4, strong) { color: #e3efec; }
 :root[data-theme="dark"] :is(.detail-list li, .planner-steps li, .local-trip-points li, .discovery-content li) { color: #c5d8d1; }
@@ -91,3 +94,7 @@
 :root[data-theme="dark"] .home-shortcut-link:hover { background: #294640; border-color: #6b9788; }
 :root[data-theme="dark"] .home-shortcut-link:hover .home-shortcut-icon { background: #246a5a; color: #fff; }
 :root[data-theme="dark"] .theme-toggle:hover { background: #294640; }
+:root[data-theme="dark"] .property-type-choice > label { border-color: #39544f; }
+:root[data-theme="dark"] .property-type-choice > label:has(input:checked) { border-color: #a4d9c9; background: #234a42; color: #f2fbf8; }
+:root[data-theme="dark"] .stay-type-filter button { border-color: #39544f; color: #d7e9e3; background: #182b28; }
+:root[data-theme="dark"] .stay-type-filter button.is-active { border-color: #a4d9c9; color: #123e39; background: #a4d9c9; }

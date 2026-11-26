@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, X } from 'lucide-react'
 import { businessErrorText, compressBusinessPhoto } from '../services/businessService'
 import type { BusinessItem } from '../services/businessSchema'
 
@@ -7,6 +7,7 @@ export type EditableBusinessItem = BusinessItem & { photo?: Blob; preview?: stri
 
 export default function BusinessItemEditor({ item, index, onChange, onRemove }: { item: EditableBusinessItem; index: number; onChange: (changes: Partial<EditableBusinessItem>) => void; onRemove: () => void }) {
   const image = useRef<HTMLImageElement>(null)
+  const input = useRef<HTMLInputElement>(null)
   const revision = useRef(0)
   useEffect(() => {
     const url = item.photo ? URL.createObjectURL(item.photo) : item.preview
@@ -28,8 +29,12 @@ export default function BusinessItemEditor({ item, index, onChange, onRemove }: 
     <legend>Item {index + 1}</legend>
     <label>Item {index + 1} heading<input name={`itemName_${item.id}`} required maxLength={100} value={item.name} onChange={(event) => onChange({ name: event.target.value })} /></label>
     <label>Item {index + 1} description<textarea name={`itemDescription_${item.id}`} required maxLength={1000} rows={3} value={item.description} onChange={(event) => onChange({ description: event.target.value })} /></label>
-    <label><span>Item {index + 1} photo</span><input aria-label={`Item ${index + 1} photo`} name={`itemPhoto_${item.id}`} type="file" accept="image/jpeg,image/png,image/webp" required={!item.preview && !item.photo} onChange={(event) => void selectPhoto(event.target.files?.[0])} /><small>Exactly one photo. JPEG, PNG or WebP, up to 5 MB; compressed before upload.</small></label>
-    {(item.photo || item.preview) && <div className="hotel-photo-grid"><img ref={image} alt={`Photo for item ${index + 1}`} /></div>}
+    <label><span>Item {index + 1} photo</span><input ref={input} aria-label={`Item ${index + 1} photo`} name={`itemPhoto_${item.id}`} type="file" accept="image/jpeg,image/png,image/webp" required={!item.preview && !item.photo} onChange={(event) => void selectPhoto(event.target.files?.[0])} /><small>Exactly one photo. JPEG, PNG or WebP, up to 5 MB; compressed before upload. Use the X to remove it.</small></label>
+    {(item.photo || item.preview) && <div className="hotel-photo-grid"><div className="editable-photo"><img ref={image} alt={`Photo for item ${index + 1}`} /><button type="button" className="photo-remove" aria-label={`Remove item ${index + 1} photo`} disabled={item.processing} onClick={() => {
+      revision.current++
+      onChange({ photo: undefined, preview: undefined, processing: false, error: '' })
+      if (input.current) input.current.value = ''
+    }}><X size={18} aria-hidden="true" /></button></div></div>}
     {item.processing && <p role="status">Preparing item photo...</p>}
     {item.error && <p role="alert" className="enquiry-error">{item.error}</p>}
     <button className="button button-outline" type="button" aria-label={`Remove item ${index + 1}`} onClick={onRemove}><Trash2 size={16} />Remove item</button>

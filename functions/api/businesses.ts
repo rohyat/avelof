@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { businessKinds, businessLocations, businessUploadLimit } from '../../src/data/businessRegistration.ts'
+import { businessKindLabels, businessKinds, businessLocations, businessUploadLimit } from '../../src/data/businessRegistration.ts'
 import { businessDeletionSchema, businessEditAuthSchema, businessModerationSchema, businessSubmissionSchema } from '../../src/services/businessSchema.ts'
 import { hotelLookupSchema } from '../../src/services/hotelSchema.ts'
 import { indianPhoneNumber } from '../../src/services/phoneNumbers.ts'
@@ -8,6 +8,7 @@ import { adminBusiness, businessAccessCode, businessColumns, businessPhotoKeys, 
 import type { BusinessEnv, BusinessRow } from '../_lib/businessRegistration.ts'
 import { limitedBody, validHotelJpeg } from '../_lib/hotelRegistration.ts'
 import { readRetainedPhotos, retainedPhotoKeys } from '../_lib/partnerPhotos.ts'
+import { queueOwnerPush } from '../_lib/pushNotifications.ts'
 
 const listSchema = z.object({
   scope: z.enum(['public', 'admin']).default('public'),
@@ -17,13 +18,26 @@ const listSchema = z.object({
   status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all'),
 }).strict()
 
-export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) => {
+export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env, waitUntil }) => {
   if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) return privateReply({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST, PATCH, DELETE' })
   if (request.method !== 'GET' && !sameOrigin(request)) return privateReply({ error: 'Origin not allowed.' }, 403)
   if (!env.DB) return privateReply({ error: 'Business registration storage is unavailable.' }, 503)
   const DB = env.DB
   let submittingId = ''
   let submittingHash = ''
+  let submittingKind: (typeof businessKinds)[number] = 'restaurant'
+  let submittingEdit = false
+  let notified = false
+  const notifyOwner = (id: string) => {
+    if (notified) return
+    queueOwnerPush(env, waitUntil, {
+      title: submittingEdit ? 'Business registration updated' : 'New business registration',
+      body: `${businessKindLabels[submittingKind]} registration awaiting approval.`,
+      url: '/admin/panel/businesses',
+      tag: `business-${id}`,
+    })
+    notified = true
+  }
 
   try {
     if (request.method === 'GET') {
@@ -152,6 +166,8 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
     const payloadHash = await hashText(JSON.stringify(editing ? { operation: 'business-update', data, auth: auth.data, photoDigests, ...(retained.data === undefined ? {} : { retainedPhotos: retained.data }), ...(itemDigests.length ? { itemDigests } : {}) } : { operation: 'business-submit', data: items.length ? data : legacyData, photoHash, ...(itemDigests.length ? { itemDigests } : {}) }))
     submittingId = data.id
     submittingHash = payloadHash
+    submittingKind = data.kind
+    submittingEdit = editing
     const existing = await DB.prepare(`SELECT ${businessColumns} FROM business_registrations WHERE id = ?`).bind(data.id).first<BusinessRow>()
     if (editing && auth.success) {
       if (existing?.version === auth.data.version + 1 && existing.payload_hash === payloadHash) return privateReply(businessReceipt(existing))
@@ -181,7 +197,7 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
     if (editing && auth.success && existing) {
       const duplicate = await DB.prepare('SELECT id FROM business_registrations WHERE registration_key = ? AND id != ?').bind(registrationKey, id).first<{ id: string }>()
       if (duplicate) return privateReply({ error: 'These business details already belong to another listing.' }, 409)
-      await DB.batch([
+      const writes = await DB.batch([
         DB.prepare("UPDATE business_registrations SET registration_key = ?, contact_name = ?, contact_phone = ?, contact_email = ?, details_json = ?, photo_key = ?, photo_keys_json = ?, latitude = CASE WHEN ? THEN ? ELSE latitude END, longitude = CASE WHEN ? THEN ? ELSE longitude END, status = 'pending', owner_note = '', publication_consent = 1, payload_hash = ?, version = version + 1 WHERE id = ? AND version = ?")
           .bind(registrationKey, contactName, contactPhone, contactEmail, JSON.stringify(details), uploadedKey, JSON.stringify(uploadedKeys), latitude !== undefined ? 1 : 0, latitude ?? null, longitude !== undefined ? 1 : 0, longitude ?? null, payloadHash, id, auth.data.version),
         ...images.map((image, index) => DB.prepare('INSERT INTO registration_photos (photo_key, content) SELECT ?, ? WHERE EXISTS (SELECT 1 FROM business_registrations WHERE id = ? AND payload_hash = ? AND version = ? AND photo_keys_json = ?)')
@@ -194,10 +210,11 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
       ])
       const row = await DB.prepare(`SELECT ${businessColumns} FROM business_registrations WHERE id = ?`).bind(id).first<BusinessRow>()
       if (!row || row.payload_hash !== payloadHash || row.version !== auth.data.version + 1) return privateReply({ error: 'This business changed. Check your status again before editing.' }, 409)
+      if (Number(writes[0].meta.changes) > 0) notifyOwner(id)
       return privateReply(businessReceipt(row))
     }
     // D1 batches are transactional: a failed photo write must not leave a registration without its photo.
-    await DB.batch([
+    const writes = await DB.batch([
       DB.prepare('INSERT INTO business_registrations (id, registration_key, contact_name, contact_phone, contact_email, details_json, photo_key, photo_keys_json, publication_consent, payload_hash, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?) ON CONFLICT DO NOTHING')
         .bind(id, registrationKey, contactName, contactPhone, contactEmail, JSON.stringify(details), uploadedKey, JSON.stringify(uploadedKeys), payloadHash, latitude ?? null, longitude ?? null),
       ...images.map((image, index) => DB.prepare('INSERT INTO registration_photos (photo_key, content) SELECT ?, ? WHERE EXISTS (SELECT 1 FROM business_registrations WHERE id = ? AND photo_key = ?)')
@@ -206,13 +223,17 @@ export const onRequest: PagesFunction<BusinessEnv> = async ({ request, env }) =>
     ])
     const row = await DB.prepare(`SELECT ${businessColumns} FROM business_registrations WHERE id = ?`).bind(id).first<BusinessRow>()
     if (!row || row.payload_hash !== payloadHash) return privateReply({ error: 'This business or registration request is already registered. Contact AVELOF for help with an existing listing.' }, 409)
+    if (Number(writes[0].meta.changes) > 0) notifyOwner(id)
     return privateReply(businessReceipt(row), 201)
   } catch (error) {
     console.error('Business registration request failed', error)
     if (submittingId && submittingHash) {
       try {
         const persisted = await DB.prepare(`SELECT ${businessColumns} FROM business_registrations WHERE id = ?`).bind(submittingId).first<BusinessRow>()
-        if (persisted?.payload_hash === submittingHash) return privateReply(businessReceipt(persisted))
+        if (persisted?.payload_hash === submittingHash) {
+          notifyOwner(persisted.id)
+          return privateReply(businessReceipt(persisted))
+        }
       } catch (lookupError) { console.error('Business registration recovery lookup failed', lookupError) }
     }
     return privateReply({ error: 'The business request could not be confirmed. Retry with the same unchanged form.' }, 503)

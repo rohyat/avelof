@@ -11,8 +11,17 @@ npm run dev
 
 Create a production build with `npm run build`. Run the configured linter with `npm run lint`.
 
-The Dark mode switch sits beside the header logo. Dark mode is the default for new visitors;
+The shared tour-package promise is 10% at booking and 90% after the trip.
+It appears in the website's reassurance messages and itinerary PDFs; submitting
+an enquiry does not itself take payment or confirm a booking.
+
+The Dark mode switch sits beside the header logo. Light mode is the default for new visitors;
 the chosen theme is stored in the browser and shared across open tabs.
+
+Hotel directories have a search box above their filters or listings. Search matches
+hotel names and locations case-insensitively, combines with existing filters, and
+keeps the query in the URL (`q`). Native browser suggestions offer approved hotel
+names and locations while typing. Clearing the search preserves other filters.
 
 The homepage destination selector links Kashmir (`/`) and Ladakh (`/ladakh`).
 Partner access stays in each region's footer rather than the homepage shortcut grid.
@@ -60,6 +69,8 @@ exact area); private editing restores the saved region. Hotel exact-area choices
 follow the destination and retain the custom-area option. Approved listings are
 shown only in their regional directory: `/hotels` and `/drivers` for Kashmir,
 `/ladakh/hotels` and `/ladakh/drivers`, or `/jammu/hotels` and `/jammu/drivers`.
+The Kashmir footer does not promote Jammu stays or drivers; their direct routes
+and regional registration options remain available.
 Editing an approved listing still requires fresh approval. Registration links
 remain global so partners can register in any of the three regions.
 The optional `region` field is stored in existing `details_json`; no migration is
@@ -69,6 +80,20 @@ private owner credentials are unchanged. Shared choices live in `src/data/region
 Run `node --test functions/api/regional-partners.test.mjs` for regional storage,
 approval, privacy and legacy-record checks, and
 `node --test tests/regional-pages.test.mjs` against port 8792 for regional forms.
+
+Kashmir package stays show up to three approved properties per overnight location,
+ranked by a combined score: 45% guest reviews (average rating smoothed towards 3.5
+with three virtual reviews, so one review cannot dominate and unreviewed hotels stay
+neutral), 35% value (cheapest matching rate scores highest) and 20% amenity count.
+Ties fall back to lowest rate, then name. Deluxe uses Deluxe hotels, Premium uses
+Premium and Premium Plus, and Luxury uses Diamond and Luxury hotels; the Luxury
+houseboat night uses Luxury Houseboats. These are possible stays, not confirmed
+allocations, and are subject to availability. Empty locations retain a generic
+stay description. The comparison and package PDF use the same options when loaded.
+Each overnight itinerary day has a `stayLink` phrase that scrolls to and highlights
+that night's stay card on the same page.
+Run `node --test tests/package-hotels.test.mjs` against port 8792 to check the
+matching, ranking, itinerary links, pagination, fallback and error states.
 
 A simple back arrow appears inline beside Home in each page's existing breadcrumb.
 Pages without breadcrumbs place it alongside their existing opening heading or
@@ -94,27 +119,32 @@ saved choice takes precedence. No migration or destructive record rewrite is nee
 
 Hotel customer room rates are the submitted/admin-reviewed rates plus 50%,
 rounded up to a whole rupee: INR 2,000 becomes INR 3,000. Private partner/admin
-rates are not changed. The saved hotel/package discount (initially 23%) applies to that regular room rate:
+rates are not changed. The saved hotel discount (initially 23%) applies to that regular room rate:
 INR 3,000 becomes INR 2,310. Discounted hotel room rates round to the nearest
 whole rupee, with .50 rounding up (INR 1,786.40 becomes INR 1,786). Listings,
 enquiries and planner totals use this same rounded nightly rate before multiplying
-by rooms and nights. Meal add-ons and package calculations are unchanged.
+by rooms and nights. Meal add-ons are unchanged.
 The regular rate is crossed out
 above the discounted rate with the current discount label (no crossed-out rate at 0%). Customer-facing rates use the
 rupee symbol. Hotel/package listing cards, the front-page offer heading and
 standard hotel/package enquiry forms say All taxes and charges included.
 The same statement is saved in enquiry details; no separate GST is added.
 Selected meals are added separately without markup or discount.
-Deluxe and Premium regular package prices are INR 22,000 and INR 36,000 per person,
-discounted to INR 16,940 and INR 27,720. Home/cards, details, banners, enquiries and
-planner estimates use discounted prices. In `/admin/panel`, signed-in admins can
-change **Hotel & package discount** from 0 to 100%, with up to two decimal places.
+Package regular prices per person are Deluxe INR 13,999, Premium INR 22,500,
+and Luxury INR 38,500. With a 23% saved discount, they become INR 10,779.23,
+INR 17,325 and INR 29,645 respectively. Home/cards, details, banners, enquiries
+and package PDFs all use the current discounted prices. In `/admin/panel`,
+signed-in admins can change **Hotel and package discount** from 0 to 100%, with up to two decimal places.
+The same saved percentage applies to package regular prices (`originalPrice`, or
+`price` when no regular price is specified), without stacking the previous
+catalog discount. Package rates keep two decimal places and adjust to selected
+nights. Hotel meal add-ons and cab offers are unchanged.
 The value is saved in D1 through `/api/pricing` and survives reloads/deployments.
 Public GET exposes only the percentage/version; PATCH requires same-origin admin
 authentication and an optimistic version check. Failed or conflicting saves show
 an error rather than confirmation. Packages wait for valid settings; hotel listing
 reads fail explicitly if pricing storage is unavailable. Admin saves refresh hotel
-rates and package views, and returning visitors refresh on window focus.
+rates, and returning visitors refresh on window focus.
 Apply migration `0026_restore_pricing_discount.sql` before deploying this restored
 control: it initializes the previously retired settings row to 23% once, replacing
 its stale historical value. Later edits persist without being reset on deployment.
@@ -123,9 +153,15 @@ Breakfast/dinner labels and selected-meal messages state the coverage: 2 people
 per room per day, or 4 in a Family room (twice the meal add-on).
 Cabs, their rates and existing 30% offer remain unchanged.
 The winter offer banner shows the saved hotel/package percentage alongside the
-30% cab offer. The Hotels slide uses Crown Prince's current public photo, regular
-and discounted rates, discount percentage and detail link, with explicit loading,
-unavailable and retry states rather than a hardcoded rate. Snowflakes vary in size,
+30% cab offer. Stays slides automatically feature up to three approved
+Premium-or-higher properties, with at most one per destination. Each destination
+uses its highest available category, choosing the lowest current room rate within
+that category. Destination winners are ranked by category, then price, with stable
+ID ties; visit shuffles and previous clicks cannot override this selection.
+Premium/Luxury houseboats qualify; lower or unknown categories never fill gaps.
+Slides use each selected stay's public photo, regular and discounted room rates,
+discount percentage and detail link, with explicit loading, empty and retry states
+rather than a fixed hotel or rate. Snowflakes vary in size,
 depth, opacity, speed and drift against a deep-blue winter background. Small
 six-armed flakes gently rotate as they fall, crossing the banner in 4-7 seconds.
 Decorative falling snow stays within the banner on desktop/mobile,
@@ -135,8 +171,7 @@ Hotel enquiry estimates update immediately from selected nights, rooms and
 meal add-ons. Hotel stay nights through **5 December 2026** use the current
 discounted room rate. Nights from **6 December 2026 onward** add 10% to that
 room-only rate, rounded to the nearest whole rupee (.50 up). Meals are added
-afterward without this increase; cab rates do not change. Standard packages use
-the separate arrival-based seasonal rule below.
+afterward without this increase; cab and standard package rates do not change.
 Check-out is excluded, and stays spanning the change sum each applicable nightly
 rate before multiplying by rooms. For example, a room at INR 2,310 is INR 2,541
 from 6 December; 5-7 December is INR 4,851 room-only for one room/two nights.
@@ -158,12 +193,8 @@ calendar. The end date is calculated from the package's included nights (sum of
 its stays), displayed as read-only text, and saved with the enquiry. Changing
 package or start date recalculates both the end date and estimate. Custom trips
 and car rentals retain their existing date selection.
-When the selected arrival date is 6 December 2026 or later, the entire
-package price increases by 10%, rounded to paise. Arrivals
-through 5 December keep current rates even when the trip crosses the cutoff.
-Listed starting prices remain unchanged; the form explains the rule and saves
-the seasonal price and increase with the enquiry. Deluxe's standard 4-night
-price becomes INR 18,634; Premium's 5-night price becomes INR 30,492.
+Standard package prices do not increase based on arrival date. Package pricing
+continues to adjust proportionally if the number of nights changes.
 Custom trip estimates retain their component pricing, including date-based hotel
 rates, without an additional package-wide increase.
 Deluxe includes 4 nights and Premium includes 5 nights. Custom planner estimates
@@ -187,16 +218,109 @@ normalised, with the final value stored as `DL01AB-1234`. This applies to both
 new registrations, partner edits and admin approval; malformed or incomplete numbers remain invalid.
 
 Public registrations (hotels, drivers, restaurants and shops), enquiries
-(including the custom planner and local trips), and reviews display a centred
+(including the custom planner and local trips), and general guest reviews display a centred
 loading dialog while their save request is pending. Escape cannot dismiss the
 loading dialog. A centred acknowledgement appears only after the server confirms
 the save; failures keep the form available for retry. Enquiry receipts do not
 confirm a booking. Shared feedback lives in `src/components/SubmissionFeedback.tsx`;
 registration receipts retain their private reference and access-code details.
+Hotel/driver review popups instead keep saving, errors and the confirmed
+publication message inside the popup, with dismissal disabled during saving.
 
-Hotel detail pages show the hotel ID, room count, ratings and review link above
-the photos. At widths up to 820px, Book Now appears after the hotel details,
-below pricing; wider layouts use only the existing sticky booking sidebar.
+Hotel detail pages show the hotel ID, room count and ratings above
+the photos. At widths up to 820px, Book Now appears in the top room-rate panel
+and again after the hotel details; wider layouts retain only the existing sticky
+booking sidebar.
+
+New hotel/houseboat registrations offer Deluxe, Premium, Family and Suite rooms.
+Room quantities, nightly rates, meal add-ons and extra-bed prices start at zero;
+each offered room type must have a positive B2B travel-agent nightly rate before
+submission. Owners enter the rates they expect to receive, subject to review and
+agreement, not the guest-facing prices after AVELOF's commission and discounts.
+Existing saved rates are restored when editing. Historical Standard rooms remain
+readable and editable for existing properties, but are not offered on new forms.
+Owners can select bathroom facilities (bathtub and hair dryer) and tea/coffee facilities (electric
+kettle, tea/coffee maker and supplies). Hotels can also select an on-site cafe.
+Matching room-comfort highlights and icons appear in registration and approved
+listings; none are selected automatically or imply complimentary services.
+Owners can choose up to eight major highlights.
+Basic bathroom, shower, towels and toiletries are omitted from registration
+choices. Existing saved amenities and major highlight choices remain unchanged.
+Accommodation navigation uses "Hotels" and still includes houseboats. Booking
+forms omit amenities and highlights; these remain on listing/detail pages.
+The selected hotel's read-only name uses a contrasting dark-mode background.
+Hotel booking forms omit the lengthy extra-bed explanation, seasonal notice,
+minimum-room explanation and submission privacy paragraph. Availability wording,
+automatic meal/extra-bed updates, room minimums and date-based prices remain.
+The enquiry thank-you appears only after a successful save.
+Hotel enquiry forms include "Need help?" to open WhatsApp,
+and "Book a package" opens Tour Packages (Ladakh packages for Ladakh hotels).
+When enquiring about a selected hotel, "View other options" opens the regional hotel directory.
+Hotel cards open a side-by-side Compare popup, with two alphabetical dropdowns
+for approved hotels or houseboats in that region, including all public
+listing pages. The first property determines the location; the second dropdown
+only offers other properties in that same destination (not just the exact area).
+Changing the first property clears an incompatible second selection.
+A selected property is hidden from the other dropdown.
+Each selector uses a large, clearly outlined native dropdown with a visible
+chevron, focus ring and disabled state for stable keyboard, touch and mouse
+selection. There are no search fields, date field or lengthy introduction.
+Detail-page Compare preselects that property on the left; it sits
+beside the top Book Now on mobile and below it in the desktop sidebar.
+Hotel cards preselect their property when Compare is clicked; directories have no
+separate top Compare button. Their actions
+match package cards: Explore Now and Book Now side by side, with Compare across
+the row below, after the AC status. Rate basis and optional-meal wording sit beside
+the price. Cards retain ratings, highlights and room types, but omit the Reviews
+link and seasonal notice; seasonal pricing and detail-page reviews remain unchanged.
+Hotel photo badges show the category and its star label in a prominent dark-green
+pill, without a separate Hotel badge. Houseboat category labels retain Houseboat text.
+Hotel cards retain large landscape photos (50.4% of the card width in height,
+a 10% trim from the previous photo height) with tighter content padding and gaps,
+with just two key features in one small icon-and-text row rather than separate
+highlight and amenity rows. Features prefer the property's highlights, then fill
+from its facilities without duplicates. Full facilities remain on the detail page.
+Room types, map links, rate basis, meal options and all three actions
+remain available; buttons retain 44px touch targets. Card height stays content-driven
+so longer property names and optional details can wrap without clipping actions.
+Hotel detail pages show a compact review preview below photos and before rates;
+driver directory cards and registered-driver vehicle details use the same preview.
+It loads only published reviews for that hotel's or driver's public ID (the latest
+25, with View reviews linking to the paginated feed), never sample feedback.
+Reviews rotate every five seconds on desktop and mobile, pause on focus/hover,
+and stay paused after opening a full review in an accessible popup. Previous/next
+and pause/resume controls are available; reduced-motion users get manual navigation.
+View reviews sits beside Write a review below the review preview text for hotels
+and drivers. There is no duplicate review link above hotel photos. Write a review
+opens a popup on the current page, including on review-feed pages.
+Display name, Your rating and Review are required; Booking
+ID is optional and there is no title field. Consent is required before publication.
+Legacy `#share-review` links open the same popup. Saving succeeds only after a
+database receipt, refreshes the preview/feed and allows another review. Hotel and
+driver reviews publish immediately without approval or a per-visitor submission
+count limit; same-origin, size, consent, honeypot and retry-idempotency checks remain.
+The general guest-review form retains its existing submission throttle.
+Admin > Reviews > Hotel reviews provides an alphabetical hotel selector and shows
+only that hotel's reviews; driver selection works the same way. Existing records,
+including historic titles or anonymous star ratings, remain readable.
+Loading, retry and no-review states are explicit, and IDs and stars are retained.
+Comparison includes selectable property photos, room/meal/extra-bed rates,
+location, category, amenities, highlights and check-in/out times.
+The popup supports Escape, focus restoration, scrolling and dark mode.
+Selection cards include photo/name previews, and a sticky header keeps Close
+visible while scrolling. The fixed-height popup does not resize when selecting hotels.
+Legacy comparison URLs remain usable, with explicit loading, retry, empty and unavailable states.
+Extra-bed rates are B2B bed-only charges without meals. If a guest selects an
+extra bed and breakfast and/or dinner, add half of each selected base two-person
+meal charge for one extra person per room/night. Family rooms retain their
+four-person meal charges; their extra bed still adds meals for only one person.
+The same calculation feeds booking estimates, planner totals and enquiry/PDF
+summaries; room-season increases do not increase meal or extra-bed charges.
+All registration photo previews have an X remove button, including hotel and
+houseboat galleries, driver portraits, business galleries and individual item
+photos. Removal updates the pending upload, allows reselecting the same file and
+still requires the mandatory photo count before submission. Existing partner
+photos are only changed after a successful save.
 
 Hotel registration tiers are Deluxe (2-star), Premium (3-star), Premium Plus
 (3-star Plus), Diamond (4-star) and Luxury (5-star). These are AVELOF categories,
@@ -238,6 +362,22 @@ home-screen icons may require removing and re-adding the app after deployment.
 Google Search refreshes its own favicon cache after recrawling the homepage;
 this can take days to weeks. Request homepage indexing in Google Search Console
 to request a recrawl, not to guarantee an immediate icon update.
+The homepage also declares a real 48px `/favicon.ico` fallback generated from the
+same Chinar PNG. Keep the existing PNG favicon URL stable for crawlers. Icon
+responses require revalidation; this affects HTTP caches, not Google's indexing
+schedule. `/robots.txt` allows crawling, including icons; existing `noindex`
+response headers keep private status and admin pages out of search results
+without blocking crawlers from seeing those headers. Authentication, not crawler
+rules, protects customer records. Run `node --test tests/favicon.test.mjs` for static checks.
+If a custom domain still returns a four-hour `max-age` while the Pages deployment
+returns `no-cache`, check Cloudflare's Browser Cache TTL and matching cache rules.
+Configure them to respect origin headers for the icon and robots paths; source
+headers cannot reliably override a zone-level response/cache policy.
+
+Social-media posters, reels and ZIPs are exported to Downloads, never `public`
+or the repository. Export-folder ignore rules guard against accidental additions.
+Unreferenced legacy destination photos and the retired Ladakh SVG placeholder
+are removed from deployed assets; source/licence records for active photos remain.
 
 The footer's Install app button opens browser-specific installation help rather
 than navigating back to the homepage when no automatic prompt is available.
@@ -323,6 +463,9 @@ Pages preview and the authenticator cases in `functions/api/enquiries.test.mjs`.
 Tests cover RFC 6238 vectors, clock drift, replay/concurrency, rate limits,
 session invalidation, setup failures, login retries and password-only rollout.
 All current destination and vehicle photos are used.
+The vehicle catalogue includes a branded version of the owner-supplied Force Urbania photo and a
+16-passenger Urbania from ₹6,000 per day; availability and final fare are
+confirmed on enquiry. The same vehicle is selectable for driver registration.
 Styles generated dynamically by booking status are intentionally
 retained even when their full class names do not appear in JSX.
 
@@ -436,6 +579,194 @@ The highlights align in an equal-sized two-column grid on mobile and tablet
 layouts, content, responsive sizing and booking selections against port 8791
 (or `AVELOF_HOTEL_TEST_URL`).
 
+### Private admin itinerary builder
+
+The separate **Payments** owner section (`/admin/panel/payments`) generates a
+branded downloadable payment receipt with AVELOF business/contact details,
+guest name and phone number, trip/package title, agreed total, receipt number
+and date, received amount, payment method and optional transaction reference.
+It is independent of the itinerary builder; enter the agreed total directly or
+choose **Per person x guests** and enter the per-person price and number of persons
+(1-100). Totals multiply using integer paisa, and the price basis is included in
+the PDF. Clearing or entering invalid numeric values blocks generation.
+Pending payment is calculated to the paisa; received amounts above the total
+are rejected. The requested advance percentage never counts as received money.
+Receipts are owner-entered records, not booking confirmations or tax invoices.
+No payment history or receipt data is uploaded or saved; download before leaving.
+
+Payment totals are presented as blue (total), green (received) and orange
+(pending) cards in both the editor and PDF. An optional PNG/JPEG/WebP payment
+screenshot (maximum 5 MB) is processed locally and placed beside the guest/payment
+details on page one, preserving the image's aspect ratio without cropping;
+it is never uploaded or saved in local storage. Generate the PDF first, then
+download or share it directly. The receipt number and filename match, e.g.
+`AVELOF-2026-1050.pdf`. A browser-local counter starts at 1050 and advances once
+for each successful generation, not for each download/share; cancelled sharing
+does not reuse a number. Tabs coordinate using Web Locks. Counter storage failures
+block generation. The counter is not a cross-device uniqueness guarantee:
+another browser/device or clearing browser data can repeat numbers.
+
+Both receipt and admin itinerary PDFs offer direct file sharing via the native
+device share sheet with the exact download filename. PDFs are prepared before the
+Share click so native sharing retains the user gesture. No local download is
+required for sharing. Unsupported browsers show an explicit message and retain
+Download and an actionable Share button explaining the limitation; the website
+cannot guarantee that WhatsApp or another app is available
+as a share target. Cancelling a share is not treated as an error.
+The VS Code integrated browser has no native Share API; open the real website in
+a supported external browser to use native PDF sharing without downloading.
+No public upload/link sharing is used for these private guest documents.
+
+Printed receipts use a forest-green/gold header, separated guest/payment detail
+rows, colour-coded totals and a prominent **Amount received** panel beside the
+payment screenshot on page one. The screenshot is fitted without cropping.
+The itinerary editor uses styled section/day cards, a trip-summary toolbar and
+quick navigation to Guest, Trip overview, Day-by-day journey and PDF preview.
+All existing fields and itinerary PDF content/design remain unchanged.
+
+Open **Itineraries** in the owner panel (`/admin/panel/itineraries`) after signing
+in. Build a fresh itinerary or open a locally saved template, then enter the guest name.
+Choose Deluxe, Premium or Luxury, then edit the
+package name, 2-15 days, guests, date, per-person price, transport, meals, payment
+split, sightseeing, photos, inclusions, exclusions and travel tips. The total
+and nights recalculate automatically. Numeric fields can be cleared while editing;
+incomplete values block PDF download, and leading zeros are normalized on blur.
+Enter one room count per night for the entire trip when accommodation is included,
+then choose Double, Triple or Family for each room. Only Double rooms offer one
+optional extra bed; switching a room to Triple or Family clears its extra bed. The
+same arrangement applies to every night, and daily overnight lines, hotel-stay
+headings and the price panel list the room types (for example `1 Double + extra
+bed, 1 Family`). Templates saved before room types existed open as Double rooms.
+The PDF cover shows the journey summary without a price; the per-person price,
+total, price wording and advance split appear in a **Your package price** panel
+directly below the inclusions and exclusions. Reducing the room count removes the
+selections for rooms beyond the new count. When accommodation is excluded, the
+count is optional and is not presented as an included room allocation.
+Changing a day's destination refreshes
+its website photo and sightseeing suggestions; edit its overnight destination
+separately for day trips. Arrival is available in Srinagar, Jammu or Katra;
+departure remains Srinagar or Jammu, and the final day has no overnight stay. Srinagar offers Hotel or Houseboat;
+other overnight locations offer Hotel only. Changing a stay away from Srinagar
+automatically resets its type to Hotel.
+
+Day 1 has a separate arrival point and an onward-destination selector. Keep
+**Leisure** for a rest/check-in day, or choose **Travel** and any listed
+destination immediately after arrival (for example Jammu to Katra, Katra to
+Srinagar or Srinagar to Sonamarg). Katra can also be a leisure day or an
+overnight stay; its suggestions mention the Mata Vaishno Devi pilgrimage without
+promising access or a confirmed arrangement. Jammu and Katra use explicitly
+labelled illustrative Kashmir scenery in the PDF. Photos and sightseeing follow the visited
+destination, not the pickup city. The overnight selector stays independently
+editable. Change the number of days to add/remove day cards, up to 15.
+
+Patnitop is available as a destination and overnight stay. Shiv Khori is a
+day-trip destination only; the itinerary automatically returns to the starting
+overnight location and does not offer a Shiv Khori stay. Both use labelled
+illustrative Kashmir scenery, not photographs of those destinations.
+Travel days show approximate one-way road distance and driving time for each
+leg, including returns. Srinagar destination estimates reuse the website's
+destination guides; selected Jammu routes use approximate fixed values. Actual
+conditions and pickup points vary, and sightseeing and stops are not included.
+Other routes explicitly show that distance and time need confirmation.
+
+Each day starts with **Travel / Leisure**, also printed above its PDF heading.
+Leisure stays at the previous night's location with no outstation sightseeing.
+Travel shows the visited destination's photos/highlights and offers overnight
+choices for that destination, Srinagar, or the starting location. Choosing a
+different overnight location adds the return journey to that day's title and
+description. The next day's start follows the previous night; downstream leisure
+days and travel headings update when nights, day order or day count change.
+Departure is always Travel, with no overnight stay.
+Each day's photo selector includes all of its destination photos plus the eight
+Kashmir scenery-gallery images (deduplicated); gallery images are explicitly
+illustrative. Pahalgam sightseeing defaults to Aru Valley, Betaab Valley and
+Chandanwari, with local cab/entry costs governed by the package checklist.
+Sonamarg's day plan does not add Zoji La; its optional union-cab checkbox remains.
+
+Transport is restricted to the existing `rentalCars` website catalog, from sedan
+through Ertiga, Innova, Innova Crysta, the listed Tempo Traveller sizes, Urbania
+and bus. No extra/unlisted vehicle types are invented.
+
+Open **Choose package inclusions & exclusions** for the editable checklist.
+Hotel stays is first. The **Meal plan** dropdown offers breakfast and dinner,
+breakfast only, dinner only, or meals not included. It stays synchronized with
+the independent breakfast/dinner checks; optional lunch remains separate and
+the cover's meal summary reflects all selected meals. Each checked item appears only
+under Included in the PDF, and every unchecked item appears only under Not
+included. The list covers private cab, pickup/drop, sightseeing, tolls, Shikara,
+separate Pahalgam ABC union cabs, bad-weather
+chain vehicles, Sonamarg-Zojila union cabs, Gondola tickets, optional activities
+at each destination, one combined winter boots/jackets/sweaters option, lunch,
+and flights/travel insurance. Heating, Gulmarg/Tangmarg union transfers and
+personal expenses are not in the default list. Edit wording, remove items that do
+not apply, or add custom items (up to 40 total). Unchecking accommodation or the
+private cab also updates the cover/hotel wording so it does not promise them.
+
+Stays default to a checked **Use package category** option: Deluxe hotel,
+Premium hotel or Luxury hotel (and the corresponding houseboat category).
+An optional typed hotel name overrides this label on the stay page and in the
+daily overnight line; checking the default again restores the tier label.
+Typed names do not borrow unrelated website photos. Alternatively select website
+hotels from the expandable list; this turns off the manual-name override.
+Explicitly selected hotel photographs remain in the PDF if the category default
+is re-enabled, with the category still shown in the daily overnight line.
+Names and choices remain in page memory only and are subject to availability.
+Optional property-name labels and category placeholders follow the selected
+Hotel/Houseboat type and overnight location.
+
+The final PDF contact page has phone, email, website and Instagram icons with
+clickable links, plus an Instagram QR code and the extra 3% off follow offer.
+The QR is generated locally from the configured business Instagram URL, with
+no third-party QR service or guest-data upload.
+Every PDF page footer includes clickable phone, email, website and Instagram
+with icons. Itinerary contact details come from `src/config.ts`: Mr. Rohyat Naik
+(no title/role), with the phone displayed as 9149418161 and the international
+`tel:` target retained. Public-site phone formatting is unchanged.
+
+Hotels come from approved website listings and match each overnight destination,
+package category and Hotel/Houseboat type. Up to three are suggested per stay;
+choose alternatives or a bedroom photo from each hotel's website gallery.
+Adding a Sonamarg overnight automatically adds that location's matching listings.
+Where none exist, the PDF uses the category or optional typed name rather
+than substituting an unrelated tier. Hotels shown or similar alternatives remain
+subject to availability, with final hotels confirmed at booking.
+
+The forest-green/gold preview is the actual generated PDF, not an approximation.
+Page counts adapt to the journey.
+Day descriptions use 11.5pt text, 10pt highlights and 16pt serif headings;
+card heights and pagination expand for these more readable sizes.
+The package checklist invites guests to request additional inclusions and retains
+the union-cab refund note. Travel tips occupy their own page; if edited tips cannot
+fit even at the minimum font size, the builder asks for shorter text.
+Download is available only for the current, valid preview; photo loading errors
+are visible and retryable. Phone, website,
+email and the Plan a trip customization link remain clickable. The builder's
+editable default is **20% advance / 80% after the trip**; this does not change the
+separate payment promises on the public website.
+
+The **Local itinerary templates** section can save up to 10 named plans in
+`localStorage` under `avelof:itinerary-templates:v1`. Save, open, update and delete
+operate only on this browser/device and never call a database. Templates contain
+the day-wise journey, hotel choices/names/photos, inclusions/exclusions, tips and
+editable overview defaults (guest count, rooms, price, transport and advance).
+Guest name and travel date are stripped on save and blank when opened.
+Changing guest name, guest count or price does not alter the saved day-wise plan
+or checklist. Storage errors are shown explicitly; corrupt data is not overwritten.
+Templates do not sync between devices and clearing browser data removes them.
+There is no itinerary database storage or automatic draft saving. Unsaved guest
+details and edits exist only in page memory; refreshing or leaving discards them.
+Download the PDF before leaving. The guest name appears prominently on the branded cover and
+in `AVELOF-Guest-Name-Itinerary.pdf`. PDF creation and downloading happen entirely
+in the browser; no guest details or PDF data are uploaded. `/api/itineraries`
+only checks admin access with a read-only GET; all storage methods return 410.
+It does not access D1. Downloading/sharing an itinerary does not confirm a booking.
+
+Apply `0029_remove_itinerary_drafts.sql` to remove the previous drafts table and
+its contents, using `npm run db:migrate:local` locally and
+`npm run db:migrate` for production before deployment. Targeted checks:
+`node --test tests/itinerary-builder.test.mjs tests/itinerary-builder-ui.test.mjs functions/api/itineraries.test.mjs`
+(the browser test uses port 8792, configurable with `AVELOF_HOTEL_TEST_URL`).
+
 Places (`/destinations`) is a destination guide, not a second enquiry form.
 Every destination uses the same layout: overview, travel/time/season facts,
 five main attraction highlights, activities and experiences, access guidance
@@ -463,8 +794,10 @@ Run `node --test tests/destinations.test.mjs` against the built local preview on
 port 8791 (or set `AVELOF_HOTEL_TEST_URL`) to check consistent highlights,
 responsive layouts, search, shared activities and planner-return links.
 
-The homepage has 12 shortcuts, including Activities (`/activities`),
-Food & Shopping (`/food-and-shopping`) and Travel Guide (`/travel-guide`).
+The Kashmir homepage shows six primary tiles: Plan a trip, Packages, Hotels,
+Cabs, Local Trips and Places. "View more" expands the same grid with matching tiles for Drivers,
+Bookings, Activities (`/activities`), Food & Shopping (`/food-and-shopping`),
+Travel Guide (`/travel-guide`) and Handicrafts. "View less" returns to the six primary tiles.
 Activities provides destination/category/search filters and incremental results.
 The catalogue in `src/data/activities.ts` focuses on paid experiences in Srinagar,
 Gulmarg, Sonamarg and Pahalgam, not general sightseeing walks. Gulmarg has one
@@ -525,7 +858,16 @@ consent. Owner contact name, phone and email stay private. Registration confirms
 receipt only after storage succeeds; nothing is advertised automatically.
 The existing admin session protects `/admin/panel/businesses`, where AVELOF can
 edit, approve, hide or delete submissions. The public directory shows approved
-records only and supports business-type and destination filters.
+records only and supports business-type and destination/district filters.
+All owner dashboard sections label this moderation area **Businesses**.
+Business locations include all 10 Kashmir districts, alongside existing tourist
+destinations so older registrations remain editable and discoverable. Owners can
+put their town or village in the public address.
+New registrations and partner edits queue an owner push alert after successful
+storage, identifying the business type and opening `/admin/panel/businesses`.
+Unchanged retries do not queue another alert. Enable notifications on the owner
+device using the Businesses dashboard's notification controls; the existing
+server-side VAPID configuration is required.
 Businesses can add up to 20 optional products, dishes or handicrafts. Every added
 item requires a heading (100 characters), description (1,000 characters) and
 exactly one photo. Registration also includes a business description. Approved
@@ -611,9 +953,10 @@ Sonamarg (one), Gulmarg (one) and Pahalgam (one). No property names are specifie
 until properties are added. Gondola tickets (subject to weather and official
 operation), daily breakfast and dinner, and union cabs in Tangmarg, Pahalgam and
 Gulmarg are included. Lunches, flights, travel insurance and optional activities
-other than Gondola are excluded. The regular price is INR 68,829.87, giving a
-price of INR 52,999 after the standard 23% discount. Live admin discount changes
-and date/night pricing rules continue to apply.
+other than Gondola are excluded. The regular package price is INR 38,500 per
+person before the current admin-configured hotel/package discount.
+The hotel discount and arrival-date seasonal increase do not apply to packages;
+night-based pricing rules continue to apply.
 All three packages include a complimentary one-hour Shikara ride.
 Package cards and every package detail heading offer a Compare popup with the
 live discounted prices, duration, destinations, stay allocation, hotel category,
@@ -1061,7 +1404,7 @@ offered type (Standard, Deluxe, Premium, Family and Suite). Submitted and
 admin-reviewed room rates remain unchanged in private records. The public hotel
 API adds 50% to each room rate and rounds up to the next whole rupee, including
 legacy rates. This applies to existing and new hotels, listings, enquiries and
-planner estimates, then applies the saved hotel/package discount. Breakfast and dinner add-ons are not increased or discounted.
+planner estimates, then applies the saved hotel discount. Breakfast and dinner add-ons are not increased or discounted.
 A zero count excludes
 that type. Family room-only rates cover four people; other room rates cover two.
 Breakfast and dinner are entered as shared base add-ons for two people. For a

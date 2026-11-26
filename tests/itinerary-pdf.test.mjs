@@ -7,7 +7,6 @@ import { business } from '../src/config.ts'
 import { brandPromises } from '../src/data/brandPromises.ts'
 import { kashmirPhotosForPdf } from '../src/data/kashmirPhotoGallery.ts'
 import { localTrekPhotos } from '../src/data/localTrips.ts'
-import { discountedHotelPackagePrice } from '../src/services/pricing.ts'
 import { buildBrandedItineraryPdf, tourPackagePdfData, ladakhJourneyPdfData } from '../src/services/itineraryPdf.ts'
 import { ladakhJourneys, ladakhJourneyPhotos } from '../src/data/ladakhJourneys.ts'
 
@@ -160,14 +159,12 @@ test('every PDF cover has compact tiles with centred icons/text and clear dates 
   }
 })
 
-test('Luxury costs 52999 after 23% off and includes six hotel nights, a final houseboat night and the requested inclusions', () => {
+test('Luxury costs 38500 and includes six hotel nights, a final houseboat night and the requested inclusions', () => {
   const luxury = tourPackages.find((item) => item.id === 'luxury')
   assert.ok(luxury)
   assert.ok(!luxury.underDevelopment)
-  assert.equal(luxury.originalPrice, 68829.87)
-  assert.equal(luxury.price, 52999)
-  assert.equal(discountedHotelPackagePrice(luxury.originalPrice, 23), 52999)
-  assert.equal(Number(((luxury.originalPrice - luxury.price) / luxury.originalPrice * 100).toFixed(2)), 23)
+  assert.equal(luxury.originalPrice, undefined)
+  assert.equal(luxury.price, 38500)
   assert.equal(luxury.duration, '7 nights · 8 days')
   assert.deepEqual(luxury.itinerary.map((day) => day.title), [
     'Arrive in Srinagar', 'Doodhpathri day trip', 'Srinagar to Sonamarg', 'Sonamarg to Srinagar',
@@ -203,8 +200,8 @@ test('Premium includes a Sonamarg day trip and the final night in Srinagar', () 
   assert.deepEqual(premium.stays.map(({ location, nights }) => ({ location, nights })), [
     { location: 'Srinagar', nights: 3 }, { location: 'Gulmarg', nights: 1 }, { location: 'Pahalgam', nights: 1 },
   ])
-  assert.match(premium.itinerary[1].detail, /return to Srinagar.*Jamal Resorts/)
-  assert.match(premium.itinerary[4].detail, /Srinagar by evening.*Jamal Resorts/)
+  assert.match(premium.itinerary[1].detail, /return to Srinagar/)
+  assert.match(premium.itinerary[4].detail, /Srinagar by evening/)
   assert.match(premium.itinerary[5].detail, /from your Srinagar hotel/)
   assert.ok(premium.gallery.includes('/images/destinations/kashmir-snowy-peaks.jpg'))
   assert.deepEqual(tourPackagePdfData(premium).days, premium.itinerary.map((day) => ({ label: day.day, title: day.title, detail: day.detail })))
@@ -247,8 +244,8 @@ test('planner and ready-made packages download branded PDFs at the intended step
       await page.goto(`${origin}/tour-packages/${packageName.toLowerCase()}`)
       const packageDownload = page.getByRole('button', { name: `Download ${packageName} package PDF`, exact: true })
       if (packageName === 'Luxury') {
-        assert.equal(await page.locator('.detail-aside > strong').innerText(), '₹52,999')
-        assert.equal(await page.locator('.detail-aside .regular-price s').innerText(), '₹68,829.87')
+        assert.equal(await page.locator('.detail-aside > strong').innerText(), '₹29,645')
+        assert.equal(await page.locator('.detail-aside .regular-price s').innerText(), '₹38,500')
         assert.equal(await page.locator('.detail-aside .discount-label').innerText(), '23% off')
       }
       const displayedPhotos = await page.locator('.detail-gallery img').evaluateAll((images) => images.map((image) => ({
@@ -277,6 +274,9 @@ test('planner and ready-made packages download branded PDFs at the intended step
       const packagePdf = await readFile(packagePath)
       assert.ok(packagePdf.subarray(0, 5).toString().startsWith('%PDF-'))
       assert.ok(packagePdf.toString('latin1').includes(`${packageName} Kashmir Tour Package`))
+      const regular = tourPackages.find(item => item.name === packageName)
+      const expectedRate = Math.round((regular.originalPrice ?? regular.price) * 77) / 100
+      assert.ok(packagePdf.toString('latin1').includes(`Current displayed package rate: INR ${expectedRate.toLocaleString('en-IN')}`))
       assert.ok(packagePdf.toString('latin1').includes('Union-cab charges and usage depend on the package'))
       if (packageName === 'Premium') {
         assert.ok(packagePdf.toString('latin1').includes('Sonamarg day trip'))
@@ -292,7 +292,7 @@ test('planner and ready-made packages download branded PDFs at the intended step
         assert.ok(packagePdf.toString('latin1').includes('Daily breakfast and dinner'))
         assert.ok(packagePdf.toString('latin1').includes('Union cabs in Tangmarg'))
         assert.ok(packagePdf.toString('latin1').includes('Complimentary one-hour Shikara ride'))
-        assert.ok(packagePdf.toString('latin1').includes('52,999'))
+        assert.ok(packagePdf.toString('latin1').includes('38,500'))
       }
       assert.ok((packagePdf.toString('latin1').match(/\/Subtype\s*\/Image/g) ?? []).length >= kashmirPhotosForPdf.length)
     }

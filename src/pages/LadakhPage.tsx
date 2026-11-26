@@ -19,7 +19,7 @@ import './ladakh.css'
 const shortcuts = [
   { label: 'Plan a trip', path: 'contact', icon: Route },
   { label: 'Packages', path: 'packages', icon: Package },
-  { label: 'Hotels & Stays', path: 'hotels', icon: BedDouble },
+  { label: 'Hotels', path: 'hotels', icon: BedDouble },
   { label: 'Cabs & Transfers', path: 'car-rentals', icon: CarFront },
   { label: 'Bike Trips', path: 'bike-trips', icon: Motorbike },
   { label: 'Places', path: 'places', icon: MapPin },

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
-import { featuredOfferHotelId as id } from '../src/data/offers.ts'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
+const id = 'f85d09ef-0222-4bc5-8842-f59c647791c7'
 const hotel = {
   id, hotelId: 'AVELOF_HTL_10003SRG', name: 'Hotel Crown Prince', location: 'Srinagar', category: 'Premium',
   description: 'Comfortable hotel rooms in the heart of Srinagar.', price: 2310, originalPrice: 3000, discountPercent: 23,
@@ -12,6 +12,41 @@ const hotel = {
   amenities: ['Wi-Fi'], highlights: ['Near the market'], checkIn: '14:00', checkOut: '11:00',
   breakfastPrice: 200, dinnerPrice: 300, photos: [`/api/hotel-images/${id}/0`],
 }
+
+test('hotel room-rate Book Now stays visible above details on mobile without changing desktop booking', async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true })
+  const page = await browser.newPage({ reducedMotion: 'reduce' })
+  await page.route('**/api/pricing', (route) => route.fulfill({ json: { discountPercent: 23, version: 1 } }))
+  await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [hotel], total: 1, page: 1, pageSize: 25 } }))
+  await page.route('**/api/hotel-images/**', (route) => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"/>' }))
+  try {
+    for (const width of [320, 390, 560, 768, 820, 821, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto(`${origin}/hotels/${id}`)
+      const panel = page.locator('.hotel-detail-layout .detail-aside')
+      const button = panel.getByRole('button', { name: 'Book Now', exact: true })
+      await button.waitFor()
+      assert.equal(await button.isVisible(), true)
+      const rateBounds = await panel.locator('.hotel-rates').boundingBox()
+      const buttonBounds = await button.boundingBox()
+      assert.ok(buttonBounds.y >= rateBounds.y + rateBounds.height, 'Book Now follows the room rate')
+      assert.equal(await page.locator('.hotel-end-booking').isVisible(), width <= 820)
+      if (width <= 820) {
+        const details = await page.locator('.detail-body').boundingBox()
+        assert.ok(buttonBounds.y + buttonBounds.height <= details.y, 'Top action precedes hotel details')
+        assert.ok(buttonBounds.height >= 40)
+      } else {
+        assert.equal(await panel.evaluate((element) => getComputedStyle(element).position), 'sticky')
+      }
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+      await button.click()
+      const form = page.locator('.enquiry-form')
+      await form.waitFor()
+      assert.equal(await form.getByLabel('Room type', { exact: true }).inputValue(), 'Deluxe')
+      assert.match(await form.innerText(), /Hotel Crown Prince/)
+    }
+  } finally { await browser.close() }
+})
 
 test('priced hotel calendars and mixed-season enquiries use nightly room rates without increasing meals', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
@@ -85,6 +120,7 @@ test('priced hotel calendars and mixed-season enquiries use nightly room rates w
     await form.getByLabel('Phone number').fill('9876543210')
     await form.getByRole('button', { name: 'Submit enquiry', exact: true }).click()
     await page.getByRole('heading', { name: 'Thank you for submitting your details.' }).waitFor()
+    assert.match(await page.locator('#booking-description').innerText(), /Thanks for submitting your enquiry/)
     assert.ok(enquiry.fields.hotelStayEstimate.includes('₹23,404'))
     assert.ok(enquiry.fields.nightlyRate.includes('₹5,620 to ₹6,082'))
     assert.ok(enquiry.fields.hotelPriceBreakdown.includes('1 night × ₹4,620'))

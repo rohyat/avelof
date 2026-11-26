@@ -1,0 +1,119 @@
+.itinerary-builder { padding-block: 36px 64px; }
+.itinerary-builder h1 { margin-block: 8px 20px; }
+.itinerary-builder-toolbar, .itinerary-inline-actions { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.itinerary-builder-toolbar { padding-block: 16px; }
+.itinerary-builder label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; min-width: 0; }
+.itinerary-builder input:not([type=checkbox]), .itinerary-builder select, .itinerary-builder textarea { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--paper); font: inherit; }
+.itinerary-builder textarea { min-height: 80px; resize: vertical; }
+.itinerary-builder-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 24px; }
+.itinerary-builder-editor { border: 0; padding: 0; margin: 0; min-width: 0; }
+.itinerary-editor-section { border: 1px solid var(--line); padding: 18px; border-radius: 10px; margin-bottom: 20px; display: grid; gap: 14px; }
+.itinerary-editor-section h2, .itinerary-builder-preview h2 { margin: 0; font-size: 23px; }
+.itinerary-editor-section p, .itinerary-builder-preview p { margin: 0; color: var(--muted); font-size: 13px; }
+.itinerary-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.itinerary-room-options { border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
+.itinerary-room-options legend { font-weight: 700; }
+.itinerary-room-list { display: flex; flex-wrap: wrap; gap: 10px 20px; margin-top: 10px; }
+.itinerary-room-list label { display: flex; align-items: center; gap: 7px; }
+.itinerary-room-list input { width: auto; }
+.itinerary-day-editor { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 6px; display: grid; gap: 12px; }
+.itinerary-day-editor legend { font-weight: 700; font-size: 14px; padding-inline: 5px; }
+.itinerary-photo-thumb { width: 120px; height: 75px; object-fit: cover; border-radius: 4px; }
+.itinerary-builder .itinerary-checkbox { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.itinerary-package-checklist summary { cursor: pointer; min-height: 44px; padding-block: 12px; font-weight: 600; }
+.itinerary-package-items { display: grid; gap: 14px; margin-block: 12px; }
+.itinerary-package-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.itinerary-package-item .itinerary-checkbox, .itinerary-package-item > input { grid-column: 1 / -1; }
+.itinerary-package-item input[type=checkbox] { flex-shrink: 0; width: 20px; height: 20px; }
+.itinerary-package-item > span { align-self: center; font-size: 13px; font-weight: 600; }
+.itinerary-hotel-option { display: grid; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.itinerary-builder-preview { position: sticky; top: 90px; display: grid; gap: 12px; min-width: 0; }
+.itinerary-builder-preview iframe { width: 100%; height: 76vh; border: 1px solid var(--line); border-radius: 6px; background: #e9e9e9; }
+.itinerary-builder .button { min-height: 44px; }
+.itinerary-workspace > h1 { letter-spacing: -0.04em; }
+.itinerary-workspace > p { line-height: 1.7; }
+.itinerary-workspace .itinerary-builder-toolbar { justify-content: space-between; padding-block: 22px 12px; }
+.itinerary-workspace-summary { display: flex; flex-wrap: wrap; gap: 8px; }
+.itinerary-workspace-summary span { background: var(--glacier); color: var(--forest); font-size: 12px; padding: 9px 13px; border-radius: 20px; text-transform: capitalize; }
+.itinerary-editor-shortcuts { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 24px; }
+.itinerary-editor-shortcuts a { padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--ivory); font-size: 12px; color: var(--forest); }
+.itinerary-editor-shortcuts a:hover { background: var(--glacier); }
+.itinerary-workspace .itinerary-builder-layout { gap: 28px; }
+.itinerary-workspace .itinerary-editor-section { padding: 24px; border-radius: 18px; background: var(--ivory); gap: 18px; box-shadow: 0 5px 20px rgb(16 49 43 / 3%); scroll-margin-top: 105px; }
+.itinerary-workspace .itinerary-editor-section h2 { font-size: 20px; letter-spacing: -0.02em; color: var(--forest); padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.itinerary-workspace .itinerary-editor-section p { line-height: 1.7; }
+.itinerary-workspace .itinerary-fields { gap: 16px; }
+.itinerary-workspace input:not([type=checkbox]), .itinerary-workspace select, .itinerary-workspace textarea { min-height: 46px; padding: 12px; border-radius: 9px; }
+.itinerary-workspace input:focus-visible, .itinerary-workspace select:focus-visible, .itinerary-workspace textarea:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
+.itinerary-workspace .itinerary-day-editor { border-radius: 12px; padding: 18px; gap: 14px; background: var(--paper); }
+.itinerary-workspace .itinerary-day-editor legend { background: var(--forest); color: var(--paper); border-radius: 8px; padding: 7px 12px; }
+.itinerary-workspace .itinerary-room-options { background: var(--glacier); border-radius: 12px; padding: 16px; }
+.itinerary-workspace .itinerary-room-list label { background: var(--ivory); padding: 10px; border-radius: 8px; }
+.itinerary-room-choice { display: grid; gap: 6px; min-width: 190px; padding: 10px; border-radius: 10px; background: var(--ivory); }
+.itinerary-room-choice > label:first-child { display: grid; gap: 4px; font-weight: 600; }
+.itinerary-workspace .itinerary-room-choice label { padding: 0; background: transparent; }
+.itinerary-room-choice select { width: 100%; }
+.itinerary-workspace .itinerary-editor-section > strong { background: var(--glacier); color: var(--forest); border-radius: 10px; padding: 14px; font-size: 13px; line-height: 1.7; }
+.itinerary-workspace .itinerary-photo-thumb { border-radius: 9px; width: 140px; height: 90px; }
+.itinerary-workspace .itinerary-builder-preview { padding: 20px; border: 1px solid var(--line); border-radius: 18px; background: var(--ivory); box-shadow: 0 12px 30px rgb(16 49 43 / 6%); scroll-margin-top: 105px; }
+.itinerary-workspace .itinerary-builder-preview h2 { font-size: 20px; color: var(--forest); }
+.itinerary-workspace .itinerary-builder-preview .button { justify-content: center; }
+.itinerary-workspace .itinerary-builder-preview iframe { border-radius: 12px; height: 65vh; }
+@media (max-width: 480px) { .itinerary-workspace .itinerary-editor-section { padding: 16px; } .itinerary-workspace .itinerary-day-editor { padding: 12px; } .itinerary-workspace .itinerary-builder-preview { padding: 14px; } }
+.receipt-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.receipt-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.receipt-summary > div { padding: 18px; border-radius: 12px; display: grid; gap: 8px; border: 1px solid currentColor; }
+.receipt-summary span { font-size: 13px; }
+.receipt-summary strong { font-size: clamp(16px, 2vw, 24px); overflow-wrap: anywhere; }
+.receipt-total { color: #264985; background: #eaf0fa; }
+.receipt-received { color: #186441; background: #e8f6ed; }
+.receipt-pending { color: #9f4218; background: #ffefde; }
+.receipt-screenshot { display: block; max-width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; margin-bottom: 10px; }
+.payment-workspace { padding-top: 24px; }
+.payment-workspace-heading { display: flex; align-items: center; gap: 18px; margin-bottom: 28px; }
+.payment-heading-icon { background: var(--forest); color: var(--paper); border-radius: 18px; padding: 18px; display: flex; }
+.payment-workspace-heading h2 { font-size: clamp(25px, 3vw, 36px); margin: 5px 0 8px; letter-spacing: -0.03em; }
+.payment-workspace p { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 0; }
+.payment-workspace-heading .eyebrow { color: var(--forest); font-size: 10px; letter-spacing: 0.16em; }
+.payment-private-badge { margin-left: auto; display: flex; align-items: center; gap: 7px; color: var(--forest); font-size: 12px; white-space: nowrap; border: 1px solid var(--line); border-radius: 30px; padding: 10px 14px; }
+.payment-workspace-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.85fr); align-items: start; gap: 28px; }
+.payment-form { display: grid; gap: 20px; }
+.payment-form-card { border: 1px solid var(--line); border-radius: 18px; background: var(--ivory); padding: 24px; box-shadow: 0 5px 20px rgb(16 49 43 / 3%); display: grid; gap: 20px; min-width: 0; }
+.payment-form-card h3 { display: flex; gap: 10px; align-items: center; font-size: 17px; margin: 0; }
+.payment-form-card h3 > span { color: var(--muted); font-size: 11px; font-weight: 500; }
+.payment-form-card h3 > svg { color: var(--forest); }
+.payment-full-width { grid-column: 1 / -1; }
+.payment-form-card input:not([type=checkbox]), .payment-form-card select { border-radius: 10px; min-height: 48px; padding: 13px; transition: border-color 150ms, box-shadow 150ms; }
+.payment-form-card input:focus-visible, .payment-form-card select:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
+.payment-form-card input[readonly] { background: var(--glacier); color: var(--muted); }
+.payment-pricing-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 5px; background: var(--glacier); border: 1px solid var(--line); border-radius: 12px; }
+.payment-pricing-toggle button { border: 0; background: transparent; color: var(--muted); padding: 12px 8px; border-radius: 8px; font: inherit; font-size: 12px; cursor: pointer; }
+.payment-pricing-toggle button[aria-pressed=true] { color: var(--forest); background: var(--paper); box-shadow: 0 2px 8px rgb(16 49 43 / 10%); font-weight: 700; }
+.payment-workspace .payment-calculation { color: var(--forest); background: var(--glacier); padding: 12px; border-radius: 8px; }
+.payment-upload { border: 1px dashed var(--muted); padding: 20px; border-radius: 12px; background: var(--glacier); }
+.payment-upload > span { color: var(--muted); font-size: 11px; font-weight: 400; }
+.payment-overview { border: 1px solid var(--line); border-radius: 20px; background: var(--ivory); padding: 24px; position: sticky; top: 90px; display: grid; gap: 20px; min-width: 0; box-shadow: 0 12px 35px rgb(16 49 43 / 6%); }
+.payment-overview-heading { display: flex; align-items: center; gap: 10px; color: var(--forest); padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.payment-overview-heading h3 { margin: 0 0 5px; font-size: 17px; }
+.payment-overview-heading > span { font-size: 11px; border: 1px solid var(--line); padding: 5px 8px; border-radius: 20px; margin-left: auto; }
+.payment-overview-heading p { overflow-wrap: anywhere; }
+.payment-guest-summary { display: grid; gap: 6px; overflow-wrap: anywhere; }
+.payment-guest-summary strong { font-size: 20px; }
+.payment-guest-summary span { font-size: 13px; color: var(--muted); }
+.payment-overview .receipt-summary { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.payment-overview .receipt-summary > div { border: 0; padding: 16px 18px; }
+.payment-overview .receipt-summary strong { font-size: 23px; }
+.payment-progress { display: grid; gap: 8px; }
+.payment-progress label { color: var(--muted); font-size: 11px; }
+.payment-progress progress { accent-color: var(--forest); height: 8px; width: 100%; }
+.payment-evidence-preview { display: grid; gap: 10px; font-size: 12px; color: var(--muted); }
+.payment-evidence-preview img { margin: 0; width: 100%; background: var(--glacier); }
+.payment-export { display: grid; gap: 12px; }
+.payment-export .button { width: 100%; justify-content: center; }
+.payment-overview .payment-fine-print { border-top: 1px solid var(--line); padding-top: 16px; font-size: 11px; }
+@media (max-width: 1000px) { .payment-private-badge { display: none; } }
+@media (max-width: 800px) { .payment-workspace-grid { grid-template-columns: minmax(0, 1fr); } .payment-overview { position: static; } }
+@media (max-width: 480px) { .payment-form-card, .payment-overview { padding: 18px; } .payment-heading-icon { padding: 12px; border-radius: 12px; } .payment-workspace-heading { gap: 12px; } }
+@media (max-width: 600px) { .receipt-summary { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 1000px) { .itinerary-builder-layout { grid-template-columns: minmax(0, 1fr); } .itinerary-builder-preview { position: static; } }
+@media (max-width: 480px) { .itinerary-fields { grid-template-columns: minmax(0, 1fr); } .itinerary-editor-section { padding: 12px; } }

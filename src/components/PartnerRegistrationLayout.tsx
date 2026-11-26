@@ -10,7 +10,7 @@ export default function PartnerRegistrationLayout({ kind, children, editing = fa
     <div className="partner-back-link page-back-line"><BackButton /><Link className="text-link" to="/partners">Partner with AVELOF</Link></div>
     <header className="partner-registration-hero">
       <div>
-        <h1>{editing ? hotel ? 'Edit your hotel' : 'Edit your driver registration' : hotel ? 'Register your hotel' : 'Register as a driver'}</h1>
+        <h1>{editing ? hotel ? 'Edit your hotel or houseboat' : 'Edit your driver registration' : hotel ? 'Register your hotel or houseboat' : 'Register as a driver'}</h1>
         {editing && <p>Update your details and submit them for review. Saving hides your listing until AVELOF approves the changes.</p>}
         <span className="partner-review-badge"><ShieldCheck size={16} /> Reviewed before going live</span>
       </div>
@@ -20,7 +20,7 @@ export default function PartnerRegistrationLayout({ kind, children, editing = fa
       <aside className="partner-registration-guide" aria-label="Registration guide">
         <p className="eyebrow">A simple start</p><h2>Your next chapter, with AVELOF.</h2>
         <ol>
-          <li><span><Icon size={19} aria-hidden="true" /></span><div><h3>Introduce {hotel ? 'your property' : 'yourself'}</h3><p>{hotel ? 'Share your hotel details, rooms and rates.' : 'Add your contact, licence and vehicle details. No driver price is needed.'}</p></div></li>
+          <li><span><Icon size={19} aria-hidden="true" /></span><div><h3>Introduce {hotel ? 'your property' : 'yourself'}</h3><p>{hotel ? 'Share your hotel or houseboat details, rooms and rates.' : 'Add your contact, licence and vehicle details. No driver price is needed.'}</p></div></li>
           <li><span><FileImage size={19} aria-hidden="true" /></span><div><h3>Add {hotel ? 'your photos' : 'a portrait'}</h3><p>{hotel ? 'Choose up to five photos that show your property at its best.' : 'Upload one clear photo of yourself.'}</p></div></li>
           <li><span><ClipboardCheck size={19} aria-hidden="true" /></span><div><h3>Leave the review to us</h3><p>Save your registration ID and status code. Your listing goes live only after approval.</p></div></li>
         </ol>

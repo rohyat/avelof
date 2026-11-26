@@ -1,33 +1,32 @@
 import type { Destination, RentalCar, TourPackage, OwnerProvidedGuestReview } from '../types'
 import { vehiclePhotos } from './vehiclePhotos.ts'
-import { discountedHotelPackagePrice } from '../services/pricing.ts'
 import { providedDestinationPhotos as suppliedPhotos } from './previewPhotos.ts'
 import { kashmirPhotoGallery } from './kashmirPhotoGallery.ts'
 
 const deluxeServices = ['Daily breakfast and dinner', 'Same private vehicle throughout the trip', 'Private transfers and sightseeing', 'All toll taxes', 'Complimentary one-hour Shikara ride']
 const premiumServices = [...deluxeServices, 'Centralized heating system', 'Union cabs in Tangmarg, Pahalgam and Gulmarg']
 
-const packageCatalog: TourPackage[] = [
+export const tourPackages: TourPackage[] = [
   {
     id: 'deluxe', kind: 'package', name: 'Deluxe', location: 'Srinagar · Gulmarg · Pahalgam',
     image: kashmirPhotoGallery.houseboat.image,
     gallery: [kashmirPhotoGallery.houseboat.image, kashmirPhotoGallery.valleyRiver.image, kashmirPhotoGallery.roomOne.image],
     galleryAlts: [kashmirPhotoGallery.houseboat.alt, kashmirPhotoGallery.valleyRiver.alt, kashmirPhotoGallery.roomOne.alt],
-    category: 'Deluxe', price: 22000,
+    category: 'Deluxe', price: 13500, originalPrice: 13999,
     hotelStandard: '2-star hotels',
     tourGuide: 'Dedicated tour guide not included; local driver provided.',
     duration: '4 nights · 5 days', description: 'A five-day Kashmir escape with stays in Srinagar and Pahalgam, plus a Gulmarg day trip.',
     itinerary: [
-      { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Meet your local driver, check in at The Mallard and enjoy a relaxed first evening.' },
-      { day: 'Day 02', title: 'Gulmarg day trip', detail: 'Travel from Srinagar to Gulmarg to explore the meadows, then return to your Srinagar hotel for the night.' },
-      { day: 'Day 03', title: 'Srinagar to Pahalgam', detail: 'Continue to Pahalgam and check in at a Deluxe package hotel for a night beside the valley.' },
-      { day: 'Day 04', title: 'Pahalgam to Srinagar', detail: 'Enjoy the Pahalgam scenery before returning to Srinagar for the final night.' },
+      { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Meet your local driver, check in at your Srinagar hotel and enjoy a relaxed first evening.', stayLink: { text: 'check in at your Srinagar hotel', stayIndex: 0 } },
+      { day: 'Day 02', title: 'Gulmarg day trip', detail: 'Travel from Srinagar to Gulmarg to explore the meadows, then return to your Srinagar hotel for the night.', stayLink: { text: 'return to your Srinagar hotel for the night', stayIndex: 0 } },
+      { day: 'Day 03', title: 'Srinagar to Pahalgam', detail: 'Continue to Pahalgam and check in at a Deluxe package hotel for a night beside the valley.', stayLink: { text: 'check in at a Deluxe package hotel', stayIndex: 1 } },
+      { day: 'Day 04', title: 'Pahalgam to Srinagar', detail: 'Enjoy the Pahalgam scenery before returning to Srinagar for the final night.', stayLink: { text: 'returning to Srinagar for the final night', stayIndex: 0 } },
       { day: 'Day 05', title: 'Departure', detail: 'Transfer to Srinagar airport for your onward journey.' },
     ],
     stay: 'Three nights in Srinagar and one night in Pahalgam. No overnight stay in Gulmarg.',
     stays: [
-      { location: 'Srinagar', nights: 3, hotel: 'Hotel Royal Imsar, Hotel Fair View, Hotel Star of Kashmir or The Mallard, subject to availability' },
-      { location: 'Pahalgam', nights: 1, hotel: 'The Cedar Pahalgam, Hotel Diamond Dreams or Home 2, subject to availability' },
+      { location: 'Srinagar', nights: 3, hotel: 'Stay at a Deluxe hotel' },
+      { location: 'Pahalgam', nights: 1, hotel: 'Stay at a Deluxe hotel' },
     ],
     transport: 'Private air-conditioned vehicle with a local driver throughout.',
     experiences: ['Srinagar city and lake time', 'Gulmarg day trip', 'Pahalgam valley visit'],
@@ -40,23 +39,23 @@ const packageCatalog: TourPackage[] = [
     gallery: [suppliedPhotos.sonamarg, kashmirPhotoGallery.snowLodge.image, kashmirPhotoGallery.roomTwo.image],
     galleryAlts: [kashmirPhotoGallery.snowyPeaks.alt, kashmirPhotoGallery.snowLodge.alt, kashmirPhotoGallery.roomTwo.alt],
     badge: 'Most selling package',
-    category: 'Premium', price: 36000,
+    category: 'Premium', price: 19500, originalPrice: 22500,
     hotelStandard: '3-star and 3-star Premium hotels',
     tourGuide: 'Dedicated tour guide not included; local driver provided.',
-    duration: '5 nights · 6 days', description: "A six-day Kashmir escape with a Sonamarg day trip and stays at Jamal Resorts, Hotel Signature and Twin Towers by D'foy, returning to Srinagar for the final night.",
+    duration: '5 nights · 6 days', description: 'A six-day Kashmir escape with a Sonamarg day trip and stays in Srinagar, Gulmarg and Pahalgam, returning to Srinagar for the final night.',
     itinerary: [
-      { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Check in at Jamal Resorts and settle into the city.' },
-      { day: 'Day 02', title: 'Sonamarg day trip', detail: 'Travel from Srinagar to Sonamarg for alpine valley scenery, then return to Srinagar for the night at Jamal Resorts.' },
-      { day: 'Day 03', title: 'Srinagar to Gulmarg', detail: 'Head to Gulmarg and stay at Hotel Signature.' },
-      { day: 'Day 04', title: 'Gulmarg to Pahalgam', detail: "Travel through the valley and check in at Twin Towers by D'foy." },
-      { day: 'Day 05', title: 'Pahalgam to Srinagar', detail: 'Enjoy the Pahalgam scenery before returning to Srinagar by evening for the final night at Jamal Resorts.' },
+      { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Check in at your Srinagar hotel and settle into the city.', stayLink: { text: 'Check in at your Srinagar hotel', stayIndex: 0 } },
+      { day: 'Day 02', title: 'Sonamarg day trip', detail: 'Travel from Srinagar to Sonamarg for alpine valley scenery, then return to Srinagar for the night.', stayLink: { text: 'return to Srinagar for the night', stayIndex: 0 } },
+      { day: 'Day 03', title: 'Srinagar to Gulmarg', detail: 'Head to Gulmarg and stay at a hotel.', stayLink: { text: 'stay at a hotel', stayIndex: 1 } },
+      { day: 'Day 04', title: 'Gulmarg to Pahalgam', detail: 'Travel through the valley and check in at a Pahalgam hotel.', stayLink: { text: 'check in at a Pahalgam hotel', stayIndex: 2 } },
+      { day: 'Day 05', title: 'Pahalgam to Srinagar', detail: 'Enjoy the Pahalgam scenery before returning to Srinagar by evening for the final night.', stayLink: { text: 'returning to Srinagar by evening for the final night', stayIndex: 0 } },
       { day: 'Day 06', title: 'Departure', detail: 'Transfer from your Srinagar hotel to Srinagar airport for your onward journey.' },
     ],
     stay: 'Three nights in Srinagar (the first two and the final night), one night in Gulmarg and one night in Pahalgam. Sonamarg is a day trip from Srinagar.',
     stays: [
-      { location: 'Srinagar', nights: 3, hotel: 'Jamal Resorts' },
-      { location: 'Gulmarg', nights: 1, hotel: 'Hotel Signature' },
-      { location: 'Pahalgam', nights: 1, hotel: "Twin Towers by D'foy" },
+      { location: 'Srinagar', nights: 3, hotel: 'Stay at a Premium hotel' },
+      { location: 'Gulmarg', nights: 1, hotel: 'Stay at a Premium hotel' },
+      { location: 'Pahalgam', nights: 1, hotel: 'Stay at a Premium hotel' },
     ],
     transport: 'Private air-conditioned vehicle with a local driver throughout.',
     experiences: ['Srinagar city and lake time', 'Sonamarg day trip', 'Gulmarg mountain stay', 'Pahalgam valley visit'],
@@ -68,18 +67,18 @@ const packageCatalog: TourPackage[] = [
     image: kashmirPhotoGallery.snowLodge.image,
     gallery: [kashmirPhotoGallery.snowLodge.image, suppliedPhotos.doodhpathri, kashmirPhotoGallery.houseboat.image],
     galleryAlts: [kashmirPhotoGallery.snowLodge.alt, kashmirPhotoGallery.meadow.alt, kashmirPhotoGallery.houseboat.alt],
-    category: 'Luxury', price: 68829.87,
+    category: 'Luxury', price: 38500,
     hotelStandard: '4-star and 5-star hotels, plus a final luxury houseboat night',
     tourGuide: 'Dedicated tour guide throughout the trip, separate from the driver.',
     duration: '7 nights · 8 days', description: 'An eight-day Kashmir escape with a Doodhpathri day trip, overnight visits to Sonamarg, Gulmarg and Pahalgam, luxury hotel stays and a final night on a luxury houseboat in Srinagar.',
     itinerary: [
-      { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Meet your driver on arrival and enjoy an easy first evening in Srinagar. Stay at a luxury hotel.' },
-      { day: 'Day 02', title: 'Doodhpathri day trip', detail: 'Travel from Srinagar to Doodhpathri for meadow and forest scenery, then return to Srinagar. Stay at a luxury hotel.' },
-      { day: 'Day 03', title: 'Srinagar to Sonamarg', detail: 'Travel to Sonamarg and enjoy the alpine valley at a relaxed pace. Stay at a luxury hotel.' },
-      { day: 'Day 04', title: 'Sonamarg to Srinagar', detail: 'Return from Sonamarg to Srinagar and settle in for the evening. Stay at a luxury hotel.' },
-      { day: 'Day 05', title: 'Srinagar to Gulmarg', detail: 'Head to Gulmarg for mountain scenery and the included Gondola ride, subject to weather and official operation. Stay at a luxury hotel.' },
-      { day: 'Day 06', title: 'Gulmarg to Pahalgam', detail: 'Continue from Gulmarg to Pahalgam and explore the valley. Stay at a luxury hotel.' },
-      { day: 'Day 07', title: 'Pahalgam to Srinagar', detail: 'Enjoy the Pahalgam scenery before returning to Srinagar for your final night. Stay on a luxury houseboat.' },
+      { day: 'Day 01', title: 'Arrive in Srinagar', detail: 'Meet your driver on arrival and enjoy an easy first evening in Srinagar. Stay at a luxury hotel.', stayLink: { text: 'Stay at a luxury hotel', stayIndex: 0 } },
+      { day: 'Day 02', title: 'Doodhpathri day trip', detail: 'Travel from Srinagar to Doodhpathri for meadow and forest scenery, then return to Srinagar. Stay at a luxury hotel.', stayLink: { text: 'Stay at a luxury hotel', stayIndex: 0 } },
+      { day: 'Day 03', title: 'Srinagar to Sonamarg', detail: 'Travel to Sonamarg and enjoy the alpine valley at a relaxed pace. Stay at a luxury hotel.', stayLink: { text: 'Stay at a luxury hotel', stayIndex: 1 } },
+      { day: 'Day 04', title: 'Sonamarg to Srinagar', detail: 'Return from Sonamarg to Srinagar and settle in for the evening. Stay at a luxury hotel.', stayLink: { text: 'Stay at a luxury hotel', stayIndex: 0 } },
+      { day: 'Day 05', title: 'Srinagar to Gulmarg', detail: 'Head to Gulmarg for mountain scenery and the included Gondola ride, subject to weather and official operation. Stay at a luxury hotel.', stayLink: { text: 'Stay at a luxury hotel', stayIndex: 2 } },
+      { day: 'Day 06', title: 'Gulmarg to Pahalgam', detail: 'Continue from Gulmarg to Pahalgam and explore the valley. Stay at a luxury hotel.', stayLink: { text: 'Stay at a luxury hotel', stayIndex: 3 } },
+      { day: 'Day 07', title: 'Pahalgam to Srinagar', detail: 'Enjoy the Pahalgam scenery before returning to Srinagar for your final night. Stay on a luxury houseboat.', stayLink: { text: 'Stay on a luxury houseboat', stayIndex: 4 } },
       { day: 'Day 08', title: 'Departure', detail: 'Transfer from your Srinagar houseboat to Srinagar airport for your onward journey.' },
     ],
     stay: 'Three luxury hotel nights in Srinagar (nights 1, 2 and 4), one luxury hotel night each in Sonamarg, Gulmarg and Pahalgam, and a final luxury houseboat night in Srinagar (night 7).',
@@ -88,7 +87,7 @@ const packageCatalog: TourPackage[] = [
       { location: 'Sonamarg', nights: 1, hotel: 'Stay at a luxury hotel' },
       { location: 'Gulmarg', nights: 1, hotel: 'Stay at a luxury hotel' },
       { location: 'Pahalgam', nights: 1, hotel: 'Stay at a luxury hotel' },
-      { location: 'Srinagar', nights: 1, hotel: 'Stay on a luxury houseboat (final night)' },
+      { location: 'Srinagar', nights: 1, hotel: 'Stay on a luxury houseboat (final night)', propertyType: 'Houseboat' },
     ],
     transport: 'Private air-conditioned vehicle with a local driver throughout.',
     experiences: ['Srinagar city and lake time', 'Doodhpathri day trip', 'Sonamarg overnight stay', 'Gulmarg mountain stay and Gondola ride', 'Pahalgam valley visit', 'Final night on a luxury houseboat in Srinagar'],
@@ -96,10 +95,6 @@ const packageCatalog: TourPackage[] = [
     exclusions: ['Flights and travel insurance', 'Optional activities other than the included Gondola ride', 'Lunches'],
   },
 ]
-
-export const tourPackages: TourPackage[] = packageCatalog.map((item) => item.underDevelopment ? item : {
-  ...item, originalPrice: item.price, price: discountedHotelPackagePrice(item.price),
-})
 
 export const rentalCars: RentalCar[] = [
   { id: 'swift-dzire', name: 'Comfort Sedan', category: 'Sedan', seats: 4, price: 2000 },
@@ -109,21 +104,25 @@ export const rentalCars: RentalCar[] = [
   { id: 'tempo-traveller', name: 'Tempo Traveller 12-seater', category: 'Tempo Traveller', seats: 12, price: 3800 },
   { id: 'tempo-traveller-14', name: 'Tempo Traveller 14-seater', category: 'Tempo Traveller', seats: 14, price: 4000 },
   { id: 'tempo-traveller-20', name: 'Tempo Traveller 20-seater', category: 'Tempo Traveller', seats: 20, price: 5000 },
+  { id: 'urbania', name: 'Force Urbania', category: 'Urbania', seats: 16, price: 6000 },
   { id: 'bus-26', name: 'Bus 26-seater', category: 'Bus', seats: 26, price: 6500 },
-].map((vehicle) => ({
-  ...vehicle,
-  kind: 'car',
-  location: 'Srinagar',
-  priceOnEnquiry: false,
-  image: (vehicle.category === 'Tempo Traveller' ? vehiclePhotos.traveller : vehiclePhotos[vehicle.id as keyof typeof vehiclePhotos]).image,
-  gallery: [(vehicle.category === 'Tempo Traveller' ? vehiclePhotos.traveller : vehiclePhotos[vehicle.id as keyof typeof vehiclePhotos]).image],
-  photoCredit: vehicle.category === 'Tempo Traveller' ? vehiclePhotos.traveller : vehiclePhotos[vehicle.id as keyof typeof vehiclePhotos],
-  description: `${vehicle.name} for Kashmir transfers, sightseeing and group travel. Contact AVELOF for a fare based on your route and dates.`,
-  luggage: 'Confirm luggage capacity with AVELOF',
-  ac: true,
-  tripTypes: ['Airport transfer', 'Local sightseeing', 'Multi-day tour'],
-  conditions: ['Prices will be confirmed on enquiry.', 'Passenger capacity and air conditioning depend on the allocated vehicle.', 'Photos show reference models, not the allocated vehicle. Tempo Travellers are manufactured by Force Motors.'],
-}))
+].map((vehicle) => {
+  const photo = vehicle.category === 'Tempo Traveller' ? vehiclePhotos.traveller : vehiclePhotos[vehicle.id as keyof typeof vehiclePhotos]
+  return {
+    ...vehicle,
+    kind: 'car',
+    location: 'Srinagar',
+    priceOnEnquiry: false,
+    image: photo.image,
+    gallery: [photo.image],
+    photoCredit: 'author' in photo ? photo : undefined,
+    description: `${vehicle.name} for Kashmir transfers, sightseeing and group travel. Contact AVELOF for a fare based on your route and dates.`,
+    luggage: 'Confirm luggage capacity with AVELOF',
+    ac: true,
+    tripTypes: ['Airport transfer', 'Local sightseeing', 'Multi-day tour'],
+    conditions: ['Prices will be confirmed on enquiry.', 'Passenger capacity and air conditioning depend on the allocated vehicle.', 'Photos show reference models, not the allocated vehicle. Tempo Travellers are manufactured by Force Motors.'],
+  }
+})
 
 export const ownerGuestReviewMonths: Record<string, string> = {
   'guest-rating-1': '2025-01', 'guest-rating-2': '2025-01',

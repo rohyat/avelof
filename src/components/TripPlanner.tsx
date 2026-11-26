@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom'
 import { rentalCars } from '../data/catalog'
 import { combinedExcursionId, destinationOptionId, destinationOptions } from '../data/destinationOptions'
 import { clearSavedTripPlan, tripPlanStorageKey, tripReturnStorageKey } from '../services/tripPlanStorage'
-import { hotelNightlyPrice, hotelsInLocation, includedHotelMeals, selectedHotelRoom, useRegisteredHotels } from '../services/hotelService'
+import { hotelExtraBedPrice, hotelNightlyPrice, hotelsInLocation, includedHotelMeals, selectedHotelRoom, useRegisteredHotels } from '../services/hotelService'
 import type { Hotel, PreparedRequest } from '../types'
 import HotelRates from './HotelRates'
 import OfferPrice from './OfferPrice'
@@ -32,6 +32,7 @@ interface DayPlan {
   hotelId?: string
   breakfast?: boolean
   dinner?: boolean
+  extraBed?: boolean
   roomType?: string
   roomCount?: string
 }
@@ -121,6 +122,7 @@ function readTripPlan(sectionId: string): SavedTripPlan {
         hotelId: typeof saved.hotelId === 'string' && /^[a-f0-9-]{36}$/.test(saved.hotelId) ? saved.hotelId : undefined,
         breakfast: saved.breakfast === true,
         dinner: saved.dinner === true,
+        extraBed: saved.extraBed === true,
         roomType: typeof saved.roomType === 'string' && saved.roomType.length <= 100 ? saved.roomType : undefined,
         roomCount: typeof saved.roomCount === 'string' && /^[1-9]\d?$|^100$/.test(saved.roomCount) ? saved.roomCount : undefined,
       }
@@ -293,12 +295,12 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
     const options = stayOptions(routeTo, index + 1 < tripDays - 1 ? scheduledStops[index + 1] : undefined)
     const stayAt = routeTo === 'gurez' ? 'gurez' : options.includes(saved.stayAt ?? '') ? saved.stayAt! : 'srinagar'
     const validHotel = hotelsAt(stayAt, availableHotels).some((hotel) => hotel.id === saved.hotelId)
-    days.push({ origin, routeTo, stayAt, routeStops: [origin, routeTo], hotelId: validHotel ? saved.hotelId : undefined, breakfast: validHotel && saved.breakfast, dinner: validHotel && saved.dinner, roomType: validHotel ? saved.roomType : undefined, roomCount: validHotel ? saved.roomCount : undefined })
+    days.push({ origin, routeTo, stayAt, routeStops: [origin, routeTo], hotelId: validHotel ? saved.hotelId : undefined, breakfast: validHotel && saved.breakfast, dinner: validHotel && saved.dinner, extraBed: validHotel && saved.extraBed, roomType: validHotel ? saved.roomType : undefined, roomCount: validHotel ? saved.roomCount : undefined })
     return days
   }, [])
   const selectedStays = dayPlans.slice(0, -1).flatMap((day, index) => {
     const hotel = availableHotels.find((hotel) => hotel.id === day.hotelId)
-    return hotel ? [hotelNightlyPrice(hotel, Boolean(day.breakfast), Boolean(day.dinner), day.roomType, addDays(startDate, index)) * Number(day.roomCount ?? minimumHotelRooms(people, selectedHotelRoom(hotel, day.roomType)?.roomType))] : []
+    return hotel ? [hotelNightlyPrice(hotel, Boolean(day.breakfast), Boolean(day.dinner), day.roomType, addDays(startDate, index), Boolean(day.extraBed)) * Number(day.roomCount ?? minimumHotelRooms(people, selectedHotelRoom(hotel, day.roomType)?.roomType))] : []
   })
   const invalidRooms = dayPlans.slice(0, -1).some((day) => {
     const hotel = availableHotels.find((hotel) => hotel.id === day.hotelId)
@@ -453,10 +455,10 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
       const overnight = index < dayPlans.length - 1 ? `; stay overnight in ${stopName(day.stayAt)}` : '; departure day'
       const selectedHotel = day.hotelId ? availableHotels.find((hotel) => hotel.id === day.hotelId) : undefined
       const room = selectedHotel ? selectedHotelRoom(selectedHotel, day.roomType) : undefined
-      const rate = selectedHotel ? hotelNightlyPrice(selectedHotel, Boolean(day.breakfast), Boolean(day.dinner), room?.roomType, addDays(startDate, index)) : 0
+      const rate = selectedHotel ? hotelNightlyPrice(selectedHotel, Boolean(day.breakfast), Boolean(day.dinner), room?.roomType, addDays(startDate, index), Boolean(day.extraBed)) : 0
       const roomCount = Number(day.roomCount ?? minimumHotelRooms(people, room?.roomType))
       const included = selectedHotel?.registeredHotelId && selectedHotel.breakfastPrice === undefined ? includedHotelMeals(selectedHotel) : { breakfast: day.breakfast, dinner: day.dinner }
-      const mealNote = selectedHotel ? `; breakfast: ${included.breakfast ? 'included' : 'not included'}; dinner: ${included.dinner ? 'included' : 'not included'}; ${included.breakfast || included.dinner ? `meals cover ${hotelRoomOccupancy(room?.roomType)} people per room per day` : 'no meals selected'}${selectedHotel.registeredHotelId ? `; hotel ID: ${selectedHotel.registeredHotelId}` : ''}; hotel rate: ₹${rate.toLocaleString('en-IN')} ${hotelRoomRateBasis(room?.roomType)}` : ''
+      const mealNote = selectedHotel ? `; breakfast: ${included.breakfast ? 'included' : 'not included'}; dinner: ${included.dinner ? 'included' : 'not included'}; ${included.breakfast || included.dinner ? `meals cover ${hotelRoomOccupancy(room?.roomType)} people per room per day` : 'no meals selected'}${day.extraBed && hotelExtraBedPrice(selectedHotel) ? `; extra bed in each room${day.breakfast || day.dinner ? ' with selected meals for 1 extra person' : ' without meals'}` : ''}${selectedHotel.registeredHotelId ? `; hotel ID: ${selectedHotel.registeredHotelId}` : ''}; hotel rate: ₹${rate.toLocaleString('en-IN')} ${hotelRoomRateBasis(room?.roomType)}` : ''
       const hotelNote = index < dayPlans.length - 1 ? `; hotel: ${selectedHotel?.name ?? 'please recommend a stay'}${room ? `; room type: ${room.roomType}` : ''}${selectedHotel ? `; rooms: ${roomCount}; all rooms per night: ₹${(Math.round(rate * roomCount * 100) / 100).toLocaleString('en-IN')}` : ''}${mealNote}` : ''
       return `Day ${index + 1} (${date}): ${route}${overnight}${hotelNote}.`
     }).join('\n')
@@ -495,7 +497,7 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
       const stay = lastDay
         ? 'Departure day.'
         : `Overnight in ${stopName(day.stayAt)}${selectedHotel ? ` at ${selectedHotel.name}${room ? ` (${room.roomType} room)` : ''}, ${Number(day.roomCount ?? minimumHotelRooms(people, room?.roomType))} room(s)` : '; hotel recommendation requested'}.`
-      const meals = selectedHotel ? ` Meals: breakfast ${included.breakfast ? 'included' : 'not selected'}, dinner ${included.dinner ? 'included' : 'not selected'}.` : ''
+      const meals = selectedHotel ? ` Meals: breakfast ${included.breakfast ? 'included' : 'not selected'}, dinner ${included.dinner ? 'included' : 'not selected'}${day.extraBed && hotelExtraBedPrice(selectedHotel) ? `; extra bed in each room${day.breakfast || day.dinner ? ' with selected meals for 1 extra person' : ' without meals'}` : ''}.` : ''
       return {
         label: `Day ${index + 1} - ${formatDate(addDays(startDate, index))}`,
         title: dayRouteLabel(day, index, dayPlans.length),
@@ -506,7 +508,7 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
       const selectedHotel = day.hotelId ? availableHotels.find((hotel) => hotel.id === day.hotelId) : undefined
       const room = selectedHotel ? selectedHotelRoom(selectedHotel, day.roomType) : undefined
       if (!selectedHotel) return `${formatDate(addDays(startDate, index))}: no hotel selected in ${stopName(day.stayAt)}; AVELOF recommendation requested.`
-      const rate = hotelNightlyPrice(selectedHotel, Boolean(day.breakfast), Boolean(day.dinner), room?.roomType, addDays(startDate, index))
+      const rate = hotelNightlyPrice(selectedHotel, Boolean(day.breakfast), Boolean(day.dinner), room?.roomType, addDays(startDate, index), Boolean(day.extraBed))
       const rooms = Number(day.roomCount ?? minimumHotelRooms(people, room?.roomType))
       return `${formatDate(addDays(startDate, index))}: ${selectedHotel.name}, ${stopName(day.stayAt)}${room ? ` - ${room.roomType} room` : ''}, ${rooms} room(s). Selected rate: INR ${(rate * rooms).toLocaleString('en-IN')} for the night.`
     }),
@@ -647,9 +649,9 @@ export default function TripPlanner({ sectionId = 'custom-trip' }: TripPlannerPr
                           {hotel.exactLocation && <span>{hotelLocationLabel(hotel)}</span>}
                           <RotatingPhotos className="planner-hotel-photo" label={`${hotel.name} hotel photos`} photos={[...new Set([hotel.image, ...hotel.gallery])].map((image) => ({ image, alt: `${hotel.name}, hotel photo` }))} />
                         </button>
-                        <HotelRates hotel={hotel} date={addDays(startDate, index)} compact={day.hotelId !== hotel.id} showRooms={day.hotelId === hotel.id} people={people} rooms={day.roomCount} onRoomsChange={day.hotelId === hotel.id ? (roomCount) => updatePlan(index, { ...day, roomCount }) : undefined} roomType={day.hotelId === hotel.id ? day.roomType : undefined} meals={{ breakfast: day.hotelId === hotel.id && Boolean(day.breakfast), dinner: day.hotelId === hotel.id && Boolean(day.dinner) }} onChange={(breakfast, dinner, _price, roomType) => setPlans((current) => {
+                        <HotelRates hotel={hotel} date={addDays(startDate, index)} compact={day.hotelId !== hotel.id} showRooms={day.hotelId === hotel.id} people={people} rooms={day.roomCount} onRoomsChange={day.hotelId === hotel.id ? (roomCount) => updatePlan(index, { ...day, roomCount }) : undefined} roomType={day.hotelId === hotel.id ? day.roomType : undefined} meals={{ breakfast: day.hotelId === hotel.id && Boolean(day.breakfast), dinner: day.hotelId === hotel.id && Boolean(day.dinner), extraBed: day.hotelId === hotel.id && Boolean(day.extraBed) }} onChange={(breakfast, dinner, _price, roomType, extraBed) => setPlans((current) => {
                           const next = [...current]
-                          next[index] = { routeTo: day.routeTo, stayAt: day.stayAt, hotelId: hotel.id, breakfast, dinner, roomType, roomCount: selectedHotelRoom(hotel, day.roomType)?.roomType === roomType ? day.roomCount : undefined }
+                          next[index] = { routeTo: day.routeTo, stayAt: day.stayAt, hotelId: hotel.id, breakfast, dinner, extraBed: Boolean(extraBed), roomType, roomCount: selectedHotelRoom(hotel, day.roomType)?.roomType === roomType ? day.roomCount : undefined }
                           return next
                         })} />
                         <Link

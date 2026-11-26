@@ -60,11 +60,12 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       }
       const parsed = hotelModerationSchema.safeParse(input)
       if (!parsed.success || (parsed.data.breakfastPrice === undefined) !== (parsed.data.dinnerPrice === undefined)) return privateReply({ error: 'Check the hotel price and moderation details. Supply both meal prices together.' }, 400)
-      const { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice, roomRates, latitude, longitude, hotColdAc } = parsed.data
+      const { id, version, status, price, ownerNote, breakfastPrice, dinnerPrice, extraBedPrice, roomRates, latitude, longitude, hotColdAc } = parsed.data
       const current = await DB.prepare('SELECT details_json FROM hotel_registrations WHERE id = ? AND version = ?').bind(id, version).first<{ details_json: string }>()
       if (!current) return privateReply({ error: 'This hotel changed. Refresh before updating it.' }, 409)
       const details = hotelDetailsSchema.parse(JSON.parse(current.details_json))
       if (hotColdAc !== undefined) details.hotColdAc = hotColdAc
+      if (extraBedPrice !== undefined) details.extraBedPrice = extraBedPrice
       if (details.roomRates && !roomRates) return privateReply({ error: 'Supply the reviewed rate for every available room type.' }, 400)
       if (roomRates) {
         if (!details.roomRates || roomRates.length !== details.roomRates.length || roomRates.some((rate) => !details.roomRates?.some((existing) => existing.roomType === rate.roomType && existing.count === rate.count))) return privateReply({ error: 'Reviewed room types and quantities must match the registration.' }, 400)

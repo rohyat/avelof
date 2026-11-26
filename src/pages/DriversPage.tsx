@@ -2,6 +2,7 @@ import BackButton from '../components/BackButton'
 import { Link } from 'react-router-dom'
 import { ArrowRight, CircleCheck, MapPin, Users } from 'lucide-react'
 import ReviewStars from '../components/ReviewStars'
+import PartnerReviewPreview from '../components/PartnerReviewPreview'
 import { useRegisteredDrivers } from '../services/driverService'
 import CallAssistance from '../components/CallAssistance'
 import LadakhPhotoGallery from '../components/LadakhPhotoGallery'
@@ -39,8 +40,8 @@ export default function DriversPage({ region = 'Kashmir' }: { region?: Region })
           <div className="driver-directory-rating"><ReviewStars rating={driver.driverAverageRating ?? 0} label={driver.driverAverageRating ? `${driver.driverAverageRating.toFixed(1)} out of 5 stars from ${driver.driverReviewCount} reviews` : 'No driver ratings yet'} /><span>{driver.driverAverageRating ? `${driver.driverAverageRating.toFixed(1)} · ${driver.driverReviewCount} ${driver.driverReviewCount === 1 ? 'review' : 'reviews'}` : 'No ratings yet'}</span></div>
           <p className="driver-directory-vehicle">{driver.name}</p>
           <p className="driver-directory-facts"><span><MapPin size={15} />{driver.location}</span><span><Users size={15} />{driver.seats} passenger seats</span></p>
-          <Link className="button button-dark" to={`${base}/drivers/${encodeURIComponent(driver.registeredDriverId!)}/reviews`}>View reviews <ArrowRight size={16} /></Link>
         </div>
+        <PartnerReviewPreview kind="driver" subjectId={driver.registeredDriverId!} name={driver.driverDisplayName || driver.name} reviewsPath={`${base}/drivers/${encodeURIComponent(driver.registeredDriverId!)}/reviews`} />
       </article>)}</div>
       <div className="driver-directory-register">
         <Link className="button button-outline" to="/register-driver">Register as a Driver <ArrowRight size={16} /></Link>

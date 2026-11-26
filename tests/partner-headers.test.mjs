@@ -28,7 +28,7 @@ test('partner edit links stay below registration buttons and form headers are co
       for (const kind of ['hotel', 'driver']) {
         await page.goto(`${origin}/register-${kind}`)
         const hero = page.locator('.partner-registration-hero')
-        assert.equal(await hero.locator('h1').textContent(), kind === 'hotel' ? 'Register your hotel' : 'Register as a driver')
+        assert.equal(await hero.locator('h1').textContent(), kind === 'hotel' ? 'Register your hotel or houseboat' : 'Register as a driver')
         assert.equal(await hero.locator('p, .partner-edit-action').count(), 0)
         assert.equal(await hero.getByText('Reviewed before going live', { exact: true }).count(), 1)
         assert.equal(await page.locator('.partner-registration-guide ol li').count(), 3)

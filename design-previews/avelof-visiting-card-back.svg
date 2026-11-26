@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3.5in" height="2in" viewBox="0 0 1050 600">
+  <defs>
+    <linearGradient id="forest" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#18594e"/><stop offset="1" stop-color="#123e39"/></linearGradient>
+  </defs>
+  <rect width="1050" height="600" fill="url(#forest)"/>
+  <path d="M0 0h1050v12H0zM0 588h1050v12H0z" fill="#c2875b"/>
+  <text x="65" y="76" fill="#f4a18d" font-family="Arial,sans-serif" font-size="25" font-weight="700" letter-spacing="2">OUR TRAVEL SERVICES</text>
+  <g fill="#fff" font-family="Arial,sans-serif" font-size="28" font-weight="700">
+    <g transform="translate(65 105)">
+      <circle cx="23" cy="23" r="23" fill="#fff" fill-opacity=".12"/>
+      <path d="M14 16h18l-2 17H16zM18 16v-4h10v4M18 22h10" fill="none" stroke="#f4a18d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="60" y="32">Tour Packages</text>
+    </g>
+    <g transform="translate(530 105)">
+      <circle cx="23" cy="23" r="23" fill="#fff" fill-opacity=".12"/>
+      <path d="M11 28v-9l12-9 12 9v9M15 27v-6h16v6M19 35v-9h8v9z" fill="none" stroke="#f4a18d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="60" y="32">Hotels &amp; Houseboats</text>
+    </g>
+    <g transform="translate(65 173)">
+      <circle cx="23" cy="23" r="23" fill="#fff" fill-opacity=".12"/>
+      <path d="M10 27l3-11h19l4 11v7h-3a4 4 0 0 0-8 0h-4a4 4 0 0 0-8 0h-3zM15 22h15" fill="none" stroke="#f4a18d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="60" y="32">Car Rentals &amp; Transfers</text>
+    </g>
+    <g transform="translate(530 173)">
+      <circle cx="23" cy="23" r="23" fill="#fff" fill-opacity=".12"/>
+      <path d="M9 33 20 17l7 9 5-6 7 13z" fill="none" stroke="#f4a18d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="60" y="32">Local Trips &amp; Sightseeing</text>
+    </g>
+  </g>
+  <path d="M65 252h920" stroke="#fff" stroke-opacity=".3" stroke-width="2"/>
+  <g fill="#fff" font-family="Arial,sans-serif" font-size="27" font-weight="700">
+    <g transform="translate(65 291)">
+      <circle cx="16" cy="16" r="14" fill="none" stroke="#f4a18d" stroke-width="2.5"/>
+      <path d="M2 16h28M16 2c5 5 5 23 0 28M16 2c-5 5-5 23 0 28" fill="none" stroke="#f4a18d" stroke-width="2.5"/>
+      <text x="47" y="25">www.avelof.in</text>
+    </g>
+    <g transform="translate(530 291)">
+      <rect x="2" y="5" width="28" height="22" rx="3" fill="none" stroke="#f4a18d" stroke-width="2.5"/>
+      <path d="m3 7 13 10L29 7" fill="none" stroke="#f4a18d" stroke-width="2.5"/>
+      <text x="47" y="25">info@avelof.in</text>
+    </g>
+    <g transform="translate(65 389)">
+      <rect x="3" y="3" width="26" height="26" rx="7" fill="none" stroke="#f4a18d" stroke-width="2.5"/>
+      <circle cx="16" cy="16" r="6" fill="none" stroke="#f4a18d" stroke-width="2.5"/>
+      <circle cx="24" cy="8" r="1.5" fill="#f4a18d"/>
+      <text x="47" y="25">@avelof.in</text>
+    </g>
+    <g transform="translate(530 389)">
+      <path d="M17 8c-2-2-5-2-7 0l-2 2c-2 2 0 8 5 13s11 7 13 5l2-2c2-2 2-5 0-7l-3-3-5 4c-2-1-4-3-5-5l4-5z" transform="translate(-2 -2)" fill="none" stroke="#f4a18d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="47" y="25">+91-9149418161</text>
+      <text x="47" y="62" fill="#f4a18d" font-size="24" font-weight="700">Mr. Rohyat Rashid</text>
+    </g>
+  </g>
+  <text x="65" y="548" fill="#f4a18d" font-family="Arial,sans-serif" font-size="19" font-weight="700" letter-spacing=".5">WHETHER YOU'RE LOCAL OR VISITING, LET'S PLAN IT ALL.</text>
+</svg>

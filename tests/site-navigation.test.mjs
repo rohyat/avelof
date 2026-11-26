@@ -66,7 +66,7 @@ for (const width of [320, 390, 600, 768, 820, 821, 900, 1024, 1440]) {
         return saved && JSON.parse(saved).y >= 400
       })
       // Activate the link without Playwright moving the viewport to the footer.
-      await page.locator('footer').getByRole('link', { name: 'Hotels & stays', exact: true }).evaluate((link) => link.click())
+      await page.locator('footer').getByRole('link', { name: 'Hotels', exact: true }).evaluate((link) => link.click())
       await page.waitForURL(`${origin}/hotels`)
       await page.waitForFunction(() => document.title.startsWith('Kashmir Hotels') && window.scrollY === 0)
       await back.click()

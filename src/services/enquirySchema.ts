@@ -34,6 +34,7 @@ export const enquirySchema = z.object({
     stayDuration: shortText.optional(),
     breakfast: z.enum(['Included', 'Not included']).optional(),
     dinner: z.enum(['Included', 'Not included']).optional(),
+    extraBed: z.enum(['Included', 'Not included']).optional(),
     nightlyRate: shortText.optional(),
     roomType: z.enum(hotelRoomTypes).optional(),
     roomCount: guestCount.refine((value) => Number(value) >= 1).optional(),

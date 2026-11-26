@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920" role="img" aria-labelledby="title description">
+  <title id="title">Refer a traveller, enjoy a complimentary hotel night</title>
+  <desc id="description">A local referral offer from AVELOF. Once a referred guest enquiry is confirmed, receive a unique code for one complimentary hotel night, subject to availability.</desc>
+  <defs>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#081b18" stop-opacity=".3"/>
+      <stop offset=".38" stop-color="#081b18" stop-opacity=".16"/>
+      <stop offset=".67" stop-color="#081b18" stop-opacity=".66"/>
+      <stop offset="1" stop-color="#081b18" stop-opacity=".86"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#f6d990"/>
+      <stop offset="1" stop-color="#d7a94f"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#000" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <image href="/images/destinations/kashmir-meadow-in-bloom.jpg" x="0" y="0" width="1080" height="1920" preserveAspectRatio="xMidYMid slice"/>
+  <rect width="1080" height="1920" fill="url(#shade)"/>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="76" y="104" fill="#fff" font-size="42" font-weight="700" letter-spacing="8">AVELOF</text>
+    <text x="1004" y="102" fill="#fff" font-size="21" font-weight="700" letter-spacing="3" text-anchor="end">KASHMIR, INDIA</text>
+    <path d="M76 137H1004" stroke="#fff" stroke-opacity=".46" stroke-width="2"/>
+
+    <rect x="76" y="188" width="500" height="58" rx="29" fill="#f3d48f"/>
+    <text x="326" y="225" fill="#203528" font-size="21" font-weight="700" letter-spacing="2.1" text-anchor="middle">EXCLUSIVE FOR KASHMIRI LOCALS</text>
+
+    <text x="76" y="337" fill="#fff" font-size="76" font-weight="700" letter-spacing="-1">KASHMIRI LOCAL?</text>
+    <text x="76" y="417" fill="#fff" font-size="76" font-weight="700" letter-spacing="-1">REFER A <tspan fill="#f3d48f">VISITOR.</tspan></text>
+    <text x="80" y="476" fill="#fff" fill-opacity=".98" font-size="30" font-weight="600" letter-spacing=".2">Refer their Kashmir trip enquiry to AVELOF and earn a reward.</text>
+
+    <g filter="url(#shadow)">
+      <rect x="76" y="590" width="928" height="420" rx="28" fill="#102821" fill-opacity=".86" stroke="#f3d48f" stroke-opacity=".9" stroke-width="2"/>
+      <text x="124" y="680" fill="#f3d48f" font-size="25" font-weight="700" letter-spacing="3">YOUR REWARD</text>
+      <text x="124" y="790" fill="#fff" font-size="76" font-weight="700" letter-spacing="-1">ONE FREE</text>
+      <text x="124" y="880" fill="#fff" font-size="76" font-weight="700" letter-spacing="-1">HOTEL NIGHT</text>
+      <path d="M124 920H956" stroke="#fff" stroke-opacity=".28" stroke-width="2"/>
+      <text x="124" y="974" fill="#fff" font-size="28" font-weight="500">A unique reward code is yours after their enquiry is confirmed.</text>
+    </g>
+
+    <text x="76" y="1190" fill="#f3d48f" font-size="27" font-weight="700" letter-spacing="2.5">HOW IT WORKS</text>
+    <g font-size="25" font-weight="500" fill="#fff">
+      <circle cx="91" cy="1270" r="20" fill="url(#gold)"/>
+      <text x="91" y="1278" fill="#203528" font-size="22" font-weight="700" text-anchor="middle">1</text>
+      <text x="132" y="1278">Refer a visitor planning a Kashmir trip</text>
+      <circle cx="91" cy="1355" r="20" fill="url(#gold)"/>
+      <text x="91" y="1363" fill="#203528" font-size="22" font-weight="700" text-anchor="middle">2</text>
+      <text x="132" y="1363">Their enquiry gets confirmed</text>
+      <circle cx="91" cy="1440" r="20" fill="url(#gold)"/>
+      <text x="91" y="1448" fill="#203528" font-size="22" font-weight="700" text-anchor="middle">3</text>
+      <text x="132" y="1448">Get your code and choose your stay date</text>
+    </g>
+
+    <path d="M76 1570H1004" stroke="#fff" stroke-opacity=".36" stroke-width="2"/>
+    <text x="76" y="1640" fill="#fff" font-size="28" font-weight="700" letter-spacing="1">START WITH AVELOF</text>
+    <text x="76" y="1700" fill="#f3d48f" font-size="31" font-weight="700">avelof.in</text>
+    <text x="1004" y="1700" fill="#fff" font-size="31" font-weight="600" text-anchor="end">+91 914-941-8161</text>
+    <text x="76" y="1760" fill="#fff" font-size="20" font-weight="500">One complimentary night. Stay date subject to hotel availability.</text>
+    <text x="76" y="1792" fill="#fff" font-size="20" font-weight="500">Reward code issued only after the referred guest enquiry is confirmed.</text>
+  </g>
+</svg>

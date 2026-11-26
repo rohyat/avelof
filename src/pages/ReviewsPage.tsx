@@ -166,7 +166,7 @@ export function AdminReviewsPage() {
           if (page * result.pageSize >= result.total) break
         }
       }
-      if (!controller.signal.aborted) setSubjects(options)
+      if (!controller.signal.aborted) setSubjects(options.sort((left, right) => left.label.localeCompare(right.label, 'en', { sensitivity: 'base', numeric: true })))
     }
     loadSubjects().catch((failure: unknown) => {
       if (controller.signal.aborted) return
@@ -219,9 +219,9 @@ export function AdminReviewsPage() {
 
   return <section className="enquiry-access-page admin-reviews-page page-width">
     <Link className="text-link" to="/admin/panel"><ArrowLeft size={16} /> Owner dashboard</Link>
-    <div className="enquiry-access-heading"><BackButton /><Star size={28} /><div><p className="eyebrow">AVELOF owner access</p><h1>Review moderation</h1></div></div>
+    <div className="enquiry-access-heading"><BackButton /><Star size={28} /><div><p className="eyebrow">AVELOF owner access</p><h1>Manage reviews</h1><p>New reviews publish immediately without approval. Choose Hotel reviews and select a hotel to see its reviews.</p></div></div>
     {signedOut ? <p>Please <Link className="text-link" to="/admin/panel">sign in to the owner dashboard</Link> before managing reviews.</p> : <>
-      <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><span aria-current="page">Reviews</span><Link to="/admin/panel/hotels">Hotels</Link><Link to="/admin/panel/drivers">Drivers</Link><Link to="/admin/panel/businesses">Food & Shopping</Link></nav>
+      <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><span aria-current="page">Reviews</span><Link to="/admin/panel/hotels">Hotels</Link><Link to="/admin/panel/drivers">Drivers</Link><Link to="/admin/panel/businesses">Businesses</Link><Link to="/admin/panel/itineraries">Itineraries</Link><Link to="/admin/panel/payments">Payments</Link></nav>
       <OwnerPushNotifications />
       <nav className="admin-review-sections" aria-label="Review sections">
         {(['guest', 'driver', 'hotel'] as const).map((category) => <button key={category} className={`button ${filters.category === category ? 'button-dark' : 'button-outline'}`} type="button" aria-current={filters.category === category ? 'page' : undefined} disabled={Boolean(savingId)} onClick={() => changeSubject(category)}>{category === 'guest' ? 'Guest reviews' : category === 'driver' ? 'Driver reviews' : 'Hotel reviews'}</button>)}

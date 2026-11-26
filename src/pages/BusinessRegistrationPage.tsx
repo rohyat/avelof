@@ -13,22 +13,15 @@ import { hotelStatusLabels } from '../data/hotelRegistration'
 import RegistrationReceipt from '../components/RegistrationReceipt'
 import SubmissionProgress from '../components/SubmissionFeedback'
 import PartnerPhotoEditor from '../components/PartnerPhotoEditor'
+import UploadedPhoto from '../components/UploadedPhoto'
 import RegistrationForm from '../components/RegistrationForm'
 import MapLocationLink from '../components/MapLocationLink'
 import { locationFields, mapCoordinates } from '../services/mapLocation'
-
-function PhotoPreview({ photo }: { photo: Blob }) {
-  const imageRef = useRef<HTMLImageElement>(null)
-  useEffect(() => {
-    const url = URL.createObjectURL(photo)
-    if (imageRef.current) imageRef.current.src = url
-    return () => URL.revokeObjectURL(url)
-  }, [photo])
-  return <img ref={imageRef} alt="Selected business photo preview" />
-}
+import OwnerPushNotifications from '../components/OwnerPushNotifications'
 
 export default function BusinessRegistrationPage({ editing, onCancel }: { editing?: { business: OwnerBusiness; accessCode: string }; onCancel?: () => void } = {}) {
   const [photos, setPhotos] = useState<Blob[]>([])
+  const photoInput = useRef<HTMLInputElement>(null)
   const [items, setItems] = useState<EditableBusinessItem[]>(() => (editing?.business.items ?? []).map((item) => typeof item === 'string' ? { id: crypto.randomUUID(), name: item, description: '' } : item))
   const [itemPhotoState, setItemPhotoState] = useState({ loading: Boolean(editing?.business.items.some((item) => typeof item !== 'string')), error: '', revision: 0 })
   const [processing, setProcessing] = useState(Boolean(editing))
@@ -129,7 +122,7 @@ export default function BusinessRegistrationPage({ editing, onCancel }: { editin
           {editing && <p className="review-text-field privacy-note">Saving changes hides this listing until AVELOF approves it again. Existing photos are kept unless you choose replacements.</p>}
           <label>Business name<input name="name" maxLength={120} required autoComplete="organization" defaultValue={editing?.business.name} /></label>
           <label>Business type<select name="kind" required defaultValue={editing?.business.kind ?? 'restaurant'}>{businessKinds.map((kind) => <option key={kind} value={kind}>{businessKindLabels[kind]}</option>)}</select></label>
-          <label>Destination<select name="location" required value={destination} onChange={(event) => setDestination(event.target.value)}>{businessLocations.map((location) => <option key={location}>{location}</option>)}</select></label>
+          <label>Destination / district<select name="location" required value={destination} onChange={(event) => setDestination(event.target.value)}>{businessLocations.map((location) => <option key={location}>{location}</option>)}</select><small>Choose any of Kashmir's 10 districts, or an existing tourist destination. Add your town or village in the address.</small></label>
           <label>Public address or area<input name="address" maxLength={200} required autoComplete="street-address" defaultValue={editing?.business.address} placeholder="Address or nearby main attraction" /><small>Include a nearby main attraction or landmark so guests can recognise the area.</small></label>
           <label className="review-text-field">Business description<textarea name="description" rows={4} maxLength={1600} required defaultValue={editing?.business.description} /></label>
           <fieldset className="business-items-fields review-text-field" disabled={itemPhotoState.loading || Boolean(itemPhotoState.error)}><legend>Products, dishes or handicrafts (optional)</legend><p>Add up to 20 items. Every added item needs a heading, description and exactly one photo. This is not an online ordering menu.</p>{items.map((item, index) => <BusinessItemEditor key={item.id} item={item} index={index} onChange={(changes) => { photoVersion.current++; setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, ...changes } : entry)) }} onRemove={() => { photoVersion.current++; setItems((current) => current.filter((entry) => entry.id !== item.id)) }} />)}<button className="button button-outline" type="button" disabled={items.length >= 20} onClick={() => setItems((current) => [...current, { id: crypto.randomUUID(), name: '', description: '' }])}><Plus size={16} />Add another item</button></fieldset>
@@ -143,9 +136,14 @@ export default function BusinessRegistrationPage({ editing, onCancel }: { editin
           <label>Private contact phone<input name="contactPhone" type="tel" maxLength={30} required autoComplete="tel" defaultValue={editing?.business.contactPhone} /></label>
           <label>Private contact email<input name="contactEmail" type="email" maxLength={200} required autoComplete="email" defaultValue={editing?.business.contactEmail} /></label>
           {editing ? <PartnerPhotoEditor kind="business" id={editing.business.id} accessCode={editing.accessCode} version={editing.business.version} onChange={(next, retained, blocked) => { photoVersion.current++; setPhotos(next); setRetainedPhotos(retained); setProcessing(blocked) }} /> : <>
-          <label className="review-text-field photo-upload-field"><span className="photo-upload-heading"><FileImage size={24} aria-hidden="true" /> Business & product photos (1-5 required)</span><small>Choose between one and five JPEG, PNG or WebP photos, up to 5 MB each. These business gallery photos are separate from the one photo required per item. Photos are resized, compressed and stripped of original metadata before upload.</small><input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required onChange={(event) => void selectPhotos(Array.from(event.target.files ?? []))} /></label>
+          <label className="review-text-field photo-upload-field"><span className="photo-upload-heading"><FileImage size={24} aria-hidden="true" /> Business & product photos (1-5 required)</span><small>Choose between one and five JPEG, PNG or WebP photos, up to 5 MB each. These business gallery photos are separate from the one photo required per item. Photos are resized, compressed and stripped of original metadata before upload. Use the X on a preview to remove it.</small><input ref={photoInput} name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple required={!photos.length} onChange={(event) => void selectPhotos(Array.from(event.target.files ?? []))} /></label>
           {photoError && <p className="enquiry-error review-text-field" role="alert">{photoError}</p>}
-          <div className="hotel-photo-grid review-text-field">{photos.map((photo, index) => <PhotoPreview key={index} photo={photo} />)}</div>
+          <div className="hotel-photo-grid review-text-field">{photos.map((photo, index) => <UploadedPhoto key={index} photo={photo} alt="Selected business photo preview" removeLabel={`Remove business photo ${index + 1}`} disabled={processing || busy} onRemove={() => {
+            photoVersion.current++
+            setPhotos((current) => current.filter((_, position) => position !== index))
+            setError('')
+            if (photoInput.current) photoInput.current.value = ''
+          }} />)}</div>
           </>}
           <label className="enquiry-honeypot" aria-hidden="true">Website<input name="websiteTrap" tabIndex={-1} autoComplete="off" /></label>
           <label className="review-consent"><input name="publicationConsent" type="checkbox" required /><span>I am authorised to register this business and use these photos. I consent to publishing the business name, description, type, destination, address{coordinates ? ', existing map pin' : ''}, item headings, descriptions, website and photos if approved. My contact name, phone and email stay private. I understand this listing does not take orders or payments and does not guarantee a discount.</span></label>
@@ -289,9 +287,10 @@ export function AdminBusinessesPage() {
     } finally { setSaving(false); inFlight.current = false }
   }
   return <section className="enquiry-access-page page-width">
-    <div className="page-back-line"><BackButton /><h1>Food & Shopping registrations</h1></div>
+    <div className="page-back-line"><BackButton /><h1>Business registrations</h1></div>
     {signedOut ? <p><Link to="/admin/panel">Sign in to the owner dashboard</Link> to manage business registrations.</p> : <>
-      <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><Link to="/admin/panel/reviews">Reviews</Link><Link to="/admin/panel/hotels">Hotels</Link><Link to="/admin/panel/drivers">Drivers</Link><span aria-current="page">Food & Shopping</span></nav>
+      <nav className="admin-section-nav" aria-label="Owner sections"><Link to="/admin/panel">Enquiries</Link><Link to="/admin/panel/reviews">Reviews</Link><Link to="/admin/panel/hotels">Hotels</Link><Link to="/admin/panel/drivers">Drivers</Link><span aria-current="page">Businesses</span><Link to="/admin/panel/itineraries">Itineraries</Link><Link to="/admin/panel/payments">Payments</Link></nav>
+      <OwnerPushNotifications />
       <p>Review business accuracy, publication consent, identity, operating details and the submitted photo before approval. Owner contact details remain private. These are discovery listings only, without ordering, checkout or guaranteed discounts.</p>
       <div className="admin-enquiry-toolbar"><label>Business status<select disabled={loading || saving} value={filters.status} onChange={(event) => refresh(1, event.target.value === 'all' ? 'all' : businessStatusSchema.parse(event.target.value))}><option value="pending">Awaiting approval</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="all">All</option></select></label><button className="button button-outline" disabled={loading || saving} onClick={() => refresh()}>Refresh businesses</button></div>
       {loading && <p role="status">Loading business registrations…</p>}

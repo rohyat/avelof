@@ -27,6 +27,9 @@ export const vehiclePhotos = {
     licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
     source: 'https://commons.wikimedia.org/wiki/File:Toyota_Innova_Crysta_2.4_Z_side.jpg',
   },
+  urbania: {
+    image: '/images/vehicles/urbania-owner-branded.png',
+  },
   traveller: {
     image: '/images/vehicles/force-traveller.jpg',
     author: 'Vampire; edited by Mr.choppers',
@@ -41,4 +44,4 @@ export const vehiclePhotos = {
     licenseUrl: 'https://creativecommons.org/licenses/by/3.0/',
     source: 'https://commons.wikimedia.org/wiki/File:Force_Motors_-_Traveller_26_-_Agra_2014-05-14_4222.JPG',
   },
-}
+} as const

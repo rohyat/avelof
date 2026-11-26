@@ -8,11 +8,10 @@ import SubmissionProgress from './SubmissionFeedback'
 import { rentalCars, tourPackages } from '../data/catalog'
 import { createWhatsAppUrl, enquiryPath, formatEnquiryDetails, prepareRequest, saveEnquiry } from '../services/bookingService'
 import { indianPhoneNumber } from '../services/phoneNumbers'
-import { hotelNightlyPrice, hotelSelectionValue, includedHotelMeals, selectedHotelRoom, useRegisteredHotels } from '../services/hotelService'
+import { hotelExtraBedPrice, hotelExtraBedTotal, hotelNightlyPrice, hotelSelectionValue, includedHotelMeals, selectedHotelRoom, useRegisteredHotels } from '../services/hotelService'
 import HotelRates from './HotelRates'
-import HotelFeature from './HotelFeature'
 import RegularPrice from './RegularPrice'
-import { hotelPackagePriceInclusions, packagePriceForNights, packageSeasonNotice, packageSeasonStart } from '../services/pricing'
+import { hotelPackagePriceInclusions, packagePriceForNights } from '../services/pricing'
 import { hotelRateRange, hotelStayPrice } from '../services/hotelPricing'
 import { usePricing, useTourPackages } from '../services/pricingContext'
 import { PricingNotice } from './PricingProvider'
@@ -54,7 +53,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   const plannerDates = kind === 'package' && Boolean(additionalFields.arrivalDate && additionalFields.departureDate && additionalFields.placesToVisit)
   const [staySelection, setPreferredStay] = useState(selectedItem ?? '')
   const preferredStay = staySelection || (availableHotels[0] ? hotelSelectionValue(availableHotels[0]) : '')
-  const [hotelMeals, setHotelMeals] = useState({ breakfast: false, dinner: false })
+  const [hotelMeals, setHotelMeals] = useState({ breakfast: false, dinner: false, extraBed: false })
   const [roomSelection, setRoomSelection] = useState({ hotelId: '', roomType: '' })
   const [adults, setAdults] = useState('2')
   const [childCount, setChildCount] = useState('0')
@@ -77,22 +76,24 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
   const people = Number(adults) + Number(childCount)
   const roomQuantity = Number(rooms ?? minimumHotelRooms(people, room?.roomType))
   const validRoomQuantity = Number.isInteger(roomQuantity) && roomQuantity >= minimumHotelRooms(people, room?.roomType) && roomQuantity <= 100
+  const extraBedRate = selectedHotel ? hotelExtraBedTotal(selectedHotel, hotelMeals.breakfast, hotelMeals.dinner) : 0
+  const extraBedSelected = hotelMeals.extraBed && extraBedRate > 0
   const selectedRoomRate = selectedHotel ? room?.price ?? selectedHotel.roomOnlyPrice ?? selectedHotel.price : undefined
-  const baseNightlyRate = selectedHotel ? hotelNightlyPrice(selectedHotel, hotelMeals.breakfast, hotelMeals.dinner, room?.roomType) : 0
-  const selectedNightlyRate = selectedHotel ? hotelNightlyPrice(selectedHotel, hotelMeals.breakfast, hotelMeals.dinner, room?.roomType, checkInDate || undefined) : 0
+  const baseNightlyRate = selectedHotel ? hotelNightlyPrice(selectedHotel, hotelMeals.breakfast, hotelMeals.dinner, room?.roomType, undefined, extraBedSelected) : 0
+  const selectedNightlyRate = selectedHotel ? hotelNightlyPrice(selectedHotel, hotelMeals.breakfast, hotelMeals.dinner, room?.roomType, checkInDate || undefined, extraBedSelected) : 0
   const includedMeals = selectedHotel?.registeredHotelId && selectedHotel.breakfastPrice === undefined ? includedHotelMeals(selectedHotel) : hotelMeals
   const millisecondsPerDay = 24 * 60 * 60 * 1000
   const nights = checkInDate && checkOutDate ? (Date.parse(checkOutDate) - Date.parse(checkInDate)) / millisecondsPerDay : 0
   const stayDuration = nights > 0 ? `${nights + 1} days, ${nights} ${nights === 1 ? 'night' : 'nights'}` : ''
   const rentalDays = checkInDate && checkOutDate && nights >= 0 ? nights + 1 : 0
   const earliestCheckout = checkInDate ? new Date(Date.parse(checkInDate) + millisecondsPerDay).toISOString().slice(0, 10) : undefined
-  const seasonalPackage = Boolean(checkInDate && checkInDate >= packageSeasonStart)
   const selectedPackagePrice = selectedPackage && nights > 0 && !customPackage ? packagePriceForNights(selectedPackage.price, packageNights, nights, checkInDate) : undefined
   const stayPrice = selectedRoomRate !== undefined && nights > 0 && validRoomQuantity ? hotelStayPrice(selectedRoomRate, Math.round((baseNightlyRate - selectedRoomRate) * 100) / 100, checkInDate, checkOutDate, roomQuantity) : undefined
   const nightlyRange = hotelRateRange(stayPrice?.minNightly ?? selectedNightlyRate, stayPrice?.maxNightly ?? selectedNightlyRate)
   const stayBreakdown = stayPrice?.groups.map((group) => `${group.nights} ${group.nights === 1 ? 'night' : 'nights'} × ₹${group.roomRate.toLocaleString('en-IN')} room-only per room`).join('; ')
   const mealRate = selectedRoomRate === undefined ? 0 : Math.round((baseNightlyRate - selectedRoomRate) * 100) / 100
-  const priceBreakdown = stayPrice ? `${stayBreakdown}; meals ₹${mealRate.toLocaleString('en-IN')} per room/night; ${roomQuantity} rooms. Check-out not charged.` : ''
+  const mealOnlyRate = Math.round((mealRate - (extraBedSelected ? extraBedRate : 0)) * 100) / 100
+  const priceBreakdown = stayPrice ? `${stayBreakdown}; room meals ₹${mealOnlyRate.toLocaleString('en-IN')} per room/night${extraBedSelected && selectedHotel ? `; extra bed ₹${extraBedRate.toLocaleString('en-IN')} per room/night (bed only ₹${hotelExtraBedPrice(selectedHotel).toLocaleString('en-IN')}; ${hotelMeals.breakfast || hotelMeals.dinner ? 'selected meals for 1 extra person included' : 'without meals'})` : ''}; ${roomQuantity} rooms. Check-out not charged.` : ''
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -114,7 +115,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     if (kind === 'package' && !customPackage) {
       if (pricing.loading || pricing.error) { setSubmitError('Wait for current package prices to load, or retry loading prices.'); return }
       if (!selectedPackage || selectedPackagePrice === undefined) { setSubmitError('Choose an available package and valid travel dates.'); return }
-      fields.packageRate = `₹${selectedPackagePrice.toLocaleString('en-IN')} per person for ${nights} ${nights === 1 ? 'night' : 'nights'}; based on ₹${selectedPackage.price.toLocaleString('en-IN')} for ${packageNights} nights${seasonalPackage ? '; includes 10% seasonal increase for arrival from 6 December 2026' : ''}`
+      fields.packageRate = `₹${selectedPackagePrice.toLocaleString('en-IN')} per person for ${nights} ${nights === 1 ? 'night' : 'nights'}; based on ₹${selectedPackage.price.toLocaleString('en-IN')} for ${packageNights} nights`
     }
     if (kind === 'hotel' || kind === 'package' && !customPackage) fields.priceInclusions = hotelPackagePriceInclusions
     if (kind === 'hotel') {
@@ -123,10 +124,10 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       fields.hotelNightlyTotal = `${hotelRateRange(Math.round(stayPrice.minNightly * roomQuantity * 100) / 100, Math.round(stayPrice.maxNightly * roomQuantity * 100) / 100)} for ${roomQuantity} rooms per night`
       fields.hotelStayEstimate = `₹${stayPrice.total.toLocaleString('en-IN')} for ${roomQuantity} rooms over ${nights} nights; subject to availability and final confirmation`
       fields.hotelPriceBreakdown = priceBreakdown
-      fields.mealCoverage = includedMeals.breakfast || includedMeals.dinner ? `Selected meals cover ${hotelRoomOccupancy(room?.roomType)} people per room per day; ${roomQuantity} rooms cover ${hotelRoomOccupancy(room?.roomType) * roomQuantity} people.` : 'No meals selected.'
+      fields.mealCoverage = includedMeals.breakfast || includedMeals.dinner ? `Selected meals cover ${hotelRoomOccupancy(room?.roomType)} people per room per day; ${roomQuantity} rooms cover ${hotelRoomOccupancy(room?.roomType) * roomQuantity} people.${extraBedSelected && (hotelMeals.breakfast || hotelMeals.dinner) ? ` Extra beds include selected meals for 1 additional person per room (${roomQuantity} additional people).` : ''}` : 'No meals selected.'
     }
     if (kind === 'hotel' && room) fields.roomType = room.roomType
-    const payload: BookingPayload = { kind, fields: { ...additionalFields, ...fields, region, ...(plannerDates ? { customDetails: formatEnquiryDetails(additionalFields) } : {}), ...(kind === 'package' ? { arrivalDate: checkInDate, departureDate: checkOutDate, tripDays: String(nights + 1), tripNights: String(nights) } : {}), ...(kind === 'car' ? { rentalDays: String(rentalDays) } : {}), ...(kind === 'hotel' ? { stayDuration, breakfast: includedMeals.breakfast ? 'Included' : 'Not included', dinner: includedMeals.dinner ? 'Included' : 'Not included', nightlyRate: `${nightlyRange} ${hotelRoomRateBasis(room?.roomType)}; breakfast ${includedMeals.breakfast ? 'included' : 'excluded'}, dinner ${includedMeals.dinner ? 'included' : 'excluded'}` } : {}) } }
+    const payload: BookingPayload = { kind, fields: { ...additionalFields, ...fields, region, ...(plannerDates ? { customDetails: formatEnquiryDetails(additionalFields) } : {}), ...(kind === 'package' ? { arrivalDate: checkInDate, departureDate: checkOutDate, tripDays: String(nights + 1), tripNights: String(nights) } : {}), ...(kind === 'car' ? { rentalDays: String(rentalDays) } : {}), ...(kind === 'hotel' ? { stayDuration, breakfast: includedMeals.breakfast ? 'Included' : 'Not included', dinner: includedMeals.dinner ? 'Included' : 'Not included', ...(extraBedRate > 0 ? { extraBed: extraBedSelected ? 'Included' : 'Not included' } : {}), nightlyRate: `${nightlyRange} ${hotelRoomRateBasis(room?.roomType)}; breakfast ${includedMeals.breakfast ? 'included' : 'excluded'}, dinner ${includedMeals.dinner ? 'included' : 'excluded'}${extraBedSelected ? ', extra bed in each room' : ''}` } : {}) } }
     const fingerprint = JSON.stringify(payload)
     if (pendingRequest.current?.fingerprint !== fingerprint) pendingRequest.current = { fingerprint, request: prepareRequest(payload) }
     const request = pendingRequest.current.request
@@ -172,13 +173,12 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     {kind === 'package' && !customPackage && selectedPackage && <div className="privacy-note full-field package-price-summary">
       <RegularPrice price={selectedPackage.price} originalPrice={selectedPackage.originalPrice} />
       <p>Package rate: ₹{selectedPackage.price.toLocaleString('en-IN')} per person for {packageNights} nights.</p>
-      <p>{packageSeasonNotice}</p>
-      {selectedPackagePrice !== undefined && <p className="package-stay-estimate" role="status"><strong>Selected dates: ₹{selectedPackagePrice.toLocaleString('en-IN')} per person for {nights} {nights === 1 ? 'night' : 'nights'}.</strong> Includes the package's {packageNights} nights.{seasonalPackage && ' Includes 10% seasonal increase based on your arrival date.'} Itinerary changes are subject to availability and final confirmation.</p>}
+      {selectedPackagePrice !== undefined && <p className="package-stay-estimate" role="status"><strong>Selected dates: ₹{selectedPackagePrice.toLocaleString('en-IN')} per person for {nights} {nights === 1 ? 'night' : 'nights'}.</strong> Includes the package's {packageNights} nights. Itinerary changes are subject to availability and final confirmation.</p>}
       <p>{hotelPackagePriceInclusions}.</p>
     </div>}
     {kind === 'hotel' && (lockedHotel
       ? <div className="full-field selected-hotel-field"><span>Selected hotel</span><strong>{lockedHotel.name}</strong>{lockedHotel.exactLocation && <span>{hotelLocationLabel(lockedHotel)}</span>}<input type="hidden" name="preferredStay" value={hotelSelectionValue(lockedHotel)} /></div>
-      : <label className="full-field">Preferred stay<select name="preferredStay" value={preferredStay} disabled={!availableHotels.length} required onChange={(event) => { setPreferredStay(event.target.value); setHotelMeals({ breakfast: false, dinner: false }); setRooms(undefined) }}>{!preferredStay && <option value="">No approved hotels available</option>}{selectedItem && !selectedHotel && <option value={selectedItem}>{selectedItem}</option>}{availableHotels.map((hotel) => <option key={hotel.id} value={hotelSelectionValue(hotel)}>{hotel.name} - {hotelLocationLabel(hotel)} - {hotelCategoryLabel(hotel.category.replace(/ package$/i, ''))}</option>)}</select></label>)}
+      : <label className="full-field">Preferred stay<select name="preferredStay" value={preferredStay} disabled={!availableHotels.length} required onChange={(event) => { setPreferredStay(event.target.value); setHotelMeals({ breakfast: false, dinner: false, extraBed: false }); setRooms(undefined) }}>{!preferredStay && <option value="">No approved hotels available</option>}{selectedItem && !selectedHotel && <option value={selectedItem}>{selectedItem}</option>}{availableHotels.map((hotel) => <option key={hotel.id} value={hotelSelectionValue(hotel)}>{hotel.name} - {hotelLocationLabel(hotel)} - {hotelCategoryLabel(hotel.category.replace(/ package$/i, ''))}</option>)}</select></label>)}
     {plannerDates ? <p className="privacy-note">Your dates, guests, places, vehicle and hotel choices are included in this enquiry. Use Back to change your plan.</p> : <fieldset className="guest-fields"><legend>{kind === 'car' ? 'Who will travel?' : 'Who will stay?'}</legend>
       <div className="form-grid">
         <label>Adults<input name="adults" type="number" min="1" max="100" value={adults} onChange={(event) => { setAdults(event.target.value); setRooms(undefined) }} required /></label>
@@ -196,7 +196,7 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
       {registered.loading && <p role="status">Loading registered hotels...</p>}
       {registered.error && <p className="enquiry-error" role="alert">{registered.error} <button type="button" className="text-link" onClick={registered.reload}>Retry loading hotels</button></p>}
       {!selectedHotel && !registered.loading && !registered.error && <p className="enquiry-error" role="alert">This selected hotel is no longer available. Choose another hotel.</p>}
-      {selectedHotel && <><div className="selected-hotel-features"><h3>Amenities</h3><div className="hotel-feature-chips">{selectedHotel.facilities.map((facility) => <HotelFeature key={facility} label={facility} />)}</div><h3>Highlights</h3><div className="hotel-feature-chips">{selectedHotel.highlights.map((highlight) => <HotelFeature key={highlight} label={highlight} />)}</div></div><HotelRates key={selectedHotel.id} hotel={selectedHotel} date={checkInDate || undefined} showRooms people={people} rooms={rooms} onRoomsChange={setRooms} roomType={room?.roomType} onChange={(breakfast, dinner, _price, roomType) => { setHotelMeals({ breakfast, dinner }); if (room?.roomType !== roomType) setRooms(undefined); setRoomSelection({ hotelId: selectedHotel.id, roomType: roomType ?? '' }) }} />{stayPrice && <div className="hotel-price-breakdown" role="status"><p className="privacy-note hotel-stay-estimate">Stay estimate: ₹{stayPrice.total.toLocaleString('en-IN')} for {roomQuantity} rooms over {nights} nights. Subject to availability and final confirmation.</p><p>{priceBreakdown}</p><p>{nightlyRange} per room/night including selected meals. {hotelPackagePriceInclusions}.</p></div>}</>}
+      {selectedHotel && <><HotelRates key={selectedHotel.id} hotel={selectedHotel} date={checkInDate || undefined} showRooms showSeasonNotice={false} people={people} rooms={rooms} onRoomsChange={setRooms} roomType={room?.roomType} onChange={(breakfast, dinner, _price, roomType, extraBed) => { setHotelMeals({ breakfast, dinner, extraBed: Boolean(extraBed) }); if (room?.roomType !== roomType) setRooms(undefined); setRoomSelection({ hotelId: selectedHotel.id, roomType: roomType ?? '' }) }} />{stayPrice && <div className="hotel-price-breakdown" role="status"><p className="privacy-note hotel-stay-estimate">Stay estimate: ₹{stayPrice.total.toLocaleString('en-IN')} for {roomQuantity} rooms over {nights} nights. Subject to availability and final confirmation.</p><p>{priceBreakdown}</p><p>{nightlyRange} per room/night including selected meals{extraBedSelected ? ' and extra bed' : ''}. {hotelPackagePriceInclusions}.</p></div>}</>}
     </> : !plannerDates && <label className="full-field">{kind === 'car' ? 'Preferred vehicle' : 'Car rental'}<select name="carRental" value={preferredCar} onChange={(event) => setPreferredCar(event.target.value)}>
       {rentalCars.map((car) => <option key={car.id} value={car.name}>{car.name} - {car.seats} seats</option>)}
       <option>No car needed</option>
@@ -205,10 +205,12 @@ export function EnquiryForm({ kind = 'package', selectedItem, onPrepared, additi
     {kind === 'hotel' && selectedHotel && <p className="privacy-note price-inclusions">{hotelPackagePriceInclusions}.</p>}
     {submitError && <p className="enquiry-error" role="alert">{submitError}</p>}
     <button className="button button-dark enquiry-submit" type="submit" disabled={submitDisabled || submitting || (kind === 'hotel' && !selectedHotel)}>{submitting ? 'Saving enquiry...' : 'Submit enquiry'} <ArrowRight size={17} /></button>
-    <p className="privacy-note" aria-live="polite">{submitting ? 'Saving your enquiry. Please wait.' : 'By submitting, you agree that AVELOF may store these details, show your selected service and dates with masked contact details in booking lookup, and contact you about your enquiry. This is not a confirmed booking.'}</p>
+    {kind !== 'hotel' && <p className="privacy-note" aria-live="polite">{submitting ? 'Saving your enquiry. Please wait.' : 'By submitting, you agree that AVELOF may store these details, show your selected service and dates with masked contact details in booking lookup, and contact you about your enquiry. This is not a confirmed booking.'}</p>}
     <div className="enquiry-help-links">
       <a className="text-link enquiry-help" href={createWhatsAppUrl('Hello AVELOF, I need help with an enquiry.')} target="_blank" rel="noreferrer"><MessageCircle size={17} /> Need help?</a>
-      <a className="text-link enquiry-help" href={region === 'Kashmir' ? '/#custom-trip' : regionHomePath(region)}>Customize your trip <ArrowRight size={16} /></a>
+      {kind === 'hotel'
+        ? <a className="text-link enquiry-help" href={region === 'Ladakh' ? '/ladakh/packages' : '/tour-packages'}>Book a package <ArrowRight size={16} /></a>
+        : <a className="text-link enquiry-help" href={region === 'Kashmir' ? '/#custom-trip' : regionHomePath(region)}>Customize your trip <ArrowRight size={16} /></a>}
       {lockedHotel && <a className="text-link enquiry-help" href={`${regionBasePath(region)}/hotels`}>View other options <ArrowRight size={16} /></a>}
     </div>
   </form>
@@ -270,7 +272,7 @@ export default function BookingModal({ kind, selectedItem, initialRequest, onClo
         <span className="success-mark"><CircleCheck size={24} /></span>
         <p className="eyebrow">Details submitted successfully</p>
         <h2 id="booking-title">Thank you for submitting your details.</h2>
-        <p id="booking-description">Your enquiry has been saved. We'll get in touch with you soon to discuss availability and the next steps.</p>
+        <p id="booking-description">{kind === 'hotel' ? "Thanks for submitting your enquiry. We'll get in touch with you soon to discuss availability and the next steps." : "Your enquiry has been saved. We'll get in touch with you soon to discuss availability and the next steps."}</p>
         <div className="confirmation-reference">
           <span>Booking enquiry ID</span>
           <div className="confirmation-reference-value">

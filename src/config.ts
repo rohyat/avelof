@@ -8,3 +8,8 @@ export const business = {
   phone: '+91 914-941-8161',
   destination: 'Kashmir, India',
 }
+
+export const itineraryContact = {
+  name: 'Mr. Rohyat Naik',
+  phone: business.phone.replace(/\D/g, '').slice(-10),
+}

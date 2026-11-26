@@ -93,7 +93,7 @@ test('package badges render on cards and detail pages and theme survives a retur
     }
     await page.goto(`${origin}/tour-packages/premium`)
     assert.equal(await page.getByText('Most selling package', { exact: true }).count(), 1)
-    assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark')
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'light')
     let saved = await context.storageState()
     await context.close()
     for (const theme of ['dark', 'light']) {

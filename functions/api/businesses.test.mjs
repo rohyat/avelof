@@ -6,6 +6,8 @@ import { createAdminSession } from '../_lib/enquiryAccess.ts'
 import { onRequest } from './businesses.ts'
 import { onRequest as onBusinessImage } from './business-images/[id].ts'
 import { onRequest as onPartnerPhotos } from './partner-photos.ts'
+import { businessLocations } from '../../src/data/businessRegistration.ts'
+import { driverLocationsByRegion, hotelLocationsByRegion } from '../../src/data/regions.ts'
 
 const jpeg = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAf/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAB//2Q==', 'base64')
 
@@ -38,10 +40,11 @@ class RegistrationDatabase {
   }
 
   async batch(statements) {
+    const results = []
     this.sqlite.exec('BEGIN')
     try {
       if (this.failBatch === 'before') { this.failBatch = ''; throw new Error('D1 unavailable before transaction') }
-      for (const statement of statements) await statement.run()
+      for (const statement of statements) results.push(await statement.run())
       if (this.failBatch === 'photo') { this.failBatch = ''; throw new Error('Photo transaction failure') }
       this.sqlite.exec('COMMIT')
     } catch (error) {
@@ -49,7 +52,7 @@ class RegistrationDatabase {
       throw error
     }
     if (this.failBatch === 'after') { this.failBatch = ''; throw new Error('Response lost after transaction committed') }
-    return []
+    return results
   }
 
   prepare(sql) {
@@ -75,7 +78,7 @@ async function adminCookie(env) {
   return `avelof_admin_local=${await createAdminSession(env)}`
 }
 
-async function sendRegistration(env, { id, name, kind, location, photoCount = 1, auth, retainedPhotos, itemPhotos, ...overrides }, ip = '192.0.2.100') {
+async function sendRegistration(env, { id, name, kind, location, photoCount = 1, auth, retainedPhotos, itemPhotos, ...overrides }, ip = '192.0.2.100', waitUntil = () => {}) {
   const form = new FormData()
   if (auth) form.append('auth', JSON.stringify(auth))
   if (retainedPhotos !== undefined) form.append('retainedPhotos', JSON.stringify(retainedPhotos))
@@ -101,7 +104,7 @@ async function sendRegistration(env, { id, name, kind, location, photoCount = 1,
     headers: { Origin: 'http://localhost', 'CF-Connecting-IP': ip },
     body: form,
   })
-  return onRequest({ request, env })
+  return onRequest({ request, env, waitUntil })
 }
 
 function jsonRequest(path, method, data, cookie) {
@@ -111,6 +114,58 @@ function jsonRequest(path, method, data, cookie) {
     body: JSON.stringify(data),
   })
 }
+
+test('all ten Kashmir districts register, remain editable and support public filtering alongside legacy destinations', async (context) => {
+  const DB = new RegistrationDatabase()
+  context.after(() => DB.sqlite.close())
+  const env = envWithAdmin(DB)
+  assert.equal(driverLocationsByRegion.Kashmir.length, 10)
+  assert.equal(new Set(businessLocations).size, businessLocations.length)
+  for (const location of hotelLocationsByRegion.Kashmir) assert.ok(businessLocations.includes(location))
+  for (const [index, location] of driverLocationsByRegion.Kashmir.entries()) {
+    const input = { id: crypto.randomUUID(), name: `District business ${location}`, kind: 'handicraft', location }
+    const response = await sendRegistration(env, input, `192.0.2.${index + 1}`)
+    assert.equal(response.status, 201, location)
+    const receipt = await response.json()
+    const changed = await sendRegistration(env, { ...input, description: 'Updated district listing', photoCount: 0, retainedPhotos: [0], auth: { accessCode: receipt.accessCode, version: 0 } }, `192.0.2.${index + 1}`)
+    assert.equal(changed.status, 200, location)
+    DB.sqlite.prepare("UPDATE business_registrations SET status = 'approved' WHERE id = ?").run(input.id)
+    const filtered = await onRequest({ request: new Request(`http://localhost/api/businesses?location=${encodeURIComponent(location)}`), env })
+    assert.equal(filtered.status, 200)
+    const listing = await filtered.json()
+    assert.equal(listing.total, 1)
+    assert.equal(listing.businesses[0].location, location)
+  }
+})
+
+test('business alerts queue only after successful storage, including edits and recovered commits, not unchanged retries', async (context) => {
+  const DB = new RegistrationDatabase()
+  context.after(() => DB.sqlite.close())
+  const env = { ...envWithAdmin(DB), ENQUIRY_VAPID_PUBLIC_KEY: 'test', ENQUIRY_VAPID_PRIVATE_KEY: 'test', ENQUIRY_VAPID_SUBJECT: 'mailto:qa@example.test' }
+  const queued = []
+  const waitUntil = (promise) => queued.push(promise)
+  for (const [index, kind] of ['restaurant', 'shop', 'handicraft'].entries()) {
+    const input = { id: crypto.randomUUID(), name: `Notification ${kind}`, kind, location: 'Kupwara' }
+    const ip = `192.0.2.${index + 1}`
+    const before = queued.length
+    DB.failBatch = 'photo'
+    assert.equal((await sendRegistration(env, input, ip, waitUntil)).status, 503)
+    assert.equal(queued.length, before)
+    if (kind === 'handicraft') DB.failBatch = 'after'
+    const saved = await sendRegistration(env, input, ip, waitUntil)
+    assert.ok(saved.ok)
+    const receipt = await saved.json()
+    assert.equal(queued.length, before + 1)
+    assert.ok((await sendRegistration(env, input, ip, waitUntil)).ok)
+    assert.equal(queued.length, before + 1)
+    const edit = { ...input, description: 'Updated business awaiting approval.', photoCount: 0, retainedPhotos: [0], auth: { accessCode: receipt.accessCode, version: 0 } }
+    assert.ok((await sendRegistration(env, edit, ip, waitUntil)).ok)
+    assert.equal(queued.length, before + 2)
+    assert.ok((await sendRegistration(env, edit, ip, waitUntil)).ok)
+    assert.equal(queued.length, before + 2)
+  }
+  await Promise.all(queued)
+})
 
 test('all business types require complete items, privately preview photos and publish only after approval', async (context) => {
   const DB = new RegistrationDatabase()

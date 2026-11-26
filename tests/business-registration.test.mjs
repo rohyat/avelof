@@ -55,7 +55,7 @@ test('business registration, moderation and discovery work without exposing priv
         const details = JSON.parse(String(form.get('details')))
         const photos = form.getAll('photo')
         submissions.push(details)
-        assert.equal(photos.length, 5)
+        assert.equal(photos.length, 4)
         for (const photo of photos) {
           assert.equal(photo.type, 'image/jpeg')
           assert.ok(photo.size > 0 && photo.size <= 1000000)
@@ -82,6 +82,9 @@ test('business registration, moderation and discovery work without exposing priv
         assert.equal(await page.getByLabel('About your business', { exact: true }).count(), 0)
         await page.getByLabel('Business description', { exact: true }).fill(publicBusiness.description)
         assert.deepEqual(await page.locator('[name=kind] option').allTextContents(), ['Restaurant', 'Shop', 'Handicraft Business'])
+        const locations = await page.locator('[name=location] option').allTextContents()
+        for (const district of ['Anantnag', 'Bandipora', 'Baramulla', 'Budgam', 'Ganderbal', 'Kulgam', 'Kupwara', 'Pulwama', 'Shopian', 'Srinagar']) assert.ok(locations.includes(district))
+        assert.ok(locations.includes('Gulmarg'))
         await page.getByRole('button', { name: 'Add another item' }).click()
         await page.getByLabel('Item 1 heading', { exact: true }).fill('Kashmiri wazwan')
         await page.getByLabel('Item 1 description', { exact: true }).fill(publicBusiness.items[0].description)
@@ -109,6 +112,8 @@ test('business registration, moderation and discovery work without exposing priv
         await page.getByRole('status').filter({ hasText: '1 photos ready' }).waitFor()
         await page.locator('input[name=photos]').setInputFiles(Array.from({ length: 5 }, (_, index) => ({ ...file, name: `shop-${index}.png` })))
         await page.getByRole('status').filter({ hasText: '5 photos ready' }).waitFor()
+        await page.getByRole('button', { name: 'Remove business photo 2', exact: true }).click()
+        await page.getByRole('status').filter({ hasText: '4 photos ready' }).waitFor()
         await page.locator('[name=publicationConsent]').check()
         assert.equal(await page.locator('.location-picker').count(), 0)
         const submit = page.getByRole('button', { name: 'Submit for approval', exact: true })
@@ -337,6 +342,8 @@ test('business registration, moderation and discovery work without exposing priv
       try {
         await page.goto(`${origin}/admin/panel/businesses`)
         await page.getByRole('heading', { name: 'Saffron Table · Restaurant', exact: true }).waitFor()
+        assert.equal(await page.getByRole('navigation', { name: 'Owner sections' }).locator('[aria-current=page]').innerText(), 'Businesses')
+        assert.equal(await page.getByRole('region', { name: 'Mobile notifications' }).count(), 1)
         assert.ok((await page.locator('main').innerText()).includes(adminBusiness.contactEmail))
         for (const width of [320, 390, 1440]) {
           await page.setViewportSize({ width, height: 900 })

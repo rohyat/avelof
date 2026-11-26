@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
-import { discountedHotelPackagePrice, discountedHotelRoomPrice } from '../src/services/pricing.ts'
-import { featuredOfferHotelId } from '../src/data/offers.ts'
+import { applyPackageDiscount, discountedHotelRoomPrice } from '../src/services/pricing.ts'
+import { tourPackages } from '../src/data/catalog.ts'
 
 const origin = process.env.AVELOF_HOTEL_TEST_URL || 'http://localhost:8792'
-const id = featuredOfferHotelId
+const id = 'f85d09ef-0222-4bc5-8842-f59c647791c7'
 
 test('homepage trust messages keep rotating during hover and touch, with reduced-motion support', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
@@ -14,9 +14,9 @@ test('homepage trust messages keep rotating during hover and touch, with reduced
   await page.route('**/api/hotels*', (route) => route.fulfill({ json: { hotels: [], total: 0, page: 1, pageSize: 25 } }))
   try {
     await page.goto(origin)
-    const points = page.getByRole('list', { name: 'Our commitment to you' })
+    const points = page.locator('.home-hero').getByRole('list', { name: 'Our commitment to you' })
     const copy = await points.locator('li').allTextContents()
-    assert.deepEqual(copy, ['All-inclusive prices, with no hidden charges', '24/7 customer support, always with you', 'Your safety and care, our priority', 'Tour packages: 25% advance, 75% after the trip.'])
+    assert.deepEqual(copy, ['All-inclusive prices, with no hidden charges', '24/7 customer support, always with you', 'Your safety and care, our priority', 'Tour packages: 10% advance, 90% after the trip.'])
     assert.ok(copy.slice(0, 3).every((text) => text.split(/\s+/).length === 6))
     assert.equal(await points.locator('li').evaluateAll((items) => items.every((item) => {
       const style = getComputedStyle(item)
@@ -42,7 +42,7 @@ test('homepage trust messages keep rotating during hover and touch, with reduced
       assert.equal(layout.contained, true)
       assert.equal(layout.overflow, false)
       assert.equal(layout.equalWidths, true, 'Messages share the original fixed-width box')
-      if (width <= 600) assert.equal(await page.locator('.hero-trust').evaluate((element) => getComputedStyle(element).marginTop), '32px')
+      if (width <= 600) assert.equal(await page.locator('.home-hero .hero-trust').evaluate((element) => getComputedStyle(element).marginTop), '32px')
     }
     const sequence = await points.evaluate(async (element) => {
       const items = [...element.children]
@@ -61,7 +61,7 @@ test('homepage trust messages keep rotating during hover and touch, with reduced
       return new DOMMatrixReadOnly(getComputedStyle(item).transform).m41
     }))
     assert.ok(directions[0] > 0 && directions[1] < 0, 'Payment message slides from the opposite direction')
-    assert.equal(await page.locator('.hero-trust button').count(), 0)
+    assert.equal(await page.locator('.home-hero .hero-trust button').count(), 0)
     assert.equal(await points.getAttribute('tabindex'), null)
     await points.evaluate((element) => [...element.children].forEach((item) => { const animation = item.getAnimations()[0]; animation.currentTime = 500; animation.play() }))
     await points.hover()
@@ -112,7 +112,7 @@ test('Compare buttons align at the far right on every package across desktop, ta
         await dialog.waitFor()
         assert.deepEqual(await dialog.locator('thead th').allTextContents(), ['Compare', 'DeluxeView itinerary', 'PremiumView itinerary', 'LuxuryView itinerary'])
         if (width <= 860) await dialog.locator('.comparison-feature').filter({ has: page.locator('summary', { hasText: /^Tour guide$/ }) }).locator('summary').click()
-        for (const text of ['2-star hotels', '3-star and 3-star Premium hotels', '4-star and 5-star hotels', 'separate from the driver', '₹52,999']) assert.ok((await dialog.innerText()).includes(text))
+        for (const text of ['2-star hotels', '3-star and 3-star Premium hotels', '4-star and 5-star hotels', 'separate from the driver', '₹38,500']) assert.ok((await dialog.innerText()).includes(text))
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
         assert.ok(await dialog.evaluate((element) => element.getBoundingClientRect().right <= innerWidth))
         await page.keyboard.press('Escape')
@@ -123,7 +123,7 @@ test('Compare buttons align at the far right on every package across desktop, ta
   } finally { await browser.close() }
 })
 
-test('package date selection adds 10% for arrivals after 5 December and saves the seasonal rate', async () => {
+test('package dates retain the same rates across the former seasonal cutoff', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage({ viewport: { width: 390, height: 900 } })
   let enquiry
@@ -135,7 +135,7 @@ test('package date selection adds 10% for arrivals after 5 December and saves th
   })
   try {
     await page.goto(`${origin}/tour-packages/deluxe`)
-    assert.ok((await page.locator('.detail-aside').innerText()).includes('16,940'))
+    assert.ok((await page.locator('.detail-aside').innerText()).includes('10,779.23'))
     await page.locator('.package-end-booking').getByRole('button', { name: 'Book Now', exact: true }).click()
     const form = page.locator('.enquiry-form')
     const estimate = form.locator('.package-stay-estimate')
@@ -147,15 +147,15 @@ test('package date selection adds 10% for arrivals after 5 December and saves th
     assert.equal(await form.count(), 1)
     await form.getByLabel('Start date', { exact: true }).fill('2026-12-05')
     assert.ok((await form.locator('.package-end-date').innerText()).includes('9 December 2026'))
-    assert.ok((await estimate.innerText()).includes('₹16,940'))
+    assert.ok((await estimate.innerText()).includes('₹10,779.23'))
     await form.getByLabel('Start date', { exact: true }).fill('2026-12-06')
-    assert.ok((await estimate.innerText()).includes('₹18,634'))
-    assert.ok((await estimate.innerText()).includes('Includes 10% seasonal increase'))
+    assert.ok((await estimate.innerText()).includes('₹10,779.23'))
+    assert.equal((await estimate.innerText()).includes('seasonal increase'), false)
     await form.locator('[name=packagePreference]').selectOption('Premium')
     assert.ok((await form.locator('.package-end-date').innerText()).includes('11 December 2026'))
-    assert.ok((await estimate.innerText()).includes('₹30,492'))
+    assert.ok((await estimate.innerText()).includes('₹17,325'))
     await form.getByLabel('Start date', { exact: true }).fill('2026-12-05')
-    assert.ok((await estimate.innerText()).includes('₹27,720'))
+    assert.ok((await estimate.innerText()).includes('₹17,325'))
     assert.equal((await estimate.innerText()).includes('Includes 10% seasonal increase'), false)
     await form.getByLabel('Start date', { exact: true }).fill('2026-12-06')
     await arrivalWindow.check()
@@ -163,7 +163,7 @@ test('package date selection adds 10% for arrivals after 5 December and saves th
     await form.getByLabel('Phone number').fill('9876543210')
     await form.getByRole('button', { name: 'Submit enquiry', exact: true }).click()
     await page.getByRole('heading', { name: 'Thank you for submitting your details.' }).waitFor()
-    assert.equal(enquiry.fields.packageRate, '₹30,492 per person for 5 nights; based on ₹27,720 for 5 nights; includes 10% seasonal increase for arrival from 6 December 2026')
+    assert.equal(enquiry.fields.packageRate, '₹17,325 per person for 5 nights; based on ₹17,325 for 5 nights')
     assert.equal(enquiry.fields.priceInclusions, 'All taxes and charges included')
     assert.equal(enquiry.fields.arrivalDate, '2026-12-06')
     assert.equal(enquiry.fields.departureDate, '2026-12-11')
@@ -190,7 +190,7 @@ test('winter offers show both discounts with bounded snowfall on desktop/mobile 
   await page.route('**/api/hotels*', (route) => route.fulfill(hotelState === 'error'
     ? { status: 503, json: { error: 'Hotel offer could not be loaded.' } }
     : { json: { hotels: hotelState === 'missing' ? [] : [{
-      id, hotelId: 'AVELOF_HTL_10003SRG', name: 'Hotel Crown Prince', location: 'Srinagar', category: 'Deluxe',
+      id, hotelId: 'AVELOF_HTL_10003SRG', name: 'Hotel Crown Prince', location: 'Srinagar', category: 'Premium',
       description: 'Comfortable hotel rooms in the heart of Srinagar.', price: 2310, originalPrice: 3000, discountPercent: 23,
       roomTypes: ['Standard (6 rooms)'], totalRooms: 6, mealPlan: 'Room only', heating: 'Centralised heating',
       amenities: ['Wi-Fi'], highlights: ['Near the market'], checkIn: '14:00', checkOut: '11:00',
@@ -201,10 +201,10 @@ test('winter offers show both discounts with bounded snowfall on desktop/mobile 
     await page.goto(origin)
     const banner = page.getByRole('region', { name: 'Travel offers', exact: true })
     await banner.getByText('Winter offers are live', { exact: true }).waitFor()
-    assert.ok((await banner.innerText()).includes('Flat 23% off on packages & hotels · 30% off on cabs'))
-    const hotelSlide = banner.getByRole('group', { name: '3 of 4: Hotels', exact: true })
-    await hotelSlide.getByText('Hotel Crown Prince · Srinagar', { exact: true }).waitFor()
-    assert.equal(await banner.getByRole('link', { name: 'Explore Hotels', exact: true }).getAttribute('href'), `/hotels/${id}`)
+    assert.ok((await banner.innerText()).includes('Flat 23% off on hotels and packages · 30% off on cabs'))
+    const hotelSlide = banner.locator('.offer-tile').filter({ has: page.locator('strong', { hasText: /^Hotels/ }) })
+    await hotelSlide.getByText('Hotel Crown Prince · Premium - 3-star', { exact: true }).waitFor()
+    assert.equal(await banner.getByRole('link', { name: 'Explore Hotels · Srinagar', exact: true }).getAttribute('href'), `/hotels/${id}`)
     assert.ok((await hotelSlide.innerText()).includes('₹2,310'))
     assert.equal(await hotelSlide.locator('s').innerText(), '₹3,000')
     assert.equal(await hotelSlide.locator('.discount-label').innerText(), '23% off')
@@ -246,9 +246,9 @@ test('winter offers show both discounts with bounded snowfall on desktop/mobile 
     }
     await page.emulateMedia({ reducedMotion: 'reduce' })
     assert.equal(await snow.isVisible(), false)
-    await banner.getByRole('button', { name: 'Show Hotels offer', exact: true }).click()
-    await page.waitForFunction(() => document.querySelector('.offer-dot[title=Hotels]')?.getAttribute('aria-current') === 'true')
-    await banner.getByRole('link', { name: 'Explore Hotels', exact: true }).click()
+    await banner.getByRole('button', { name: 'Show Hotels · Srinagar offer', exact: true }).click()
+    await page.waitForFunction(() => document.querySelector('.offer-dot[title="Hotels · Srinagar"]')?.getAttribute('aria-current') === 'true')
+    await banner.getByRole('link', { name: 'Explore Hotels · Srinagar', exact: true }).click()
     await page.waitForURL(`**/hotels/${id}`)
     await banner.getByRole('button', { name: 'Show Cabs offer', exact: true }).click()
     await page.waitForFunction(() => document.querySelector('.offer-dot[title=Cabs]')?.getAttribute('aria-current') === 'true')
@@ -259,16 +259,16 @@ test('winter offers show both discounts with bounded snowfall on desktop/mobile 
     assert.equal(await hotelSlide.locator('s, .offer-payable b').count(), 0)
     hotelState = 'available'
     await hotelSlide.getByRole('button', { name: 'Retry hotel offer' }).click()
-    await hotelSlide.getByText('Hotel Crown Prince · Srinagar', { exact: true }).waitFor()
+    await hotelSlide.getByText('Hotel Crown Prince · Premium - 3-star', { exact: true }).waitFor()
     hotelState = 'missing'
     await page.reload()
-    await hotelSlide.getByRole('alert').filter({ hasText: 'Crown Prince is not currently listed.' }).waitFor()
+    await hotelSlide.getByRole('status').filter({ hasText: 'No approved Premium-or-higher stays are currently listed.' }).waitFor()
     assert.equal(await hotelSlide.getByRole('link').getAttribute('href'), '/hotels')
     assert.equal(await hotelSlide.locator('s, .offer-payable b').count(), 0)
   } finally { await browser.close() }
 })
 
-test('admin discount saves across reloads, propagates to packages/hotels and handles failed or conflicting saves', async () => {
+test('admin discount updates hotels and packages and handles failed or conflicting saves', async () => {
     const browser = await chromium.launch({ channel: 'msedge', headless: true })
     const page = await browser.newPage({ viewport: { width: 390, height: 900 } })
     let settings = { discountPercent: 23, version: 1 }, failSave = false, failLoad = false, enquiry
@@ -298,7 +298,7 @@ test('admin discount saves across reloads, propagates to packages/hotels and han
       return route.fulfill({ status: 201, json: { saved: true, requestReference: enquiry.reference, reference: 'AVELOF_DLX_10001' } })
     })
     const discount = page.getByRole('spinbutton', { name: 'Hotel and package discount (%)' })
-    const save = page.getByRole('button', { name: 'Save hotel and package discount', exact: true })
+    const save = page.getByRole('button', { name: 'Save discount', exact: true })
     try {
       await page.goto(`${origin}/admin/panel`)
       assert.equal(await discount.inputValue(), '23')
@@ -314,23 +314,23 @@ test('admin discount saves across reloads, propagates to packages/hotels and han
       assert.equal(await discount.inputValue(), '20')
       await page.goto(`${origin}/tour-packages`)
       const deluxe = page.locator('.catalog-card').filter({ has: page.getByRole('heading', { name: 'Deluxe', exact: true }) })
-      assert.ok((await deluxe.locator('.price').innerText()).includes('17,600'))
+      assert.ok((await deluxe.locator('.price').innerText()).includes('11,199.2'))
       assert.equal(await deluxe.locator('.discount-label').innerText(), '20% off')
-      assert.ok((await page.locator('.offer-heading-subtitle').first().innerText()).includes('Flat 20% off on packages & hotels'))
-      assert.equal(await page.getByRole('group', { name: '3 of 4: Hotels', exact: true }).locator('.discount-label').innerText(), '20% off')
+      assert.ok((await page.locator('.offer-heading-subtitle').first().innerText()).includes('Flat 20% off on hotels'))
+      assert.equal(await page.locator('.offer-tile').filter({ hasText: 'Dynamic Discount Hotel' }).locator('.discount-label').innerText(), '20% off')
       assert.equal(await page.locator('.offer-tile').filter({ hasText: 'Premium package' }).locator('.discount-label').innerText(), '20% off')
       await page.goto(`${origin}/tour-packages/deluxe`)
-      assert.ok((await page.locator('.detail-aside').innerText()).includes('17,600'))
+      assert.ok((await page.locator('.detail-aside').innerText()).includes('11,199.2'))
       await page.locator('.package-end-booking').getByRole('button', { name: 'Book Now', exact: true }).click()
       const form = page.locator('.enquiry-form')
       await form.getByLabel('Name', { exact: true }).fill('Discount Test Guest')
       await form.getByLabel('Phone number').fill('9876543210')
       await form.locator('[name=arrivalDate]').fill('2026-11-20')
-      assert.ok((await form.locator('.package-stay-estimate').innerText()).includes('₹17,600'))
+      assert.ok((await form.locator('.package-stay-estimate').innerText()).includes('₹11,199.2'))
       await form.locator('[type=submit]').click()
       assert.deepEqual(await form.locator(':invalid').evaluateAll((elements) => elements.map((element) => ({ name: element.getAttribute('name'), message: element.validationMessage }))), [])
       await page.getByRole('heading', { name: 'Thank you for submitting your details.' }).waitFor()
-      assert.ok(enquiry.fields.packageRate.includes('₹17,600'))
+      assert.ok(enquiry.fields.packageRate.includes('₹11,199.2'))
       assert.equal(enquiry.fields.arrivalBetween6PmAnd7Am, 'No')
       await page.goto(`${origin}/hotels`)
       assert.equal(await page.locator('.hotel-rates strong').innerText(), '₹2,400')
@@ -353,8 +353,10 @@ test('admin discount saves across reloads, propagates to packages/hotels and han
         await save.click()
         await page.getByRole('status').filter({ hasText: `Saved ${percent}% discount` }).waitFor()
         await page.goto(`${origin}/tour-packages`)
-        assert.ok((await deluxe.locator('.price').innerText()).includes(discountedHotelPackagePrice(22000, percent).toLocaleString('en-IN')))
+        const expected = applyPackageDiscount(tourPackages, percent).find(item => item.id === 'deluxe')
+        assert.ok((await deluxe.locator('.price').innerText()).includes(expected.price.toLocaleString('en-IN')))
         assert.equal(await deluxe.locator('.discount-label').count(), percent === 0 ? 0 : 1)
+        if (percent !== 0) assert.equal(await deluxe.locator('.discount-label').innerText(), `${percent}% off`)
         assert.equal(await page.locator('.offer-tile').filter({ hasText: 'Deluxe package' }).locator('s').count(), percent === 0 ? 0 : 1)
         await page.goto(`${origin}/admin/panel`)
         await discount.waitFor()
@@ -371,9 +373,10 @@ test('admin discount saves across reloads, propagates to packages/hotels and han
     } finally { await browser.close() }
   })
 
-test('23% inclusive hotel/package prices update with dates and persist totals while preserving cab offers', async () => {
+test('package prices and hotel discounts persist in enquiries while preserving cab offers', async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true })
   const page = await browser.newPage({ viewport: { width: 390, height: 900 } })
+  await page.clock.setFixedTime(new Date('2026-11-01T12:00:00Z'))
   let pricingRequests = 0, enquiry
   let acAvailable = true
   await page.route('**/api/pricing', (route) => {
@@ -409,38 +412,38 @@ test('23% inclusive hotel/package prices update with dates and persist totals wh
   try {
     await page.goto(`${origin}/tour-packages`)
     assert.ok((await page.locator('.offer-banner-heading').innerText()).includes('All taxes and charges included'))
-    for (const [name, price, original] of [['Deluxe', '16,940', '22,000'], ['Premium', '27,720', '36,000']]) {
+    for (const [name, price, original, discount] of [['Deluxe', '10,779.23', '13,999', '23% off'], ['Premium', '17,325', '22,500', '23% off'], ['Luxury', '29,645', '38,500', '23% off']]) {
       const card = page.locator('.catalog-card').filter({ has: page.getByRole('heading', { name, exact: true }) })
       assert.ok((await card.locator('.price').innerText()).includes(price))
       assert.equal(await card.locator('s').innerText(), `₹${original}`)
-      assert.equal(await card.locator('.discount-label').innerText(), '23% off')
+      assert.equal(await card.locator('.discount-label').innerText(), discount)
       assert.ok((await card.innerText()).includes('All taxes and charges included'))
       const tile = page.locator('.offer-tile').filter({ hasText: `${name} package` })
       assert.ok((await tile.innerText()).includes(price))
       assert.equal(await tile.locator('s').innerText(), `₹${original}`)
-      assert.equal(await tile.locator('.discount-label').innerText(), '23% off')
+      assert.equal(await tile.locator('.discount-label').innerText(), discount)
     }
     await page.goto(`${origin}/tour-packages/deluxe`)
-    assert.ok((await page.locator('.detail-aside').innerText()).includes('16,940'))
-    assert.equal(await page.locator('.detail-aside s').innerText(), '₹22,000')
+    assert.ok((await page.locator('.detail-aside').innerText()).includes('10,779.23'))
+    assert.equal(await page.locator('.detail-aside s').innerText(), '₹13,999')
     await page.locator('.package-end-booking').getByRole('button', { name: 'Book Now', exact: true }).click()
-    await form.getByText('Package rate: ₹16,940 per person for 4 nights.', { exact: true }).waitFor()
+    await form.getByText('Package rate: ₹10,779.23 per person for 4 nights.', { exact: true }).waitFor()
     assert.ok((await form.innerText()).includes('All taxes and charges included'))
     await form.getByLabel('Name', { exact: true }).fill('Package Pricing Guest')
     await form.getByLabel('Phone number').fill('9876543210')
     await form.locator('[name=arrivalDate]').fill('2026-11-20')
     const packageEstimate = form.locator('.package-stay-estimate')
-    assert.ok((await packageEstimate.innerText()).includes('₹16,940 per person for 4 nights.'))
+    assert.ok((await packageEstimate.innerText()).includes('₹10,779.23 per person for 4 nights.'))
     await form.getByLabel('Package preference').selectOption('Premium')
-    assert.ok((await packageEstimate.innerText()).includes('₹27,720 per person for 5 nights.'))
+    assert.ok((await packageEstimate.innerText()).includes('₹17,325 per person for 5 nights.'))
     await form.getByLabel('Package preference').selectOption('Deluxe')
     await form.locator('[name=arrivalDate]').fill('')
     assert.equal(await packageEstimate.count(), 0, 'No price estimate without a start date')
     await form.locator('[name=arrivalDate]').fill('2026-11-20')
-    assert.ok((await packageEstimate.innerText()).includes('₹16,940 per person for 4 nights.'))
+    assert.ok((await packageEstimate.innerText()).includes('₹10,779.23 per person for 4 nights.'))
     await form.locator('[type=submit]').click()
     await page.getByRole('heading', { name: 'Thank you for submitting your details.' }).waitFor()
-    assert.equal(enquiry.fields.packageRate, '₹16,940 per person for 4 nights; based on ₹16,940 for 4 nights')
+    assert.equal(enquiry.fields.packageRate, '₹10,779.23 per person for 4 nights; based on ₹10,779.23 for 4 nights')
     assert.equal(enquiry.fields.priceInclusions, 'All taxes and charges included')
     assert.equal(enquiry.fields.tripNights, '4')
     assert.equal(enquiry.fields.departureDate, '2026-11-24')

@@ -1,7 +1,7 @@
-import { hotelLocationsByRegion } from './regions.ts'
+import { driverLocationsByRegion, hotelLocationsByRegion } from './regions.ts'
 
 export const businessKinds = ['restaurant', 'shop', 'handicraft'] as const
-export const businessLocations = hotelLocationsByRegion.Kashmir
+export const businessLocations = [...driverLocationsByRegion.Kashmir, ...hotelLocationsByRegion.Kashmir.filter((location) => location !== 'Srinagar')] as const
 export const businessPhotoLimit = 1000000
 export const businessUploadLimit = businessPhotoLimit * 25 + 100000
 

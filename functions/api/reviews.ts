@@ -121,7 +121,7 @@ export const onRequest: PagesFunction<AccessEnv> = async ({ request, env, waitUn
     if (existing) return existing.payload_hash === payloadHash
       ? privateReply({ saved: true, id, status: existing.status })
       : privateReply({ error: 'This submission ID has already been used. Start a new review.' }, 409)
-    if (!await allowAccessAttempt(request, env.DB, 'review-submit', 3)) return privateReply({ error: 'Too many reviews. Please try again in ten minutes.' }, 429, { 'Retry-After': '600' })
+    if (!driverId && !hotelId && !await allowAccessAttempt(request, env.DB, 'review-submit', 3)) return privateReply({ error: 'Too many reviews. Please try again in ten minutes.' }, 429, { 'Retry-After': '600' })
     const inserted = await env.DB.prepare("INSERT INTO reviews (id, reviewer_name, booking_id, experience, rating, title, review_text, driver_id, hotel_id, publication_consent, payload_hash, status, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 'published', strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ON CONFLICT (id) DO NOTHING")
       .bind(id, reviewerName, bookingId, experience, rating, title, reviewText, driverId || null, hotelId || null, payloadHash).run()
     const saved = await env.DB.prepare('SELECT status, payload_hash FROM reviews WHERE id = ?').bind(id).first<ReviewRow>()

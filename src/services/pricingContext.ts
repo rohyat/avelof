@@ -1,7 +1,7 @@
-import { createContext, useContext, useMemo } from 'react'
+import { createContext, useContext } from 'react'
 import { tourPackages } from '../data/catalog'
-import { discountedHotelPackagePrice } from './pricing'
 import type { PricingSettings } from './pricingSchema'
+import { applyPackageDiscount } from './pricing'
 
 interface PricingContext {
   settings: PricingSettings | null
@@ -18,8 +18,5 @@ export function usePricing() {
 }
 export function useTourPackages() {
   const { settings, loading, error } = usePricing()
-  return useMemo(() => !settings || loading || error ? [] : tourPackages.map((item) => item.underDevelopment ? item : {
-    ...item, originalPrice: item.originalPrice ?? item.price,
-    price: discountedHotelPackagePrice(item.originalPrice ?? item.price, settings.discountPercent),
-  }), [settings, loading, error])
+  return !settings || loading || error ? [] : applyPackageDiscount(tourPackages, settings.discountPercent)
 }

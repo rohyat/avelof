@@ -88,7 +88,7 @@ export default function OwnerPushNotifications() {
           if (active) { setState('enabled'); setMessage('Alerts are enabled on this device.') }
         } else {
           setState('ready')
-          setMessage('Get alerts for new bookings and guest reviews.')
+          setMessage('Get alerts for booking enquiries, guest reviews and hotel, driver or business registrations.')
         }
       } catch (error) {
         if (!active) return

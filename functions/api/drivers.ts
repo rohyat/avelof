@@ -14,7 +14,7 @@ import { regions } from '../../src/data/regions.ts'
 import { listingRegionSql } from '../_lib/regionalListings.ts'
 
 const listSchema = z.object({ scope: z.enum(['public', 'admin']).default('public'), page: z.coerce.number().int().min(1).max(10000).default(1), id: z.uuidv4().optional(), driverId: z.string().regex(/^AVELOF-DRV-[0-9]{5,10}$/).optional(), status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all'), region: z.enum(regions).optional() }).strict()
-const moderationSchema = hotelModerationObject.omit({ price: true, breakfastPrice: true, dinnerPrice: true, roomRates: true, latitude: true, longitude: true }).extend({ vehicleNumber: driverVehicleNumberSchema })
+const moderationSchema = hotelModerationObject.omit({ price: true, breakfastPrice: true, dinnerPrice: true, extraBedPrice: true, roomRates: true, latitude: true, longitude: true }).extend({ vehicleNumber: driverVehicleNumberSchema })
 const deletionSchema = z.object({ id: z.uuidv4(), version: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER) }).strict()
 const legacyDriverId = (id: string) => `AVELOF_DRV_${id.replaceAll('-', '').toUpperCase()}`
 

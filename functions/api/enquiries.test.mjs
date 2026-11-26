@@ -764,6 +764,23 @@ test('hotel heating options persist through private editing and approved listing
   } finally { DB.sqlite.close() }
 })
 
+test('hotel extra bed charge is saved by owners, reviewed by admins and published', async () => {
+  const DB = database(), bucket = hotelBucket()
+  try {
+    const input = { ...hotelPayload(), extraBedPrice: 800 }
+    const registered = await hotelRequest(DB, bucket, 'POST', input)
+    assert.equal(registered.status, 201)
+    const receipt = await registered.json()
+    const lookup = () => hotelRequest(DB, bucket, 'POST', { identifier: receipt.hotelId, accessCode: receipt.accessCode }, { lookup: true })
+    assert.equal((await (await lookup()).json()).hotel.extraBedPrice, 800)
+    const login = await access(DB, { action: 'admin-login', code: '123456789012345678901234567890123456789012345678' })
+    const Cookie = login.headers.get('Set-Cookie').split(';')[0]
+    assert.equal((await hotelRequest(DB, bucket, 'PATCH', { id: input.id, version: 0, status: 'approved', ownerNote: '', price: input.price, extraBedPrice: 700 }, { headers: { Cookie } })).status, 200)
+    assert.equal((await (await hotelRequest(DB, bucket, 'GET')).json()).hotels[0].extraBedPrice, 700)
+    assert.equal(hotelSubmissionSchema.safeParse({ ...input, extraBedPrice: -1 }).success, false)
+  } finally { DB.sqlite.close() }
+})
+
 test('hotel room discount rounds to whole rupees, including half-up boundaries, without changing package rounding', async () => {
   for (const [price, expected] of [[2320, 1786], [37, 28], [50, 39], [63, 49], [3771, 2904]]) assert.equal(discountedHotelRoomPrice(price), expected)
   const DB = database(), bucket = hotelBucket()
@@ -797,14 +814,14 @@ test('hotel prices add 50% then apply default 23% off, ignoring legacy GST witho
     const privateRow = DB.sqlite.prepare('SELECT price, details_json FROM hotel_registrations WHERE id = ?').get(input.id)
     assert.equal(privateRow.price, 2000)
     assert.equal(JSON.parse(privateRow.details_json).roomRates[1].price, 4000)
-    assert.equal(tourPackages.find(({ id }) => id === 'deluxe').price, 16940)
-    assert.equal(tourPackages.find(({ id }) => id === 'deluxe').originalPrice, 22000)
-    assert.equal(tourPackages.find(({ id }) => id === 'premium').price, 27720)
-    assert.equal(tourPackages.find(({ id }) => id === 'premium').originalPrice, 36000)
-    assert.equal(tourPackages.find(({ id }) => id === 'luxury').price, 52999)
+    assert.equal(tourPackages.find(({ id }) => id === 'deluxe').price, 13500)
+    assert.equal(tourPackages.find(({ id }) => id === 'deluxe').originalPrice, 13999)
+    assert.equal(tourPackages.find(({ id }) => id === 'premium').price, 19500)
+    assert.equal(tourPackages.find(({ id }) => id === 'premium').originalPrice, 22500)
+    assert.equal(tourPackages.find(({ id }) => id === 'luxury').price, 38500)
     assert.equal(tourPackages.find(({ id }) => id === 'luxury').originalPrice, undefined)
     for (const [price, expected] of [[2, 1.54], [146, 112.42], [3771, 2903.67], [1450000, 1116500]]) assert.equal(discountedHotelPackagePrice(price), expected)
-    assert.deepEqual(rentalCars.map(({ price }) => price), [2000, 2500, 3500, 3500, 3800, 4000, 5000, 6500])
+    assert.deepEqual(rentalCars.map(({ price }) => price), [2000, 2500, 3500, 3500, 3800, 4000, 5000, 6000, 6500])
     DB.sqlite.exec('DROP TABLE pricing_settings')
     const independent = await hotelRequest(DB, bucket, 'GET')
     assert.equal(independent.status, 503)
@@ -1350,12 +1367,13 @@ test('package prices scale by selected nights with paise rounding and reject inv
   for (const [standard, nights] of [[0, 1], [4, 0], [4, -1], [4, 1.5], [NaN, 1], [4, Infinity]]) assert.throws(() => packagePriceForNights(16940, standard, nights), RangeError)
 })
 
-test('package seasonal prices depend on arrival date rather than individual stay nights', () => {
-  assert.equal(packagePriceForNights(16940, 4, 4, '2026-12-05'), 16940)
-  assert.equal(packagePriceForNights(16940, 4, 4, '2026-12-06'), 18634)
-  assert.equal(packagePriceForNights(16940, 4, 2, '2026-12-06'), 9317)
-  assert.equal(packagePriceForNights(27720, 5, 5, '2027-01-01'), 30492)
-  assert.equal(packagePriceForNights(100, 3, 1, '2026-12-06'), 36.67)
+test('package prices do not increase seasonally and validate arrival dates', () => {
+  assert.equal(packagePriceForNights(13500, 4, 4, '2026-12-05'), 13500)
+  assert.equal(packagePriceForNights(13500, 4, 4, '2026-12-06'), 13500)
+  assert.equal(packagePriceForNights(13500, 4, 2, '2026-12-06'), 6750)
+  assert.equal(packagePriceForNights(19500, 5, 5, '2027-01-01'), 19500)
+  assert.equal(packagePriceForNights(38500, 7, 7, '2027-01-01'), 38500)
+  assert.equal(packagePriceForNights(100, 3, 1, '2026-12-06'), 33.33)
   assert.equal(packagePriceForNights(0, 4, 4, '2026-12-06'), 0)
   for (const date of ['2026-02-30', 'not-a-date', '2026-13-06']) assert.throws(() => packagePriceForNights(16940, 4, 4, date), RangeError)
 })
@@ -2173,24 +2191,24 @@ test('published driver ratings are linked by public driver ID and included in dr
     DB.sqlite.prepare("UPDATE driver_registrations SET status = 'approved' WHERE id = ?").run(driver.id)
     const rating = {
       ...reviewPayload(),
-      reviewerName: '',
+      reviewerName: 'Driver guest',
       bookingId: '',
       experience: 'Driver experience',
       driverId: receipt.driverId,
       rating: 5,
       title: '',
-      reviewText: '',
+      reviewText: 'A helpful driver.',
     }
-    assert.equal((await reviewRequest(DB, 'POST', { ...rating, id: crypto.randomUUID(), reviewText: 'A helpful driver.' })).status, 400)
-    assert.equal((await reviewRequest(DB, 'POST', { ...rating, id: crypto.randomUUID(), reviewerName: 'Guest', reviewText: 'A helpful driver.' })).status, 400)
+    assert.equal((await reviewRequest(DB, 'POST', { ...rating, id: crypto.randomUUID(), reviewerName: '' })).status, 400)
+    assert.equal((await reviewRequest(DB, 'POST', { ...rating, id: crypto.randomUUID(), reviewText: ' ' })).status, 400)
     assert.equal((await reviewRequest(DB, 'POST', rating)).status, 201)
     const filtered = await (await reviewRequest(DB, 'GET', undefined, { query: `?driverId=${receipt.driverId}` })).json()
     assert.equal(filtered.total, 1)
     assert.equal(filtered.averageRating, 5)
     assert.equal(filtered.reviews[0].driverId, receipt.driverId)
-    assert.equal(filtered.reviews[0].reviewerName, '')
+    assert.equal(filtered.reviews[0].reviewerName, 'Driver guest')
     assert.equal(filtered.reviews[0].bookingId, '')
-    assert.equal(filtered.reviews[0].reviewText, '')
+    assert.equal(filtered.reviews[0].reviewText, 'A helpful driver.')
     const listing = await (await driverRequest(DB, bucket, 'GET')).json()
     assert.equal(listing.drivers[0].driverId, receipt.driverId)
     assert.equal(listing.drivers[0].averageRating, 5)
@@ -2200,7 +2218,7 @@ test('published driver ratings are linked by public driver ID and included in dr
   } finally { DB.sqlite.close() }
 })
 
-test('anonymous hotel stars and written hotel feedback rules use the approved hotel ID', async () => {
+test('named hotel reviews need text but no booking ID, publish immediately and allow repeat submissions', async () => {
   const DB = database(), bucket = hotelBucket()
   try {
     const hotel = hotelPayload()
@@ -2208,24 +2226,35 @@ test('anonymous hotel stars and written hotel feedback rules use the approved ho
     DB.sqlite.prepare("UPDATE hotel_registrations SET status = 'approved' WHERE id = ?").run(hotel.id)
     const rating = {
       ...reviewPayload(),
-      reviewerName: '',
+      reviewerName: 'Hotel guest',
       bookingId: '',
       experience: 'Hotel stay',
       hotelId: receipt.hotelId,
       rating: 4,
       title: '',
-      reviewText: '',
+      reviewText: 'A comfortable stay.',
     }
-    assert.equal((await reviewRequest(DB, 'POST', rating)).status, 201)
+    for (const change of [{ reviewerName: '' }, { reviewerName: ' ' }, { reviewText: '' }, { rating: 0 }]) {
+      assert.equal((await reviewRequest(DB, 'POST', { ...rating, ...change, id: crypto.randomUUID() })).status, 400)
+    }
+    for (let count = 0; count < 5; count++) {
+      const input = { ...rating, id: count ? crypto.randomUUID() : rating.id }
+      const response = await reviewRequest(DB, 'POST', input)
+      assert.equal(response.status, 201)
+      assert.deepEqual(await response.json(), { saved: true, id: input.id, status: 'published' })
+      assert.equal((await reviewRequest(DB, 'POST', input)).status, 200)
+    }
     const filtered = await (await reviewRequest(DB, 'GET', undefined, { query: `?hotelId=${receipt.hotelId}` })).json()
-    assert.equal(filtered.total, 1)
+    assert.equal(filtered.total, 5)
     assert.equal(filtered.averageRating, 4)
     assert.equal(filtered.reviews[0].hotelId, receipt.hotelId)
-    assert.equal(filtered.reviews[0].reviewerName, '')
+    assert.equal(filtered.reviews[0].reviewerName, 'Hotel guest')
+    assert.equal(filtered.reviews[0].bookingId, '')
+    assert.equal(filtered.reviews[0].title, '')
     const listing = await (await hotelRequest(DB, bucket, 'GET', undefined)).json()
     assert.equal(listing.hotels[0].hotelId, receipt.hotelId)
     assert.equal(listing.hotels[0].averageRating, 4)
-    assert.equal(listing.hotels[0].reviewCount, 1)
+    assert.equal(listing.hotels[0].reviewCount, 5)
     const unavailable = { ...rating, id: crypto.randomUUID(), hotelId: 'AVELOF_HTL_99999SRG' }
     assert.equal((await reviewRequest(DB, 'POST', unavailable)).status, 404)
   } finally { DB.sqlite.close() }

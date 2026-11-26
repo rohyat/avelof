@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { discountedHotelRoomPrice } from '../../src/services/pricing.ts'
 import { hotelDetailsSchema } from '../../src/services/hotelSchema.ts'
-import { hotelLocationCodes, hotelPhotoCount, hotelPhotoDimension, hotelPhotoLimit } from '../../src/data/hotelRegistration.ts'
+import { hotelLocationCodes, propertyTypeOf, stayIdPrefix, hotelPhotoCount, hotelPhotoDimension, hotelPhotoLimit } from '../../src/data/hotelRegistration.ts'
 import { partnerStatusAccessCode } from '../../src/services/partnerAccessCode.ts'
 import type { AccessEnv } from './enquiryAccess.ts'
 
@@ -20,8 +20,8 @@ export async function assignHotelId(DB: D1Database, row: HotelRow) {
   const details = hotelDetailsSchema.parse(JSON.parse(row.details_json))
   await DB.prepare('INSERT INTO hotel_reference_numbers (registration_id, legacy_hotel_id) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM hotel_reference_numbers WHERE registration_id = ?)')
     .bind(row.id, legacyHotelId(row.id), row.id).run()
-  await DB.prepare("UPDATE hotel_registrations SET hotel_id = 'AVELOF_HTL_' || printf('%05d', (SELECT number + 10000 FROM hotel_reference_numbers WHERE registration_id = ?)) || ? WHERE id = ?")
-    .bind(row.id, hotelLocationCodes[details.location], row.id).run()
+  await DB.prepare("UPDATE hotel_registrations SET hotel_id = ? || printf('%05d', (SELECT number + 10000 FROM hotel_reference_numbers WHERE registration_id = ?)) || ? WHERE id = ?")
+    .bind(stayIdPrefix(propertyTypeOf(details)), row.id, hotelLocationCodes[details.location], row.id).run()
   return DB.prepare(`SELECT ${hotelColumns} FROM hotel_registrations WHERE id = ?`).bind(row.id).first<HotelRow>()
 }
 export async function resolveHotelId(DB: D1Database, hotelId: string) {

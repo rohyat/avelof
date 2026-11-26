@@ -1,7 +1,13 @@
 import { hotelLocationsByRegion } from './regions.ts'
 
 export const registrationLocations = [...hotelLocationsByRegion.Kashmir, ...hotelLocationsByRegion.Ladakh, ...hotelLocationsByRegion.Jammu] as const
-export function hotelAreaOptions(destination: string): string[] {
+export const propertyTypes = ['Hotel', 'Houseboat'] as const
+export type PropertyType = (typeof propertyTypes)[number]
+export const propertyTypeOf = (stay: { propertyType?: string }): PropertyType => stay.propertyType === 'Houseboat' ? 'Houseboat' : 'Hotel'
+export const houseboatLocations = ['Srinagar'] as const
+export const houseboatAreas = ['Dal Lake', 'Nigeen Lake', 'Jhelum River'] as const
+export function hotelAreaOptions(destination: string, propertyType: PropertyType = 'Hotel'): string[] {
+  if (propertyType === 'Houseboat') return destination === 'Srinagar' ? [...houseboatAreas] : []
   if (destination === 'Gulmarg') return ['Main Gulmarg', 'Tangmarg']
   if (destination === 'Pahalgam') return ['Main Pahalgam', 'Rafting Point']
   if (destination === 'Srinagar') return ['Near Dal Lake', 'Near Airport', 'Main Srinagar']
@@ -28,9 +34,13 @@ export const hotelLocationCodes: Record<(typeof registrationLocations)[number], 
   Jammu: 'JMU', Katra: 'KTR', Patnitop: 'PTP', Udhampur: 'UDH', Reasi: 'RSI', Bhaderwah: 'BHD',
   Kishtwar: 'KSW', Rajouri: 'RJR', Poonch: 'PNC', Kathua: 'KTH', Samba: 'SMB', Ramban: 'RMB',
 }
-export const hotelIdPattern = /^AVELOF_HTL_[0-9]{5,10}[A-Z]{3}$/
-export const hotelLookupIdPattern = /^(?:AVELOF_HTL_[0-9]{5,10}[A-Z]{3}|AVELOF_HTL_[A-F0-9]{32})$/
+export const hotelIdPattern = /^AVELOF_(?:HTL|HB)_[0-9]{5,10}[A-Z]{3}$/
+export const hotelLookupIdPattern = /^(?:AVELOF_(?:HTL|HB)_[0-9]{5,10}[A-Z]{3}|AVELOF_HTL_[A-F0-9]{32})$/
+export const stayIdPrefix = (propertyType: PropertyType) => propertyType === 'Houseboat' ? 'AVELOF_HB_' : 'AVELOF_HTL_'
 export const hotelCategories = ['Deluxe', 'Premium', 'Premium Plus', 'Diamond', 'Luxury'] as const
+export const houseboatCategories = ['Standard Houseboat', 'Deluxe Houseboat', 'Premium Houseboat', 'Luxury Houseboat'] as const
+export const stayCategories = [...hotelCategories, ...houseboatCategories] as const
+export const categoriesFor = (propertyType: PropertyType): readonly string[] => propertyType === 'Houseboat' ? houseboatCategories : hotelCategories
 export const hotelPriceRanges = Array.from({ length: 9 }, (_, index) => {
   const minimum = 1500 + index * 1000
   const maximum = minimum + 1000
@@ -42,18 +52,34 @@ export const hotelCategoryLabels = {
   'Premium Plus': 'Premium Plus - 3-star Plus',
   Diamond: 'Diamond - 4-star',
   Luxury: 'Luxury - 5-star',
-} satisfies Record<(typeof hotelCategories)[number], string>
+  'Standard Houseboat': 'Standard Houseboat',
+  'Deluxe Houseboat': 'Deluxe Houseboat',
+  'Premium Houseboat': 'Premium Houseboat',
+  'Luxury Houseboat': 'Luxury Houseboat',
+} satisfies Record<(typeof stayCategories)[number], string>
 export function hotelCategoryLabel(category: string) {
-  const tier = hotelCategories.find((value) => value === category)
+  const tier = stayCategories.find((value) => value === category)
   return tier ? hotelCategoryLabels[tier] : category
 }
-export const hotelRoomTypes = ['Standard', 'Deluxe', 'Premium', 'Family', 'Suite'] as const
+export const registrationRoomTypes = ['Deluxe', 'Premium', 'Family', 'Suite'] as const
+export const hotelRoomTypes = ['Standard', ...registrationRoomTypes] as const
 export const hotelRoomOccupancy = (roomType?: string) => roomType === 'Family' ? 4 : 2
 export const hotelRoomMealMultiplier = (roomType?: string) => roomType === 'Family' ? 2 : 1
 export const hotelRoomRateBasis = (roomType?: string) => `per room per night for ${hotelRoomOccupancy(roomType)} people`
 export const minimumHotelRooms = (people: number, roomType?: string) => Math.max(1, Math.ceil(people / hotelRoomOccupancy(roomType)))
-export const hotelHighlightOptions = ['Mountain views', 'Near the market', 'Near local attractions', 'Garden or outdoor space', 'On-site restaurant', 'Room service', 'Family-friendly stay', 'Centralised heating'] as const
-export const hotelAmenities = ['Wi-Fi', 'Parking', 'Restaurant', 'Room service', 'Hot water', 'Power backup', 'Lift', 'Wheelchair access', 'Air conditioning'] as const
+const roomComfortHighlights = ['Private attached bathrooms', 'In-room tea & coffee facilities'] as const
+export const hotelHighlightOptions = ['Mountain views', 'Near the market', 'Near local attractions', 'Garden or outdoor space', 'On-site restaurant', 'Room service', 'Family-friendly stay', 'Centralised heating', ...roomComfortHighlights, 'On-site cafe'] as const
+export const houseboatHighlightOptions = ['Lake views', 'Traditional walnut-wood interiors', 'Near the Boulevard', 'Family-friendly stay', 'Home-cooked Kashmiri meals', 'Peaceful location', ...roomComfortHighlights] as const
+export const highlightOptionsFor = (propertyType: PropertyType): readonly string[] => propertyType === 'Houseboat' ? houseboatHighlightOptions : hotelHighlightOptions
+export const houseboatOnlyAmenities = ['Shikara pick-up & drop', 'Lake-view sundeck', 'Whole-boat booking'] as const
+const hotelOnlyAmenities = ['Lift', 'Wheelchair access', 'Restaurant', 'On-site cafe'] as const
+export const hotelAmenities = ['Wi-Fi', 'Parking', 'Restaurant', 'Room service', 'Hot water', 'Power backup', 'Lift', 'Wheelchair access', 'Air conditioning', 'Private attached bathroom', 'Shower', 'Bathtub', 'Towels', 'Toiletries', 'Hair dryer', 'Electric kettle', 'Tea/coffee maker', 'Tea & coffee supplies', 'On-site cafe', ...houseboatOnlyAmenities] as const
+const basicAmenities = ['Private attached bathroom', 'Shower', 'Towels', 'Toiletries'] as const
+export const amenitiesFor = (propertyType: PropertyType): readonly (typeof hotelAmenities)[number][] => hotelAmenities.filter((amenity) =>
+  !basicAmenities.some((value) => value === amenity)
+  && (propertyType === 'Houseboat'
+    ? !hotelOnlyAmenities.some((value) => value === amenity)
+    : !houseboatOnlyAmenities.some((value) => value === amenity)))
 export const heatingOptions = ['Centralised heating', 'Hot & cold AC', 'Room heaters', 'No heating'] as const
 export const hotelMealPlans = ['Room only', 'Breakfast included', 'Breakfast and dinner included', 'All meals included'] as const
 export const hotelTaxLabel = 'Rates exclude GST'
