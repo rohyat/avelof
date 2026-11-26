@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowUp, Download, Plus, RefreshCw, Share2, Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { destinations, rentalCars } from '../data/catalog'
+import { itineraryTerms } from '../data/itineraryTerms'
 import { changeArrivalPlan, changeItineraryMeals, createItineraryDraft, dayStart, destinationImages, eligibleStayHotels, itineraryMealChoice, itineraryPackageDetails, itineraryPdfFilename, itineraryStays, overnightOptions, resizeItinerary, selectedStayHotels, stayDisplayName, synchronizeItinerary, updateDayPlan } from '../data/itineraryBuilder'
 import { formatItineraryRouteLeg, itineraryRouteLegs } from '../data/itineraryRoutes'
 import { itineraryDraftSchema, itineraryRoomTypes } from '../services/itineraryBuilderSchema'
@@ -268,6 +269,9 @@ export default function ItineraryBuilderPage() {
           </section>
           <section className="itinerary-editor-section"><h2>Before you travel</h2>{draft.tips.map((tip, index) => <div key={index} className="itinerary-day-editor"><label>Tip {index + 1} heading<input value={tip.title} maxLength={160} onChange={event => edit({ ...draft, tips: draft.tips.map((value, i) => i === index ? { ...value, title: event.target.value } : value) })} /></label><label>Tip {index + 1} advice<textarea value={tip.detail} maxLength={250} onChange={event => edit({ ...draft, tips: draft.tips.map((value, i) => i === index ? { ...value, detail: event.target.value } : value) })} /></label><button type="button" className="button button-outline" onClick={() => edit({ ...draft, tips: draft.tips.filter((_, i) => i !== index) })}>Remove tip</button></div>)}
             <button type="button" className="button button-outline" disabled={draft.tips.length >= 8} onClick={() => edit({ ...draft, tips: [...draft.tips, { title: 'Travel tip', detail: 'Add your advice here.' }] })}>Add travel tip</button>
+            <h3>Terms and conditions</h3>
+            <p>These terms are included in every itinerary PDF, even if all travel tips are removed.</p>
+            {itineraryTerms.map(term => <div key={term.title}><strong>{term.title}</strong><p>{term.detail}</p></div>)}
           </section>
         </fieldset>
         <aside className="itinerary-builder-preview" id="itinerary-preview" aria-label="PDF preview">

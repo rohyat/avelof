@@ -5,6 +5,7 @@ import { arrivalDay, changeArrivalPlan, changeItineraryMeals, createItineraryDra
 import { destinations, rentalCars } from '../src/data/catalog.ts'
 import { itineraryContact } from '../src/config.ts'
 import { itineraryDraftSchema } from '../src/services/itineraryBuilderSchema.ts'
+import { itineraryTerms } from '../src/data/itineraryTerms.ts'
 import { buildEditableItineraryPdf } from '../src/services/builderItineraryPdf.ts'
 import { formatItineraryRouteLeg, itineraryRouteLegs, routeEstimate } from '../src/data/itineraryRoutes.ts'
 
@@ -282,6 +283,12 @@ test('dynamic PDF embeds selected hotels and preserves the design, links and edi
     assert.equal(tipsPages.length, 1)
     assert.ok(tipsPages[0].includes('Mobile network') && tipsPages[0].includes('Documents'))
     assert.ok(!tipsPages[0].includes('KNOW YOUR PACKAGE'))
+    assert.ok(tipsPages[0].includes('Terms and conditions.'), 'standard guidance includes terms on the same page')
+    for (const term of itineraryTerms) assert.ok(tipsPages[0].includes(term.title), term.title)
+    const guidanceText = pageText(tipsPages[0])
+    for (const phrase of ['Booking payments are non-refundable if you cancel.', 'provide supporting proof', 'will verify it', 'may consider a refund', 'refund is not guaranteed', 'separate unused union-cab refund']) {
+      assert.ok(guidanceText.includes(phrase), phrase)
+    }
     const noRooms = fresh()
     noRooms.roomsPerNight = null
     noRooms.roomTypes = []
@@ -289,6 +296,11 @@ test('dynamic PDF embeds selected hotels and preserves the design, links and edi
     noRooms.packageItems.find(item => item.id === 'accommodation').included = false
     const excludedPdf = await buildEditableItineraryPdf(noRooms, [])
     assert.ok(!excludedPdf.internal.pages.slice(1).some(page => page.join('\n').includes('ROOMS PER NIGHT')))
+    const noTipsPdf = await buildEditableItineraryPdf({ ...fresh(), tips: [] }, [])
+    const noTipsPages = noTipsPdf.internal.pages.slice(1).map(page => page.join('\n'))
+    const noTipsTerms = noTipsPages.find(page => page.includes('Cancellation and medical emergencies'))
+    assert.ok(noTipsTerms && noTipsTerms.includes('Before you travel.'), 'terms remain present when every tip is removed')
+    for (const term of itineraryTerms) assert.ok(noTipsTerms.includes(term.title), term.title)
     for (const [roomTypes, selection, expected] of [[['Double', 'Double', 'Double'], [false, false, false], '3 DOUBLE'], [['Double', 'Double', 'Double'], [true, true, true], '3 DOUBLE + EXTRA BED'], [['Triple', 'Family', 'Triple'], [false, false, false], '2 TRIPLE, 1 FAMILY']]) {
       const arrangementPdf = await buildEditableItineraryPdf({ ...fresh(), roomsPerNight: 3, roomTypes, roomExtraBeds: selection }, [])
       const text = arrangementPdf.internal.pages.slice(1).flatMap(page => [...page.join('\n').matchAll(/\((.*?)\) Tj/g)].map(match => match[1])).join(' ')
@@ -301,6 +313,10 @@ test('dynamic PDF embeds selected hotels and preserves the design, links and edi
     const longTipsPages = longPdf.internal.pages.slice(1).map(page => page.join('\n')).filter(page => page.includes('Before you travel.'))
     assert.equal(longTipsPages.length, 1, 'all eight long tips remain on one dedicated page')
     for (let index = 1; index <= 8; index++) assert.ok(longTipsPages[0].includes(`Travel tip ${index}`))
+    const longPages = longPdf.internal.pages.slice(1).map(page => page.join('\n'))
+    const termsIndex = longPages.findIndex(page => page.includes('Cancellation and medical emergencies'))
+    assert.ok(termsIndex >= longPages.indexOf(longTipsPages[0]), 'terms follow the travel guidance even when continued')
+    for (const term of itineraryTerms) assert.ok(longPages[termsIndex].includes(term.title), term.title)
   } finally { globalThis.fetch = nativeFetch }
 })
 

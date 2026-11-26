@@ -736,8 +736,14 @@ Page counts adapt to the journey.
 Day descriptions use 11.5pt text, 10pt highlights and 16pt serif headings;
 card heights and pagination expand for these more readable sizes.
 The package checklist invites guests to request additional inclusions and retains
-the union-cab refund note. Travel tips occupy their own page; if edited tips cannot
-fit even at the minimum font size, the builder asks for shorter text.
+the union-cab refund note. The travel guidance includes fixed terms in every admin
+itinerary: booking payments are non-refundable on cancellation, while a refund
+may be considered after verification of proof of a medical emergency; it is not
+guaranteed. The separately stated unused union-cab refund remains applicable.
+The terms also cover booking confirmation, availability and package exclusions.
+They follow the travel tips, on a continuation page when necessary, and remain
+present even if all tips are removed. If edited tips cannot fit even at the
+minimum font size, the builder asks for shorter text.
 Download is available only for the current, valid preview; photo loading errors
 are visible and retryable. Phone, website,
 email and the Plan a trip customization link remain clickable. The builder's
