@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom'
 import { Menu, Moon, Sun, X } from 'lucide-react'
+import MaintenanceBanner from './MaintenanceBanner'
 import { business } from '../config'
 import { rentalCars, tourPackages } from '../data/catalog'
 import BookingModal from './BookingModal'
@@ -358,6 +359,7 @@ export default function SiteLayout({ maintenanceMode }: { maintenanceMode?: bool
         </nav>
       </header>
       <main>
+        {maintenanceMode && <MaintenanceBanner />}
         <Outlet context={{ openBooking } satisfies SiteContext} />
       </main>
       <a className="whatsapp-float" href={createWhatsAppUrl(`Hello AVELOF, I would like help planning my ${destinationName} journey.`)} target="_blank" rel="noreferrer" aria-label="Chat with AVELOF on WhatsApp" title="Chat with AVELOF on WhatsApp"><WhatsAppIcon size={28} /></a>

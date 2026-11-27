@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
-import MaintenanceBanner from './components/MaintenanceBanner'
 import SiteLayout from './components/SiteLayout'
 import PricingProvider from './components/PricingProvider'
 import { AboutPage, CollectionPage, DetailPage, HomePage, NotFoundPage, ReviewsPage } from './pages/Pages'
@@ -42,7 +41,6 @@ export default function App() {
   
   return (
     <PricingProvider>
-      {maintenanceMode && <MaintenanceBanner />}
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route element={<SiteLayout maintenanceMode={maintenanceMode} />}>
