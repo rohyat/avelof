@@ -61,7 +61,7 @@ function SectionHeading({ eyebrow, title, copy, link, to }: { eyebrow: string; t
   return <div className="section-heading"><div><Eyebrow>{eyebrow}</Eyebrow><h2>{title}</h2>{copy && <p>{copy}</p>}</div>{link && to && <Link className="text-link" to={to}>{link}<ArrowRight size={16} /></Link>}</div>
 }
 
-export function CatalogCard({ item: initialItem, kind }: { item: CatalogItem; kind: CatalogKind }) {
+export function CatalogCard({ item: initialItem, kind, disabled }: { item: CatalogItem; kind: CatalogKind; disabled?: boolean }) {
   const openBooking = useBooking()
   const region = regionFromPath(useLocation().pathname)
   const routeFor: Record<CatalogKind, string> = { package: '/tour-packages', car: `${regionBasePath(region)}/car-rentals`, hotel: `${regionBasePath(region)}/hotels` }
@@ -74,7 +74,7 @@ export function CatalogCard({ item: initialItem, kind }: { item: CatalogItem; ki
   const underDevelopment = item.kind === 'package' && item.underDevelopment
   const hotelCardFeatures = item.kind === 'hotel' ? [...new Set([...item.highlights, ...item.facilities])].slice(0, 2) : []
   return (
-    <article className={`catalog-card${underDevelopment ? ' is-under-development' : ''}${item.kind === 'car' ? ' vehicle-card' : ''}${item.kind === 'hotel' ? ' hotel-card' : ''}${item.kind === 'package' ? ' package-card' : ''}`}>
+    <article className={`catalog-card${underDevelopment ? ' is-under-development' : ''}${item.kind === 'car' ? ' vehicle-card' : ''}${item.kind === 'hotel' ? ' hotel-card' : ''}${item.kind === 'package' ? ' package-card' : ''}${disabled ? ' is-disabled' : ''}`}>
       {underDevelopment ? <div className="catalog-image"><img src={item.image} alt={`${item.name}, ${item.location}`} loading="lazy" /><span className="image-tag">Under development</span></div> : <Link to={detailUrl} className="catalog-image">{item.kind === 'hotel' && item.registeredHotelId ? <RotatingPhotos photos={item.gallery.map((photo, index) => ({ image: photo, alt: `${item.name}, hotel-provided photo ${index + 1}` }))} className="catalog-photo-rotation" label={`${item.name} hotel photos`} /> : <img src={item.image} alt={item.kind === 'hotel' ? 'Illustrative bedroom photo' : `${item.name}, ${item.location}`} loading="lazy" />}<span className={item.kind === 'hotel' ? 'image-tag hotel-category-tag' : 'image-tag'}>{item.kind === 'hotel' ? hotelCategoryLabel(item.category) : item.category}</span>{item.kind === 'hotel' && <span className="hotel-image-location"><MapPin size={13} aria-hidden="true" />{item.location.split('·')[0]}</span>}<span className="image-arrow"><ArrowUpRight size={17} /></span></Link>}
       <div className="catalog-content">{item.kind !== 'hotel' && <div className="catalog-meta"><span><MapPin size={13} /> {item.location.split('·')[0]}</span>{item.kind === 'package' && <span>{item.duration}</span>}</div>}
         {item.kind === 'package' && item.badge && <p className="eyebrow">{item.badge}</p>}
@@ -100,7 +100,7 @@ export function CatalogCard({ item: initialItem, kind }: { item: CatalogItem; ki
 }
 
 export function HomePage() {
-  const openBooking = useBooking()
+  const { openBooking, maintenanceMode } = useOutletContext<SiteContext>()
   const tourPackages = useTourPackages()
   const [showAllShortcuts, setShowAllShortcuts] = useState(false)
 
@@ -141,7 +141,7 @@ export function HomePage() {
       </div>
     </section>
     <TripPlanner />
-    <section className="section page-width feature-section"><SectionHeading eyebrow="Everything for your Kashmir holiday" title={'Your stay. Your journey.\nYour Kashmir experience.'} copy="From handpicked stays and comfortable transportation to thoughtfully arranged tours, bring your Kashmir holiday together in one place." link="See all packages" to="/tour-packages" /><div className="catalog-grid">{tourPackages.slice(0, 3).map((item) => <CatalogCard key={item.id} item={item} kind="package" />)}</div></section>
+    <section className="section page-width feature-section"><SectionHeading eyebrow="Everything for your Kashmir holiday" title={'Your stay. Your journey.\nYour Kashmir experience.'} copy="From handpicked stays and comfortable transportation to thoughtfully arranged tours, bring your Kashmir holiday together in one place." link="See all packages" to="/tour-packages" /><div className="catalog-grid">{tourPackages.slice(0, 3).map((item) => <CatalogCard key={item.id} item={item} kind="package" disabled={maintenanceMode} />)}</div></section>
     <section className="section page-width split-promo"><div className="promo-photo"><img src={rentalCars[1].image} alt="Comfortable vehicle for Kashmir mountain travel" loading="lazy" /><span>THE VALLEY, YOUR WAY</span></div><div className="promo-copy"><Eyebrow>Go at your own pace</Eyebrow><h2>Good roads.<br /><em>Better company.</em></h2><p>From a quick Srinagar pickup to a week on the mountain roads, travel with a local driver who knows the turns and the stories.</p><div className="service-points"><span><Check size={15} /> Comfortable vehicles</span><span><Check size={15} /> Local, experienced drivers</span><span><Check size={15} /> Routes made around you</span></div><Link className="button button-dark" to="/car-rentals">Explore car rentals <ArrowRight size={16} /></Link></div></section>
     <section className="stay-strip"><div className="page-width stay-content"><div><Eyebrow>Stay a little longer</Eyebrow><h2>From lake mornings<br />to mountain evenings.</h2><p>Explore approved hotels and houseboats, with room rates and optional meals shown by each property.</p><Link className="button button-ivory" to="/hotels">Find your stay <ArrowRight size={16} /></Link></div><div className="stay-image"><BedDouble size={120} strokeWidth={1} aria-hidden="true" /></div></div></section>
     <section className="final-cta page-width"><div><Eyebrow>Your Kashmir, your way</Eyebrow><h2>Let’s make room<br /><em>for the unexpected.</em></h2></div><div><p>Tell us what you’re dreaming about. We’ll help shape the rest.</p><button className="button button-dark" onClick={() => openBooking('package')}>Start a conversation <ArrowUpRight size={16} /></button></div></section>

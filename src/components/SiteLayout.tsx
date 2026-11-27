@@ -16,6 +16,7 @@ import { ladakhJourneys } from '../data/ladakhJourneys'
 
 export interface SiteContext {
   openBooking: (kind: BookingKind, selectedItem?: string) => void
+  maintenanceMode?: boolean
 }
 
 const navItems = [
@@ -360,7 +361,7 @@ export default function SiteLayout({ maintenanceMode }: { maintenanceMode?: bool
       </header>
       <main>
         {maintenanceMode && <MaintenanceBanner />}
-        <Outlet context={{ openBooking } satisfies SiteContext} />
+        <Outlet context={{ openBooking, maintenanceMode } satisfies SiteContext} />
       </main>
       <a className="whatsapp-float" href={createWhatsAppUrl(`Hello AVELOF, I would like help planning my ${destinationName} journey.`)} target="_blank" rel="noreferrer" aria-label="Chat with AVELOF on WhatsApp" title="Chat with AVELOF on WhatsApp"><WhatsAppIcon size={28} /></a>
       <footer className="site-footer">
