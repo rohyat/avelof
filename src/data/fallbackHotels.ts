@@ -150,5 +150,8 @@ export const fallbackHotels = [
   }
 ];
 
-export const fallbackHotelsLadakh = fallbackHotels.filter(h => h.location.includes("Ladakh"));
+export const fallbackHotelsLadakh = [
+  fallbackHotels[3], // Himalayan Eco-Lodge
+  fallbackHotels[4]  // Nubra Valley Camp
+];
 export const fallbackHotelsKashmir = fallbackHotels.filter(h => h.location.includes("Kashmir"));
