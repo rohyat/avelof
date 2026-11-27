@@ -22,6 +22,7 @@ const navItems = [
   ['Destinations', '/destinations'], ['Check Bookings', '/my-enquiries'],
   ['About & Contact', '/about'],
 ]
+const disabledNavItemsOnMaintenance = ['/tour-packages', '/local-trips', '/car-rentals', '/hotels']
 const currentYear = new Date().getFullYear()
 const scrollStoragePrefix = 'avelof:scroll:'
 
@@ -348,7 +349,12 @@ export default function SiteLayout({ maintenanceMode }: { maintenanceMode?: bool
         </div>
         <button ref={menuToggleRef} className="icon-button menu-toggle" aria-expanded={menuOpen} aria-controls="main-navigation" aria-label={menuOpen ? 'Close menu' : 'Open menu'} onClick={() => { const next = !menuOpen; setMenuOpen(next); if (next) window.dispatchEvent(new Event('avelof:pause-review-carousel')) }}>{menuOpen ? <X /> : <Menu />}</button>
         <nav ref={menuRef} id="main-navigation" className={menuOpen ? 'main-nav is-open' : 'main-nav'} aria-label="Main navigation">
-          {visibleNavItems.map(([label, href]) => <NavLink key={href} to={href} onClick={closeMenu}>{label}</NavLink>)}
+          {visibleNavItems.map(([label, href]) => {
+            const isDisabled = maintenanceMode && disabledNavItemsOnMaintenance.includes(href)
+            return isDisabled 
+              ? <span key={href} className="nav-link-disabled" title="Temporarily disabled during maintenance">{label}</span>
+              : <NavLink key={href} to={href} onClick={closeMenu}>{label}</NavLink>
+          })}
         </nav>
       </header>
       <main>
