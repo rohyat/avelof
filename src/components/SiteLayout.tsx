@@ -197,6 +197,81 @@ export default function SiteLayout() {
       : pageDetails[location.pathname] ?? { title: `AVELOF | ${regionFromPath(location.pathname)} Travel`, description: `Discover thoughtful travel experiences in ${regionFromPath(location.pathname)} with AVELOF.` }
     document.title = details.title
     document.querySelector('meta[name="description"]')?.setAttribute('content', details.description)
+    
+    // Update or create Open Graph tags
+    const updateMetaTag = (property: string, content: string) => {
+      let tag = document.querySelector(`meta[property="${property}"]`)
+      if (!tag) {
+        tag = document.createElement('meta')
+        tag.setAttribute('property', property)
+        document.head.appendChild(tag)
+      }
+      tag.setAttribute('content', content)
+    }
+    
+    updateMetaTag('og:title', details.title)
+    updateMetaTag('og:description', details.description)
+    updateMetaTag('og:url', window.location.href)
+    
+    // Add structured data for Organization (home page only)
+    if (location.pathname === '/') {
+      let script = document.querySelector('script[type="application/ld+json"][data-type="organization"]') as HTMLScriptElement
+      if (!script) {
+        script = document.createElement('script')
+        script.type = 'application/ld+json'
+        script.setAttribute('data-type', 'organization')
+        document.head.appendChild(script)
+      }
+      script.textContent = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        'name': 'AVELOF',
+        'url': 'https://avelof.pages.dev',
+        'logo': 'https://avelof.pages.dev/app-icon-512.png',
+        'description': 'Thoughtfully planned Kashmir and Ladakh journeys with quality stays, comfortable transport and local expertise',
+        'address': {
+          '@type': 'PostalAddress',
+          'addressRegion': 'Jammu & Kashmir',
+          'addressCountry': 'IN'
+        },
+        'contactPoint': {
+          '@type': 'ContactPoint',
+          'contactType': 'Sales'
+        },
+        'sameAs': ['https://www.instagram.com/avelof']
+      })
+    }
+    
+    // Add LocalBusiness schema
+    if (location.pathname === '/about') {
+      let script = document.querySelector('script[type="application/ld+json"][data-type="localbusiness"]') as HTMLScriptElement
+      if (!script) {
+        script = document.createElement('script')
+        script.type = 'application/ld+json'
+        script.setAttribute('data-type', 'localbusiness')
+        document.head.appendChild(script)
+      }
+      script.textContent = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'LocalBusiness',
+        'name': 'AVELOF',
+        'image': 'https://avelof.pages.dev/app-icon-512.png',
+        'description': 'Kashmir and Ladakh Travel Planner',
+        'url': 'https://avelof.pages.dev',
+        'address': {
+          '@type': 'PostalAddress',
+          'addressLocality': 'Srinagar',
+          'addressRegion': 'Jammu & Kashmir',
+          'addressCountry': 'IN'
+        },
+        'geo': {
+          '@type': 'GeoCoordinates',
+          'latitude': '34.1526',
+          'longitude': '77.5771'
+        },
+        'sameAs': ['https://www.instagram.com/avelof']
+      })
+    }
   }, [location.pathname])
 
   const openBooking = (kind: BookingKind, selectedItem?: string) => setBooking({ kind, item: selectedItem })
