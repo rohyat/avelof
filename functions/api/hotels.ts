@@ -8,6 +8,7 @@ import { adminHotel, assignHotelId, deleteRegistrationPhotos, hotelAccessCode, h
 import type { HotelEnv, HotelRow } from '../_lib/hotelRegistration.ts'
 import { regions } from '../../src/data/regions.ts'
 import { listingRegionSql } from '../_lib/regionalListings.ts'
+import { fallbackHotels, fallbackHotelsKashmir, fallbackHotelsLadakh } from '../../src/data/fallbackHotels.ts'
 
 const listSchema = z.object({
   scope: z.enum(['public', 'admin']).default('public'),
@@ -22,7 +23,18 @@ const deletionSchema = z.object({ id: z.uuidv4().toLowerCase(), version: z.numbe
 export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUntil }) => {
   if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) return privateReply({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST, PATCH, DELETE' })
   if (request.method !== 'GET' && !sameOrigin(request)) return privateReply({ error: 'Origin not allowed.' }, 403)
-  if (!env.DB) return privateReply({ error: 'Hotel registration storage is unavailable.' }, 503)
+  if (!env.DB) {
+    if (request.method !== 'GET') return privateReply({ error: 'Hotel registration storage is unavailable.' }, 503)
+    // For GET requests, serve fallback data
+    const parsed = listSchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
+    if (!parsed.success) return privateReply({ error: 'Invalid hotel filters.' }, 400)
+    const { page, region } = parsed.data
+    const hotels = region === 'Ladakh' ? fallbackHotelsLadakh : (region === 'Kashmir' ? fallbackHotelsKashmir : fallbackHotels)
+    const pageSize = 25
+    const start = (page - 1) * pageSize
+    const paginatedHotels = hotels.slice(start, start + pageSize)
+    return privateReply({ hotels: paginatedHotels, total: hotels.length, page, pageSize })
+  }
   const DB = env.DB
   let uploadedKeys: string[] = []
   let savedToDatabase = false
