@@ -1,0 +1,4 @@
+[env.pages]
+d1_databases = [
+  { binding = "DB", database_name = "avelof-enquiries", database_id = "f1e267ee-cc0f-49c4-ae45-37118e44e3c5" }
+]

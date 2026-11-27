@@ -1,5 +1,6 @@
 import { business, itineraryContact } from '../config.ts'
 import { kashmirPhotoGallery as gallery } from '../data/kashmirPhotoGallery.ts'
+import { itineraryTerms } from '../data/itineraryTerms.ts'
 import { itineraryPackageDetails, itineraryStays, selectedStayHotels, stayDisplayName } from '../data/itineraryBuilder.ts'
 import { formatItineraryRouteLeg, itineraryRouteLegs } from '../data/itineraryRoutes.ts'
 import { itineraryDraftSchema } from './itineraryBuilderSchema.ts'
@@ -296,23 +297,26 @@ export async function buildEditableItineraryPdf(input: ItineraryDraft, hotels: H
     if (y + height > 266) { page('YOUR PACKAGE', 'A few useful details.', ''); y = 72 }
     y += text(note.value, 14, y, { size: note.size, bold: note.bold, width: 182, color: note.bold ? forest : muted }) + 4
   }
-  if (data.tips.length) {
-    page('A FEW SIMPLE ESSENTIALS', 'Before you travel.', 'Pack well. Stay connected. Enjoy Kashmir.')
+  {
+    page('A FEW SIMPLE ESSENTIALS', 'Before you travel.', 'Travel guidance and terms for your journey.')
     y = 70
     const pairs = Array.from({ length: Math.ceil(data.tips.length / 2) }, (_, index) => data.tips.slice(index * 2, index * 2 + 2))
-    const availableHeight = 263 - y - (pairs.length - 1) * 5
-    let detailSize = 10
+    const termsHeight = 14 + itineraryTerms.reduce((sum, term) =>
+      sum + 8 + lines(term.detail, 168, 9).length * 9 * 0.45864 + 3, 0)
     const heights = () => pairs.map(pair => Math.max(...pair.map(tip =>
       18 + lines(tip.title, 79, 12, true).length * 5.51 + lines(tip.detail, 79, detailSize).length * detailSize * 0.45864)))
-    let minimumHeights = heights()
-    while (minimumHeights.reduce((sum, height) => sum + height, 0) > availableHeight && detailSize > 7) {
-      detailSize -= 0.5
-      minimumHeights = heights()
+    let detailSize = 10
+    const tipsSpace = () => heights().reduce((sum, height) => sum + height, 0) + Math.max(0, pairs.length - 1) * 5
+    const availableHeight = 263 - y
+    while (tipsSpace() + (pairs.length ? 7 : 0) + termsHeight > availableHeight && detailSize > 9) detailSize -= 0.5
+    const together = tipsSpace() + (pairs.length ? 7 : 0) + termsHeight <= availableHeight
+    if (!together) {
+      while (tipsSpace() > availableHeight && detailSize > 7) detailSize -= 0.5
+      if (tipsSpace() > availableHeight) throw new Error('Shorten the travel tips so they fit on one page.')
     }
-    const remaining = availableHeight - minimumHeights.reduce((sum, height) => sum + height, 0)
-    if (remaining < 0) throw new Error('Shorten the travel tips so they fit on one page.')
+    const minimumHeights = heights()
     pairs.forEach((pair, row) => {
-      const height = minimumHeights[row] + remaining / pairs.length
+      const height = minimumHeights[row]
       pair.forEach((tip, index) => {
         const x = 14 + index * 93
         box(x, y, 89, height, pale, 1); box(x, y, 1.4, height, gold)
@@ -321,6 +325,19 @@ export async function buildEditableItineraryPdf(input: ItineraryDraft, hotels: H
       })
       y += height + 5
     })
+    if (!together) {
+      page('BEFORE YOU TRAVEL', 'Terms and conditions.', 'Please review these terms for your journey.')
+      y = 70
+    } else {
+      if (pairs.length) y += 2
+      text('Terms and conditions.', 14, y + 7, { size: 18, serif: true, color: forest })
+      y += 14
+    }
+    for (const term of itineraryTerms) {
+      text(term.title, 19, y + 4, { size: 9.5, bold: true, color: forest })
+      y += 8
+      y += text(term.detail, 19, y, { size: 9, width: 168, color: deep }) + 3
+    }
   }
   pdf.addPage(); box(0, 0, 210, 297, deep)
   image(gallery.houseboat.image, 0, 0, 210, 108)
