@@ -2,7 +2,9 @@
 @import "tailwindcss";
 
 .maintenance-banner {
-  position: static;
+  position: sticky;
+  top: 0;
+  z-index: 999;
   width: 100%;
   background: #dc2626;
   border-bottom: 3px solid #991b1b;
