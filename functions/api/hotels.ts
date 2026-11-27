@@ -22,7 +22,10 @@ const deletionSchema = z.object({ id: z.uuidv4().toLowerCase(), version: z.numbe
 export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUntil }) => {
   if (!['GET', 'POST', 'PATCH', 'DELETE'].includes(request.method)) return privateReply({ error: 'Method not allowed.' }, 405, { Allow: 'GET, POST, PATCH, DELETE' })
   if (request.method !== 'GET' && !sameOrigin(request)) return privateReply({ error: 'Origin not allowed.' }, 403)
-  if (!env.DB) return privateReply({ error: 'Hotel registration storage is unavailable.' }, 503)
+  if (!env.DB) {
+    console.error('DB binding not found in env', { keys: Object.keys(env) })
+    return privateReply({ error: 'Hotel registration storage is unavailable.' }, 503)
+  }
   const DB = env.DB
   
   // Handle GET requests separately from mutation operations
@@ -43,15 +46,16 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       const discountPercent = admin ? 0 : (await loadPricingSettings(DB)).discountPercent
       return privateReply({ hotels: rows.results.map((row) => admin ? adminHotel(row) : publicHotel(row, discountPercent)), total: total?.total ?? 0, page, pageSize: 25 })
     } catch (err) {
-      // Database query failed, fall back to sample data for public GET requests
-      console.error('Hotel listing query failed', err)
+      // Database query failed, fall back to empty list for public GET requests
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      console.error('Hotel listing query failed', { message: errorMsg, error: err })
       const parsed = listSchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
       if (!parsed.success) return privateReply({ error: 'Invalid hotel filters.' }, 400)
       const { scope } = parsed.data
-      if (scope !== 'public') return privateReply({ error: 'Hotel database is temporarily unavailable.' }, 503)
+      if (scope !== 'public') return privateReply({ error: `Hotel database error: ${errorMsg}` }, 503)
       
-      // Return empty list for now - sample data needs proper schema
-      return privateReply({ hotels: [], total: 0, page: 1, pageSize: 25 })
+      // Return empty list with error for debugging
+      return privateReply({ hotels: [], total: 0, page: 1, pageSize: 25, debug_error: errorMsg })
     }
   }
   

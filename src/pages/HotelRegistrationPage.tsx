@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRight, Check, FileImage, Handshake, Heart, RefreshCw, S
 import SubmissionProgress from '../components/SubmissionFeedback'
 import PartnerPhotoEditor from '../components/PartnerPhotoEditor'
 import UploadedPhoto from '../components/UploadedPhoto'
-import { amenitiesFor, categoriesFor, highlightOptionsFor, hotelAreaOptions, hotelLocationLabel, propertyTypeOf, propertyTypes } from '../data/hotelRegistration'
+import { amenitiesFor, categoriesFor, highlightOptionsFor, hotelAreaOptions, hotelLocationLabel, propertyTypeOf, propertyTypes, roomTypesFor } from '../data/hotelRegistration'
 import type { PropertyType } from '../data/hotelRegistration'
 import RegistrationReceipt from '../components/RegistrationReceipt'
 import RegistrationForm from '../components/RegistrationForm'
@@ -14,7 +14,7 @@ import PartnerRegistrationLayout from '../components/PartnerRegistrationLayout'
 import HotelFeature from '../components/HotelFeature'
 import OwnerPushNotifications from '../components/OwnerPushNotifications'
 import NumberStepper from '../components/NumberStepper'
-import { heatingOptions, hotelCategoryLabel, hotelMealPlans, hotelPhotoCount, hotelRoomRateBasis, registrationRoomTypes, hotelStatusLabels } from '../data/hotelRegistration'
+import { heatingOptions, hotelCategoryLabel, hotelMealPlans, hotelPhotoCount, hotelRoomRateBasis, hotelStatusLabels } from '../data/hotelRegistration'
 import { hotelLocationsByRegion, listingRegion, regionBasePath, regions } from '../data/regions'
 import type { Region } from '../data/regions'
 import { hotelPriceSchema, hotelStatusSchema, hotelSubmissionSchema } from '../services/hotelSchema'
@@ -55,7 +55,8 @@ export default function HotelRegistrationPage({ editing, accessCode, onCancel }:
   const inFlight = useRef(false)
   const photoVersion = useRef(0)
   const legacyRooms = Boolean(editing && !editing.roomRates)
-  const roomTypes = editing?.roomRates?.some((room) => room.roomType === 'Standard') ? ['Standard', ...registrationRoomTypes] as const : registrationRoomTypes
+  const baseDalLakeRoomTypes = roomTypesFor(area === 'custom' ? customArea.trim() : area)
+  const roomTypes = editing?.roomRates?.some((room) => room.roomType === 'Standard') ? ['Standard', ...baseDalLakeRoomTypes] as const : baseDalLakeRoomTypes
   const highlights = [...new Set([...highlightOptionsFor(propertyType), ...(editing?.highlights ?? [])])]
 
   async function selectPhotos(files: File[]) {

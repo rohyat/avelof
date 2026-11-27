@@ -10,7 +10,7 @@ export function hotelAreaOptions(destination: string, propertyType: PropertyType
   if (propertyType === 'Houseboat') return destination === 'Srinagar' ? [...houseboatAreas] : []
   if (destination === 'Gulmarg') return ['Main Gulmarg', 'Tangmarg']
   if (destination === 'Pahalgam') return ['Main Pahalgam', 'Rafting Point']
-  if (destination === 'Srinagar') return ['Near Dal Lake', 'Near Airport', 'Main Srinagar']
+  if (destination === 'Srinagar') return ['Dal Lake', 'Near Dal Lake', 'Near Airport', 'Main Srinagar']
   if (destination === 'Leh') return ['Main Leh', 'Changspa', 'Choglamsar']
   if (destination === 'Nubra Valley') return ['Hunder', 'Diskit', 'Sumur', 'Panamik']
   if (destination === 'Pangong') return ['Spangmik', 'Man', 'Merak']
@@ -61,9 +61,13 @@ export function hotelCategoryLabel(category: string) {
   const tier = stayCategories.find((value) => value === category)
   return tier ? hotelCategoryLabels[tier] : category
 }
-export const registrationRoomTypes = ['Deluxe', 'Premium', 'Family', 'Suite'] as const
+export const registrationRoomTypes = ['Deluxe', 'Premium', 'Family', 'Suite', 'Dal view'] as const
 export const hotelRoomTypes = ['Standard', ...registrationRoomTypes] as const
-export const hotelRoomOccupancy = (roomType?: string) => roomType === 'Family' ? 4 : 2
+export function roomTypesFor(exactLocation?: string): readonly (typeof registrationRoomTypes)[number][] {
+  const isDalLake = exactLocation === 'Dal Lake' || exactLocation === 'Near Dal Lake'
+  return isDalLake ? registrationRoomTypes : registrationRoomTypes.filter((rt) => rt !== 'Dal view') as unknown as (typeof registrationRoomTypes)[number][]
+}
+export const hotelRoomOccupancy = (roomType?: string) => roomType === 'Family' ? 4 : roomType === 'Dal view' ? 2 : 2
 export const hotelRoomMealMultiplier = (roomType?: string) => roomType === 'Family' ? 2 : 1
 export const hotelRoomRateBasis = (roomType?: string) => `per room per night for ${hotelRoomOccupancy(roomType)} people`
 export const minimumHotelRooms = (people: number, roomType?: string) => Math.max(1, Math.ceil(people / hotelRoomOccupancy(roomType)))
@@ -73,7 +77,8 @@ export const houseboatHighlightOptions = ['Lake views', 'Traditional walnut-wood
 export const highlightOptionsFor = (propertyType: PropertyType): readonly string[] => propertyType === 'Houseboat' ? houseboatHighlightOptions : hotelHighlightOptions
 export const houseboatOnlyAmenities = ['Shikara pick-up & drop', 'Lake-view sundeck', 'Whole-boat booking'] as const
 const hotelOnlyAmenities = ['Lift', 'Wheelchair access', 'Restaurant', 'On-site cafe'] as const
-export const hotelAmenities = ['Wi-Fi', 'Parking', 'Restaurant', 'Room service', 'Hot water', 'Power backup', 'Lift', 'Wheelchair access', 'Air conditioning', 'Private attached bathroom', 'Shower', 'Bathtub', 'Towels', 'Toiletries', 'Hair dryer', 'Electric kettle', 'Tea/coffee maker', 'Tea & coffee supplies', 'On-site cafe', ...houseboatOnlyAmenities] as const
+export const premiumAmenities = ['Gym', 'Swimming pool', 'Jacuzzi'] as const
+export const hotelAmenities = ['Wi-Fi', 'Parking', 'Restaurant', 'Room service', 'Hot water', 'Power backup', 'Lift', 'Wheelchair access', 'Air conditioning', 'Private attached bathroom', 'Shower', 'Bathtub', 'Towels', 'Toiletries', 'Hair dryer', 'Electric kettle', 'Tea/coffee maker', 'Tea & coffee supplies', 'On-site cafe', ...premiumAmenities, ...houseboatOnlyAmenities] as const
 const basicAmenities = ['Private attached bathroom', 'Shower', 'Towels', 'Toiletries'] as const
 export const amenitiesFor = (propertyType: PropertyType): readonly (typeof hotelAmenities)[number][] => hotelAmenities.filter((amenity) =>
   !basicAmenities.some((value) => value === amenity)

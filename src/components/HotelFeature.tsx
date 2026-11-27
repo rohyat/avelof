@@ -1,4 +1,4 @@
-import { Accessibility, Baby, Bath, BedDouble, BellRing, CarFront, Check, Coffee, Droplets, Flame, Landmark, MapPin, Mountain, ShowerHead, Snowflake, Trees, Utensils, Waves, Wifi, Wind, Zap, ArrowUpDown } from 'lucide-react'
+import { Accessibility, Baby, Bath, BedDouble, BellRing, CarFront, Check, Coffee, Droplets, Flame, Landmark, MapPin, Mountain, ShowerHead, Snowflake, Trees, Utensils, Waves, Wifi, Wind, Zap, ArrowUpDown, Dumbbell, Waves as Waves2, Sparkles } from 'lucide-react'
 
 export default function HotelFeature({ label }: { label: string }) {
   const Icon = /wi-?fi/i.test(label) ? Wifi
@@ -21,6 +21,9 @@ export default function HotelFeature({ label }: { label: string }) {
     : /family|child/i.test(label) ? Baby
     : /market|location|near/i.test(label) ? MapPin
     : /attraction|heritage/i.test(label) ? Landmark
+    : /gym/i.test(label) ? Dumbbell
+    : /swimming pool/i.test(label) ? Waves2
+    : /jacuzzi/i.test(label) ? Sparkles
     : /room|bed|suite/i.test(label) ? BedDouble : Check
   return <span className="hotel-feature"><Icon size={18} aria-hidden="true" /><span>{label}</span></span>
 }
