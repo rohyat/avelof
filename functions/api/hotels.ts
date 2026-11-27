@@ -39,6 +39,28 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
   let uploadedKeys: string[] = []
   let savedToDatabase = false
   let insertingId: string | null = null
+  
+  // For GET requests, test the database connection with a quick query before proceeding
+  if (request.method === 'GET') {
+    console.log('Testing database connection...')
+    try {
+      const testQuery = await DB.prepare('SELECT 1').first()
+      console.log('Database connection OK')
+      if (!testQuery) throw new Error('DB connection check failed')
+    } catch (err) {
+      console.log('Database unavailable, serving fallback:', err)
+      // Database is unavailable, serve fallback data
+      const parsed = listSchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
+      if (!parsed.success) return privateReply({ error: 'Invalid hotel filters.' }, 400)
+      const { page, region } = parsed.data
+      const hotels = region === 'Ladakh' ? fallbackHotelsLadakh : (region === 'Kashmir' ? fallbackHotelsKashmir : fallbackHotels)
+      const pageSize = 25
+      const start = (page - 1) * pageSize
+      const paginatedHotels = hotels.slice(start, start + pageSize)
+      return privateReply({ hotels: paginatedHotels, total: hotels.length, page, pageSize })
+    }
+  }
+  
   try {
     if (request.method === 'GET') {
       const parsed = listSchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
