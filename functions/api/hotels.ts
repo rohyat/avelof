@@ -8,6 +8,7 @@ import { adminHotel, assignHotelId, deleteRegistrationPhotos, hotelAccessCode, h
 import type { HotelEnv, HotelRow } from '../_lib/hotelRegistration.ts'
 import { regions } from '../../src/data/regions.ts'
 import { listingRegionSql } from '../_lib/regionalListings.ts'
+import { fallbackHotels, fallbackHotelsKashmir, fallbackHotelsLadakh } from '../../src/data/fallbackHotels.ts'
 
 const listSchema = z.object({
   scope: z.enum(['public', 'admin']).default('public'),
@@ -47,9 +48,28 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       console.log('Database connection OK')
       if (!testQuery) throw new Error('DB connection check failed')
     } catch (err) {
-      console.log('Database unavailable, serving fallback:', err)
-      // Database is unavailable, serve fallback data
-      return privateReply({ test: 'fallback_works', error_thrown: String(err).substring(0, 100) }, 200)
+      // Database is unavailable, serve fallback data with inline hotels
+      const parsed = listSchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
+      if (!parsed.success) return privateReply({ error: 'Invalid hotel filters.' }, 400)
+      const { page, region } = parsed.data
+      
+      // Inline fallback hotel data - all 5 hotels
+      const fallbackHotelsInline = [
+        { id: "h1", hotelId: "GUL-001", name: "Chestnuts Houseboat", location: "Gulmarg, Kashmir", exactLocation: "Gulmarg", category: "Luxury", description: "Experience luxury", price: 8500, originalPrice: 12000, discountPercent: 29, latitude: 34.267, longitude: 75.428, photos: ["/hotels/1.jpg"], mealPlan: "Breakfast", totalRooms: 8, checkIn: "2:00 PM", checkOut: "11:00 AM", amenities: ["AC"], highlights: ["Lake"], propertyType: "Houseboat", roomTypes: ["Deluxe"], roomRates: [{ roomType: "Deluxe", price: 7500, meals: "Breakfast" }], hotColdAc: true, averageRating: 4.5, reviewCount: 24 },
+        { id: "h2", hotelId: "AHA-001", name: "Aharbal Forest Resort", location: "Aharbal, Kashmir", exactLocation: "Aharbal", category: "Premium", description: "Forest resort", price: 5500, originalPrice: 8000, discountPercent: 31, latitude: 34.329, longitude: 75.445, photos: ["/hotels/2.jpg"], mealPlan: "Breakfast", totalRooms: 12, checkIn: "2:00 PM", checkOut: "11:00 AM", amenities: ["AC"], highlights: ["Forest"], propertyType: "Resort", roomTypes: ["Deluxe"], roomRates: [{ roomType: "Deluxe", price: 6500, meals: "Breakfast" }], hotColdAc: false, averageRating: 4.3, reviewCount: 18 },
+        { id: "h3", hotelId: "PAH-001", name: "Pahalgam Valley Inn", location: "Pahalgam, Kashmir", exactLocation: "Pahalgam", category: "Mid-range", description: "Cozy inn", price: 3500, originalPrice: 5000, discountPercent: 30, latitude: 33.939, longitude: 75.531, photos: ["/hotels/3.jpg"], mealPlan: "Room", totalRooms: 15, checkIn: "2:00 PM", checkOut: "11:00 AM", amenities: ["WiFi"], highlights: ["Mountain"], propertyType: "Hotel", roomTypes: ["Standard"], roomRates: [{ roomType: "Standard", price: 3500, meals: "Room" }], hotColdAc: false, averageRating: 4.1, reviewCount: 12 },
+        { id: "h4", hotelId: "LEH-001", name: "Himalayan Eco-Lodge", location: "Leh, Ladakh", exactLocation: "Leh", category: "Premium", description: "Eco-lodge", price: 6500, originalPrice: 9000, discountPercent: 28, latitude: 34.164, longitude: 77.577, photos: ["/hotels/4.jpg"], mealPlan: "Breakfast", totalRooms: 10, checkIn: "2:00 PM", checkOut: "11:00 AM", amenities: ["AC"], highlights: ["Mountain"], propertyType: "Lodge", roomTypes: ["Deluxe"], roomRates: [{ roomType: "Deluxe", price: 7500, meals: "Breakfast" }], hotColdAc: true, averageRating: 4.6, reviewCount: 31 },
+        { id: "h5", hotelId: "NUB-001", name: "Nubra Valley Camp", location: "Nubra, Ladakh", exactLocation: "Nubra", category: "Mid-range", description: "Desert camp", price: 4000, originalPrice: 5500, discountPercent: 27, latitude: 35.303, longitude: 77.591, photos: ["/hotels/5.jpg"], mealPlan: "All", totalRooms: 20, checkIn: "2:00 PM", checkOut: "11:00 AM", amenities: ["WiFi"], highlights: ["Desert"], propertyType: "Camp", roomTypes: ["Tent"], roomRates: [{ roomType: "Tent", price: 3000, meals: "All" }], hotColdAc: false, averageRating: 4.4, reviewCount: 22 }
+      ];
+      
+      return privateReply({ 
+        debug: {
+          fallbackCount: fallbackHotelsInline.length,
+          region: region,
+          testFilter: fallbackHotelsInline.filter(h => h.location.includes('Ladakh')).length,
+          allLocations: fallbackHotelsInline.map(h => h.location)
+        }
+      }, 200)
     }
   }
   
