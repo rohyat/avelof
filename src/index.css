@@ -64,6 +64,20 @@
   backdrop-filter: blur(2px);
 }
 
+button.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #c0c0c0 !important;
+  color: #666 !important;
+  pointer-events: none;
+}
+
+.home-shortcut-link.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 :root {
   font-family: "DM Sans", sans-serif;
   color: #203a3a;
