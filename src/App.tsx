@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
+import MaintenanceRedirect from './components/MaintenanceRedirect'
 import SiteLayout from './components/SiteLayout'
 import PricingProvider from './components/PricingProvider'
 import { AboutPage, CollectionPage, DetailPage, HomePage, NotFoundPage, ReviewsPage } from './pages/Pages'
@@ -43,7 +44,7 @@ export default function App() {
     <PricingProvider>
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
-          <Route element={<SiteLayout maintenanceMode={maintenanceMode} />}>
+          <Route element={<MaintenanceRedirect maintenanceMode={maintenanceMode}><SiteLayout maintenanceMode={maintenanceMode} /></MaintenanceRedirect>}>
             <Route index element={<HomePage />} />
             <Route path="ladakh" element={<LadakhPage />} />
             {Object.keys(ladakhPages).map((section) => <Route key={section} path={`ladakh/${section}`} element={<LadakhPage section={section as keyof typeof ladakhPages} />} />)}
