@@ -31,6 +31,18 @@
   flex: 1;
 }
 
+.maintenance-banner-text strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.maintenance-banner-text p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  opacity: 0.95;
+}
+
 .nav-link-disabled {
   display: inline-flex;
   align-items: center;
