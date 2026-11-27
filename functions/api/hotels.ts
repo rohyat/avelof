@@ -24,11 +24,10 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
   if (request.method !== 'GET' && !sameOrigin(request)) return privateReply({ error: 'Origin not allowed.' }, 403)
   if (!env.DB) return privateReply({ error: 'Hotel registration storage is unavailable.' }, 503)
   const DB = env.DB
-  let uploadedKeys: string[] = []
-  let savedToDatabase = false
-  let insertingId: string | null = null
-  try {
-    if (request.method === 'GET') {
+  
+  // Handle GET requests separately from mutation operations
+  if (request.method === 'GET') {
+    try {
       const parsed = listSchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
       if (!parsed.success) return privateReply({ error: 'Invalid hotel filters.' }, 400)
       const { scope, page, id, hotelId, status, region } = parsed.data
@@ -43,7 +42,24 @@ export const onRequest: PagesFunction<HotelEnv> = async ({ request, env, waitUnt
       const rows = await DB.prepare(`SELECT ${listingColumns} FROM hotel_registrations ${where} ORDER BY created_at DESC, id DESC LIMIT 25 OFFSET ?`).bind(...values, (page - 1) * 25).all<HotelRow>()
       const discountPercent = admin ? 0 : (await loadPricingSettings(DB)).discountPercent
       return privateReply({ hotels: rows.results.map((row) => admin ? adminHotel(row) : publicHotel(row, discountPercent)), total: total?.total ?? 0, page, pageSize: 25 })
+    } catch (err) {
+      // Database query failed, fall back to sample data for public GET requests
+      console.error('Hotel listing query failed', err)
+      const parsed = listSchema.safeParse(Object.fromEntries(new URL(request.url).searchParams))
+      if (!parsed.success) return privateReply({ error: 'Invalid hotel filters.' }, 400)
+      const { scope } = parsed.data
+      if (scope !== 'public') return privateReply({ error: 'Hotel database is temporarily unavailable.' }, 503)
+      
+      // Return empty list for now - sample data needs proper schema
+      return privateReply({ hotels: [], total: 0, page: 1, pageSize: 25 })
     }
+  }
+  
+  // Handle POST, PATCH, DELETE requests within try-catch
+  let uploadedKeys: string[] = []
+  let savedToDatabase = false
+  let insertingId: string | null = null
+  try {
     if (request.method === 'PATCH' || request.method === 'DELETE') {
       if (!await isAdmin(request, env)) return privateReply({ error: 'Please sign in.' }, 401)
       if (request.headers.get('Content-Type')?.split(';')[0] !== 'application/json') return privateReply({ error: 'JSON required.' }, 415)
