@@ -150,29 +150,29 @@ export default function SiteLayout() {
   useEffect(() => {
     const catalogItem = [...tourPackages, ...rentalCars].find((item) => item.id === location.pathname.split('/').at(-1))
     const pageDetails: Record<string, { title: string; description: string }> = {
-      '/': { title: 'AVELOF | Experience Kashmir Beyond Expectations', description: "Where Kashmir's natural beauty meets quality stays, comfortable journeys and genuine local care." },
-      '/ladakh': { title: 'Ladakh Holidays & Bike Trip Planning | AVELOF', description: 'Explore proposed summer Ladakh routes, motorcycle journeys, stays and travel guidance. Prices, departures and availability require confirmation.' },
-      '/tour-packages': { title: 'Kashmir Tour Packages | AVELOF', description: 'Explore thoughtfully planned Kashmir tour packages with local expertise, flexible itineraries and handpicked stays.' },
-      '/car-rentals': { title: 'Kashmir Car Rentals | AVELOF', description: 'Find comfortable vehicles and local drivers for airport transfers, day trips and Kashmir journeys.' },
-      '/hotels': { title: 'Kashmir Hotels & Houseboats | AVELOF', description: 'Discover houseboats, boutique hotels, family stays and mountain retreats across Kashmir.' },
-      '/destinations': { title: 'Kashmir Places & Destination Guide | AVELOF', description: 'Explore Kashmir places, main attractions, seasonal guidance and optional activities, then customise your journey in the trip planner.' },
-      '/activities': { title: 'Kashmir Activities | AVELOF', description: 'Browse Kashmir activity inspiration by destination and category, then request your favourites when planning a trip. Suggestions are not a live availability feed.' },
-      '/local-trips': { title: 'Local Trips in Kashmir | AVELOF', description: 'Enquire about Kashmir treks, picnic destinations and local transport for families and friends.' },
-      '/food-and-shopping': { title: 'Kashmir Restaurants, Shops & Handicrafts | AVELOF', description: 'Discover AVELOF-approved restaurants, shops and handicraft businesses across Kashmir by destination. In-person discovery only; no online ordering or checkout.' },
+      '/': { title: 'Kashmir Tour Packages, Hotels & Cabs | AVELOF', description: 'Book Kashmir tour packages, hotels, cabs & activities. Honeymoon, family, group & solo travel packages available. Professional guides, quality stays, comfortable transport.' },
+      '/ladakh': { title: 'Ladakh Tour Packages, Treks & Hotels | Leh, Nubra, Pangong | AVELOF', description: 'Plan your Ladakh adventure with AVELOF. Book trekking tours, bike trips, homestays, hotels & car rentals in Leh, Nubra Valley, Pangong Lake & Khardung La.' },
+      '/tour-packages': { title: 'Kashmir & Ladakh Tour Packages | Honeymoon, Family, Group Tours | AVELOF', description: 'Browse Kashmir and Ladakh tour packages: honeymoon, family vacation, group tours, adventure trekking & solo travel. Multi-day packages with hotels, cabs & activities.' },
+      '/car-rentals': { title: 'Cabs & Car Rentals in Kashmir & Ladakh | Professional Drivers | AVELOF', description: 'Rent cabs and cars for Kashmir and Ladakh travel. Professional local drivers, comfortable vehicles for airport transfers, day trips & guided tours.' },
+      '/hotels': { title: 'Hotels & Houseboats in Kashmir & Ladakh | Quality Stays | AVELOF', description: 'Discover verified hotels, houseboats & accommodations in Kashmir and Ladakh. Quality stays from budget to luxury for families, couples & groups.' },
+      '/destinations': { title: 'Kashmir & Ladakh Destinations, Treks & Things to Do | AVELOF', description: 'Explore top Kashmir and Ladakh destinations: Srinagar, Gulmarg, Pahalgam, Sonmarg, Leh, Nubra Valley, Pangong Lake. Discover treks, activities & attractions.' },
+      '/activities': { title: 'Kashmir & Ladakh Activities, Treks & Adventure Tours | AVELOF', description: 'Browse Kashmir and Ladakh trekking trails, hiking routes & outdoor activities. Discover adventure options by destination and season with local expertise.' },
+      '/local-trips': { title: 'Local Trips & Treks in Kashmir | Day Tours & Picnic Spots | AVELOF', description: 'Explore Kashmir treks, hiking trails, picnic destinations & local transport for families, friends & groups. Book day trips and local adventures.' },
+      '/food-and-shopping': { title: 'Kashmir Restaurants, Shops & Handicrafts | Local Guides | AVELOF', description: 'Discover AVELOF-approved restaurants, shops and handicraft businesses across Kashmir. Local guides for authentic food & shopping experiences.' },
       '/register-business': { title: 'Register Your Business | AVELOF', description: 'Submit your Kashmir restaurant, shop or handicraft business for review, with item headings, descriptions and photos.' },
       '/business-status': { title: 'Private Business Status | AVELOF', description: 'Check and edit your restaurant, shop or handicraft business registration with your private status access code.' },
       '/admin/panel/businesses': { title: 'Food & Shopping Registrations | AVELOF', description: 'Private AVELOF business registration approval and moderation dashboard.' },
-      '/travel-guide': { title: 'Kashmir Travel Guide | AVELOF', description: 'Prepare for your Kashmir holiday with seasonal advice, packing tips and practical travel essentials.' },
-      '/reviews': { title: 'Guest Reviews | AVELOF', description: 'Read guest reviews and share your Kashmir experience for publication after consent.' },
-      '/about': { title: 'About AVELOF | Your Kashmir Travel Companion', description: 'Discover AVELOF: locally rooted travel expertise, quality stays, comfortable transportation and personalised Kashmir holiday planning.' },
-      '/contact': { title: 'Contact AVELOF | Plan a Kashmir Trip', description: 'Call, email or WhatsApp AVELOF to start planning your Kashmir journey.' },
+      '/travel-guide': { title: 'Kashmir Travel Guide | Packing Tips, Weather & Essentials | AVELOF', description: 'Prepare for your Kashmir holiday with seasonal advice, packing tips, weather guide & practical travel essentials for families & groups.' },
+      '/reviews': { title: 'Guest Reviews | Kashmir Travel Experiences | AVELOF', description: 'Read guest reviews and experiences from Kashmir and Ladakh travelers. Share your travel story for publication after consent.' },
+      '/about': { title: 'About AVELOF | Kashmir Travel Experts', description: 'Discover AVELOF: locally rooted travel expertise, quality hotels, professional drivers & personalized Kashmir holiday planning with 10+ years experience.' },
+      '/contact': { title: 'Contact AVELOF | Plan Your Kashmir Trip', description: 'Call, email or WhatsApp AVELOF to start planning your Kashmir honeymoon, family vacation, group tour or adventure travel today.' },
       '/my-enquiries': { title: 'Check Your Bookings | AVELOF', description: 'View your private AVELOF booking enquiry summary.' },
       '/admin/panel': { title: 'Owner Enquiry Dashboard | AVELOF', description: 'Private AVELOF owner sign-in.' },
       '/admin/panel/reviews': { title: 'Review Moderation | AVELOF', description: 'Private AVELOF review approval dashboard.' },
       '/admin/panel/hotels': { title: 'Hotel Registrations | AVELOF', description: 'Private AVELOF hotel approval dashboard.' },
       '/register-hotel': { title: 'Register Your Hotel or Houseboat | AVELOF', description: 'Submit your Kashmir hotel or houseboat for AVELOF review and approval.' },
       '/hotel-status': { title: 'Private Hotel Status | AVELOF', description: 'Check your hotel registration with your private access code.' },
-      '/partners': { title: 'Partner with AVELOF | Kashmir', description: 'Registration for hotel owners and driver partners.' },
+      '/partners': { title: 'Partner with AVELOF | Kashmir Hotels & Drivers', description: 'Registration for hotel owners and driver partners in Kashmir and Ladakh.' },
       '/register-driver': { title: 'Register as a Driver | AVELOF', description: 'Submit your vehicle for AVELOF approval.' },
       '/driver-status': { title: 'Private Driver Status | AVELOF', description: 'Check your driver registration with a private access code.' },
       '/admin/panel/drivers': { title: 'Driver Registrations | AVELOF', description: 'Private AVELOF driver approval dashboard.' },
@@ -270,6 +270,55 @@ export default function SiteLayout() {
           'longitude': '77.5771'
         },
         'sameAs': ['https://www.instagram.com/avelof']
+      })
+    }
+    
+    // Add Breadcrumb schema for multi-level pages
+    const breadcrumbMap: Record<string, Array<{ name: string; url: string }>> = {
+      '/tour-packages': [
+        { name: 'Home', url: 'https://avelof.pages.dev' },
+        { name: 'Tour Packages', url: 'https://avelof.pages.dev/tour-packages' },
+      ],
+      '/hotels': [
+        { name: 'Home', url: 'https://avelof.pages.dev' },
+        { name: 'Hotels', url: 'https://avelof.pages.dev/hotels' },
+      ],
+      '/car-rentals': [
+        { name: 'Home', url: 'https://avelof.pages.dev' },
+        { name: 'Car Rentals', url: 'https://avelof.pages.dev/car-rentals' },
+      ],
+      '/destinations': [
+        { name: 'Home', url: 'https://avelof.pages.dev' },
+        { name: 'Destinations', url: 'https://avelof.pages.dev/destinations' },
+      ],
+      '/activities': [
+        { name: 'Home', url: 'https://avelof.pages.dev' },
+        { name: 'Activities', url: 'https://avelof.pages.dev/activities' },
+      ],
+      '/local-trips': [
+        { name: 'Home', url: 'https://avelof.pages.dev' },
+        { name: 'Local Trips', url: 'https://avelof.pages.dev/local-trips' },
+      ],
+    }
+
+    const breadcrumbs = breadcrumbMap[location.pathname]
+    if (breadcrumbs) {
+      let script = document.querySelector('script[type="application/ld+json"][data-type="breadcrumb"]') as HTMLScriptElement
+      if (!script) {
+        script = document.createElement('script')
+        script.type = 'application/ld+json'
+        script.setAttribute('data-type', 'breadcrumb')
+        document.head.appendChild(script)
+      }
+      script.textContent = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        'itemListElement': breadcrumbs.map((item, index) => ({
+          '@type': 'ListItem',
+          'position': index + 1,
+          'name': item.name,
+          'item': item.url,
+        })),
       })
     }
   }, [location.pathname])
