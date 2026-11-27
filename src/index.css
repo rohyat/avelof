@@ -1,6 +1,38 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap');
 @import "tailwindcss";
 
+.maintenance-banner {
+  position: sticky;
+  top: 0;
+  z-index: 9999;
+  width: 100%;
+  background: #dc2626;
+  border-bottom: 3px solid #991b1b;
+  padding: 12px 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.maintenance-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+  text-align: center;
+  margin: 0 auto;
+}
+
+.maintenance-banner-content svg {
+  flex-shrink: 0;
+  color: #fca5a5;
+}
+
+.maintenance-banner-text {
+  flex: 1;
+}
+
 :root {
   font-family: "DM Sans", sans-serif;
   color: #203a3a;

@@ -54,7 +54,7 @@ function saveScrollPosition(key: string, x: number, y: number) {
   }
 }
 
-export default function SiteLayout() {
+export default function SiteLayout({ maintenanceMode }: { maintenanceMode?: boolean }) {
   const [darkMode, setDarkMode] = useState(() => {
     try { return localStorage.getItem('avelof:theme') === 'dark' }
     catch (error) { console.warn('Could not read the saved theme preference.', error); return false }
@@ -323,7 +323,13 @@ export default function SiteLayout() {
     }
   }, [location.pathname])
 
-  const openBooking = (kind: BookingKind, selectedItem?: string) => setBooking({ kind, item: selectedItem })
+  const openBooking = (kind: BookingKind, selectedItem?: string) => {
+    if (maintenanceMode) {
+      alert('Bookings are temporarily disabled. We are currently under maintenance. Please try again shortly.')
+      return
+    }
+    setBooking({ kind, item: selectedItem })
+  }
   const closeMenu = () => setMenuOpen(false)
   const returnHome = (event: MouseEvent<HTMLAnchorElement>) => {
     closeMenu()

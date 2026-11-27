@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
+import MaintenanceBanner from './components/MaintenanceBanner'
 import SiteLayout from './components/SiteLayout'
 import PricingProvider from './components/PricingProvider'
 import { AboutPage, CollectionPage, DetailPage, HomePage, NotFoundPage, ReviewsPage } from './pages/Pages'
@@ -37,11 +38,14 @@ import { ladakhPages } from './data/ladakh'
 const LoadingFallback = () => <div />  // Silent loading - no UI bloat
 
 export default function App() {
+  const maintenanceMode = true // Set to false to remove banner
+  
   return (
     <PricingProvider>
+      {maintenanceMode && <MaintenanceBanner />}
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
-          <Route element={<SiteLayout />}>
+          <Route element={<SiteLayout maintenanceMode={maintenanceMode} />}>
             <Route index element={<HomePage />} />
             <Route path="ladakh" element={<LadakhPage />} />
             {Object.keys(ladakhPages).map((section) => <Route key={section} path={`ladakh/${section}`} element={<LadakhPage section={section as keyof typeof ladakhPages} />} />)}
